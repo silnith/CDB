@@ -41,7 +41,7 @@ public class SQLCDB : ICDB
     }
 
     private static readonly Regex PathPrefixPattern = new(
-        "^/?(?<directory>Metadata|GTModel|MModel|Tiles|Navigation)/",
+        @"^[\\/]?(?<directory>Metadata|GTModel|MModel|Tiles|Navigation)[\\/]",
         RegexOptions.CultureInvariant | RegexOptions.IgnoreCase | RegexOptions.NonBacktracking);
 
     /// <inheritdoc/>
