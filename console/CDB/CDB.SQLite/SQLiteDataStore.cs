@@ -10,6 +10,13 @@ namespace Silnith.CDB.SQLite;
 /// An encapsulated SQLite database that uses a schema designed for storing
 /// files from a CDB data store.
 /// </summary>
+/// <remarks>
+/// <para>
+/// SQLite cannot handle a Stream as an input object.  Therefore this implementation
+/// must override all the insert methods that take <see cref="Stream"/> parameters
+/// and convert them to byte arrays.
+/// </para>
+/// </remarks>
 public class SQLiteDataStore : SQLDataStore
 {
     private const string varcharColumnType = "text";
@@ -278,11 +285,6 @@ public class SQLiteDataStore : SQLDataStore
 
     /// <inheritdoc/>
     protected override string InsertIntoMetadataStatement => insertIntoMetadata;
-
-    /*
-     * SQLite cannot handle a Stream as an input object.  Therefore this
-     * implementation must convert all the Streams to byte arrays.
-     */
 
     /// <inheritdoc/>
     public override int InsertIntoMetadata(string cdbName, Metadata metadata, Stream content)
