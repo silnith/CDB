@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.IO;
 using System.Linq;
 using System.Xml.Serialization;
 
@@ -29,19 +28,20 @@ public class CDBInformation
     public void Initialize(ICDB dataStore)
     {
         XmlSerializerFactory xmlSerializerFactory = new();
-        if (dataStore.TryReadFile("Metadata/Version.xml", out byte[] versionContent))
+        XmlSerializer versionDeserializer = xmlSerializerFactory.CreateSerializer(typeof(Metadata.Version.Element));
+        XmlSerializer datasetsDeserializer = xmlSerializerFactory.CreateSerializer(typeof(Metadata.Datasets.Element));
+
+        dataStore.TryReadFile("Metadata/Version.xml", stream =>
         {
-            XmlSerializer xmlSerializer = xmlSerializerFactory.CreateSerializer(typeof(Metadata.Version.Element));
-            Version = (Metadata.Version.Element?) xmlSerializer.Deserialize(new MemoryStream(versionContent));
-        }
-        if (dataStore.TryReadFile("Metadata/Datasets.xml", out byte[] datasetsContent))
+            Version = (Metadata.Version.Element?) versionDeserializer.Deserialize(stream);
+        });
+        dataStore.TryReadFile("Metadata/Datasets.xml", stream =>
         {
-            XmlSerializer datasetsDeserializer = xmlSerializerFactory.CreateSerializer(typeof(Metadata.Datasets.Element));
-            Datasets = (Metadata.Datasets.Element?) datasetsDeserializer.Deserialize(new MemoryStream(datasetsContent));
+            Datasets = (Metadata.Datasets.Element?) datasetsDeserializer.Deserialize(stream);
             DatasetNames = Datasets!.Datasets
                 .Select(d => new KeyValuePair<int, string>(d.Code, d.Name))
                 .ToImmutableSortedDictionary();
-        }
+        });
 
     }
 }

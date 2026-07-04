@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -24,6 +23,7 @@ namespace Silnith.CDB;
 /// </remarks>
 public interface ICDB : IDisposable
 {
+
     /// <summary>
     /// A simple identifier for the CDB data store.
     /// </summary>
@@ -49,14 +49,14 @@ public interface ICDB : IDisposable
     /// the public API to access files.
     /// </para>
     /// </remarks>
-    /// <seealso cref="TryReadFile(string, out byte[])"/>
     public DirectoryInfo CdbRoot
     {
         get;
     }
 
     /// <summary>
-    /// Tries to read a file out of the CDB and return its contents.
+    /// Tries to read a file out of the CDB.
+    /// If the file was found, runs <paramref name="fileFoundAction"/> on its contents.
     /// </summary>
     /// <remarks>
     /// <para>
@@ -73,12 +73,15 @@ public interface ICDB : IDisposable
     /// </remarks>
     /// <param name="filePathAndName">The relative path and filename of the file to read.
     /// The path should be relative to the CDB root.</param>
-    /// <param name="content">An output variable that will receive the file contents.</param>
-    /// <returns><see langword="true"/> if the file was found and its contents returned.</returns>
-    public bool TryReadFile(string filePathAndName, [NotNullWhen(true)] out byte[] content);
+    /// <param name="fileFoundAction">The action to run if the file is found.
+    /// The stream will be automatically closed after the action returns or
+    /// throws an exception.</param>
+    /// <returns><see langword="true"/> if the file was found.</returns>
+    public bool TryReadFile(string filePathAndName, Action<Stream> fileFoundAction);
 
     /// <summary>
-    /// Tries to read a file out of the CDB and return its contents.
+    /// Tries to read a file out of the CDB.
+    /// If the file was found, runs <paramref name="fileFoundAsyncAction"/> on its contents.
     /// </summary>
     /// <remarks>
     /// <para>
@@ -95,53 +98,13 @@ public interface ICDB : IDisposable
     /// </remarks>
     /// <param name="filePathAndName">The relative path and filename of the file to read.
     /// The path should be relative to the CDB root.</param>
-    /// <param name="output">A stream that will receive the file contents.</param>
-    /// <returns><see langword="true"/> if the file was found and its contents returned.</returns>
-    public bool TryReadFile(string filePathAndName, Stream output);
-
-    /// <summary>
-    /// Tries to read a file out of the CDB and return its contents.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// The <paramref name="filePathAndName"/> should always begin with one of
-    /// the known root directories.  These are:
-    /// </para>
-    /// <list type="bullet">
-    /// <item><term><c>/Metadata/</c></term></item>
-    /// <item><term><c>/GTModel/</c></term></item>
-    /// <item><term><c>/MModel/</c></term></item>
-    /// <item><term><c>/Tiles/</c></term></item>
-    /// <item><term><c>/Navigation/</c></term></item>
-    /// </list>
-    /// </remarks>
-    /// <param name="filePathAndName">The relative path and filename of the file to read.
-    /// The path should be relative to the CDB root.</param>
-    /// <param name="output">A stream that will receive the file contents.</param>
+    /// <param name="fileFoundAsyncAction">The action to run if the file is found.
+    /// The stream will be automatically closed after the action returns or
+    /// throws an exception.</param>
     /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns><see langword="true"/> if the file was found and its contents returned.</returns>
-    public Task<bool> TryReadFileAsync(string filePathAndName, Stream output, CancellationToken cancellationToken = default);
+    /// <returns><see langword="true"/> if the file was found.</returns>
+    public Task<bool> TryReadFileAsync(string filePathAndName,
+        Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
+        CancellationToken cancellationToken);
 
-    /// <summary>
-    /// Reads a file out of the CDB and return its contents.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// The <paramref name="filePathAndName"/> should always begin with one of
-    /// the known root directories.  These are:
-    /// </para>
-    /// <list type="bullet">
-    /// <item><term><c>/Metadata/</c></term></item>
-    /// <item><term><c>/GTModel/</c></term></item>
-    /// <item><term><c>/MModel/</c></term></item>
-    /// <item><term><c>/Tiles/</c></term></item>
-    /// <item><term><c>/Navigation/</c></term></item>
-    /// </list>
-    /// </remarks>
-    /// <param name="filePathAndName">The relative path and filename of the file to read.
-    /// The path should be relative to the CDB root.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The file contents.</returns>
-    /// <exception cref="FileNotFoundException">If the file was not found.</exception>
-    public Task<byte[]> ReadFileAsync(string filePathAndName, CancellationToken cancellationToken = default);
 }

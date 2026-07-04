@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
-using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
@@ -665,6 +664,8 @@ public abstract class SQLDataStore : IDisposable
         get;
     }
 
+    #region Insert
+
     /// <summary>
     /// The SQL statement that inserts a new name into the CDB table.
     /// This takes one parameter,
@@ -723,6 +724,10 @@ public abstract class SQLDataStore : IDisposable
         return insertIntoCDBCommand.ExecuteNonQueryAsync(cancellationToken);
     }
 
+    #endregion
+
+    #region Select
+
     /// <summary>
     /// The SQL statement that selects the CDB name from the CDB table.
     /// This has no parameters.
@@ -780,6 +785,8 @@ public abstract class SQLDataStore : IDisposable
 
     #endregion
 
+    #endregion
+
     #region Metadata
 
     /// <summary>
@@ -798,6 +805,8 @@ public abstract class SQLDataStore : IDisposable
     {
         get;
     }
+
+    #region Insert
 
     /// <summary>
     /// The SQL statement to insert a row in the Metadata table.
@@ -901,6 +910,10 @@ public abstract class SQLDataStore : IDisposable
         return insertIntoMetadataCommand.ExecuteNonQueryAsync(cancellationToken);
     }
 
+    #endregion
+
+    #region Select
+
     /// <summary>
     /// The SQL statement to select one row from the Metadata table.
     /// This requires three parameters,
@@ -926,32 +939,16 @@ public abstract class SQLDataStore : IDisposable
     }
 
     /// <summary>
-    /// Tries to find and return a metadata file from a CDB data store.
-    /// Returns <see langword="true"/> if the file was found, and writes the
-    /// file contents to the <paramref name="content"/> parameter.
+    /// Tries to find a metadata file in the database.
+    /// If the file was found, runs <paramref name="fileFoundAction"/> on the file contents.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store.</param>
     /// <param name="metadata">The metadata identifier.</param>
-    /// <param name="content">An output variable that will receive the file contents.</param>
-    /// <returns><see langword="true"/> if the file was found and returned.</returns>
-    public virtual bool TrySelectFromMetadata(string cdbName, Metadata metadata, [NotNullWhen(true)] out byte[] content)
-    {
-        using MemoryStream memoryStream = new();
-        bool succeeded = TrySelectFromMetadata(cdbName, metadata, memoryStream);
-        content = memoryStream.ToArray();
-        return succeeded;
-    }
-
-    /// <summary>
-    /// Tries to find and return a metadata file from a CDB data store.
-    /// Returns <see langword="true"/> if the file was found, and writes the
-    /// file contents to the <paramref name="output"/> parameter.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="metadata">The metadata identifier.</param>
-    /// <param name="output">A stream that will receive the file contents.</param>
-    /// <returns><see langword="true"/> if the file was found and returned.</returns>
-    public virtual bool TrySelectFromMetadata(string cdbName, Metadata metadata, Stream output)
+    /// <param name="fileFoundAction">The action to run if the file is found.
+    /// The stream will be automatically closed after the action returns or
+    /// throws an exception.</param>
+    /// <returns><see langword="true"/> if the file was found.</returns>
+    public virtual bool TrySelectFromMetadata(string cdbName, Metadata metadata, Action<Stream> fileFoundAction)
     {
         selectFromMetadataCommand.Parameters[CdbParamName].Value = cdbName;
         SetMetadataParameters(selectFromMetadataCommand, metadata);
@@ -963,7 +960,7 @@ public abstract class SQLDataStore : IDisposable
             while (dbDataReader.Read())
             {
                 using Stream stream = dbDataReader.GetStream(ContentColumnName);
-                stream.CopyTo(output);
+                fileFoundAction(stream);
                 return true;
             }
         } while (dbDataReader.NextResult());
@@ -971,16 +968,19 @@ public abstract class SQLDataStore : IDisposable
     }
 
     /// <summary>
-    /// Tries to find and return a metadata file from a CDB data store.
-    /// Returns <see langword="true"/> if the file was found, and writes the
-    /// file contents to the <paramref name="output"/> parameter.
+    /// Tries to find a metadata file in the database.
+    /// If the file was found, runs <paramref name="fileFoundAsyncAction"/> on the file contents.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store.</param>
     /// <param name="metadata">The metadata identifier.</param>
-    /// <param name="output">A stream that will receive the file contents.</param>
+    /// <param name="fileFoundAsyncAction">The action to run if the file is found.
+    /// The stream will be automatically closed after the action returns or
+    /// throws an exception.</param>
     /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns><see langword="true"/> if the file was found and returned.</returns>
-    public virtual async Task<bool> TrySelectFromMetadataAsync(string cdbName, Metadata metadata, Stream output, CancellationToken cancellationToken = default)
+    /// <returns><see langword="true"/> if the file was found.</returns>
+    public virtual async Task<bool> TrySelectFromMetadataAsync(string cdbName, Metadata metadata,
+        Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
+        CancellationToken cancellationToken)
     {
         selectFromMetadataCommand.Parameters[CdbParamName].Value = cdbName;
         SetMetadataParameters(selectFromMetadataCommand, metadata);
@@ -992,33 +992,14 @@ public abstract class SQLDataStore : IDisposable
             while (await dbDataReader.ReadAsync(cancellationToken))
             {
                 await using Stream stream = dbDataReader.GetStream(ContentColumnName);
-                await stream.CopyToAsync(output, cancellationToken);
+                await fileFoundAsyncAction(stream, cancellationToken);
                 return true;
             }
         } while (await dbDataReader.NextResultAsync(cancellationToken));
         return false;
     }
 
-    /// <summary>
-    /// Returns the metadata file from a CDB data store.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="metadata">The metadata identifier.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The file contents.</returns>
-    /// <exception cref="FileNotFoundException">If the file was not found in the database.</exception>
-    public virtual async Task<byte[]> SelectFromMetadataAsync(string cdbName, Metadata metadata, CancellationToken cancellationToken = default)
-    {
-        await using MemoryStream memoryStream = new();
-        if (await TrySelectFromMetadataAsync(cdbName, metadata, memoryStream, cancellationToken))
-        {
-            return memoryStream.ToArray();
-        }
-        else
-        {
-            throw new FileNotFoundException("Metadata file not found.", metadata.Filename);
-        }
-    }
+    #endregion
 
     #endregion
 
@@ -1040,6 +1021,8 @@ public abstract class SQLDataStore : IDisposable
     {
         get;
     }
+
+    #region Insert
 
     /// <summary>
     /// The SQL statement to insert a row into the Texture table.
@@ -1152,6 +1135,10 @@ public abstract class SQLDataStore : IDisposable
         return insertIntoTextureCommand.ExecuteNonQueryAsync(cancellationToken);
     }
 
+    #endregion
+
+    #region Select
+
     /// <summary>
     /// The SQL statement to select a row from the Texture table.
     /// This requires six parameters,
@@ -1180,32 +1167,17 @@ public abstract class SQLDataStore : IDisposable
     }
 
     /// <summary>
-    /// Tries to find and return a texture file from a CDB data store.
-    /// Returns <see langword="true"/> if the file was found, and writes the
-    /// file contents to the <paramref name="content"/> parameter.
+    /// Tries to find a texture file in the database.
+    /// If the file was found, runs <paramref name="fileFoundAction"/> on the file contents.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store.</param>
     /// <param name="texture">The texture identifier.</param>
-    /// <param name="content">An output variable that will receive the file contents.</param>
-    /// <returns><see langword="true"/> if the file was found and returned.</returns>
-    public virtual bool TrySelectFromTexture(string cdbName, Texture texture, [NotNullWhen(true)] out byte[] content)
-    {
-        using MemoryStream memoryStream = new();
-        bool succeeded = TrySelectFromTexture(cdbName, texture, memoryStream);
-        content = memoryStream.ToArray();
-        return succeeded;
-    }
-
-    /// <summary>
-    /// Tries to find and return a texture file from a CDB data store.
-    /// Returns <see langword="true"/> if the file was found, and writes the
-    /// file contents to the <paramref name="output"/> parameter.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="texture">The texture identifier.</param>
-    /// <param name="output">A stream that will receive the file contents.</param>
-    /// <returns><see langword="true"/> if the file was found and returned.</returns>
-    public virtual bool TrySelectFromTexture(string cdbName, Texture texture, Stream output)
+    /// <param name="fileFoundAction">The action to run if the file is found.
+    /// The stream will be automatically closed after the action returns or
+    /// throws an exception.</param>
+    /// <returns><see langword="true"/> if the file was found.</returns>
+    public virtual bool TrySelectFromTexture(string cdbName, Texture texture,
+        Action<Stream> fileFoundAction)
     {
         selectFromTextureCommand.Parameters[CdbParamName].Value = cdbName;
         SetTextureParameters(selectFromTextureCommand, texture);
@@ -1217,7 +1189,7 @@ public abstract class SQLDataStore : IDisposable
             while (dbDataReader.Read())
             {
                 using Stream stream = dbDataReader.GetStream(ContentColumnName);
-                stream.CopyTo(output);
+                fileFoundAction(stream);
                 return true;
             }
         } while (dbDataReader.NextResult());
@@ -1225,16 +1197,19 @@ public abstract class SQLDataStore : IDisposable
     }
 
     /// <summary>
-    /// Tries to find and return a texture file from a CDB data store.
-    /// Returns <see langword="true"/> if the file was found, and writes the
-    /// file contents to the <paramref name="output"/> parameter.
+    /// Tries to find a texture file in the database.
+    /// If the file was found, runs <paramref name="fileFoundAsyncAction"/> on the file contents.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store.</param>
     /// <param name="texture">The texture identifier.</param>
-    /// <param name="output">A stream that will receive the file contents.</param>
+    /// <param name="fileFoundAsyncAction">The action to run if the file is found.
+    /// The stream will be automatically closed after the action returns or
+    /// throws an exception.</param>
     /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns><see langword="true"/> if the file was found and returned.</returns>
-    public virtual async Task<bool> TrySelectFromTextureAsync(string cdbName, Texture texture, Stream output, CancellationToken cancellationToken = default)
+    /// <returns><see langword="true"/> if the file was found.</returns>
+    public virtual async Task<bool> TrySelectFromTextureAsync(string cdbName, Texture texture,
+        Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
+        CancellationToken cancellationToken)
     {
         selectFromTextureCommand.Parameters[CdbParamName].Value = cdbName;
         SetTextureParameters(selectFromTextureCommand, texture);
@@ -1246,33 +1221,14 @@ public abstract class SQLDataStore : IDisposable
             while (await dbDataReader.ReadAsync(cancellationToken))
             {
                 await using Stream stream = dbDataReader.GetStream(ContentColumnName);
-                await stream.CopyToAsync(output, cancellationToken);
+                await fileFoundAsyncAction(stream, cancellationToken);
                 return true;
             }
         } while (await dbDataReader.NextResultAsync(cancellationToken));
         return false;
     }
 
-    /// <summary>
-    /// Reads a texture file from a CDB data store.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="texture">The texture identifier.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The file contents.</returns>
-    /// <exception cref="FileNotFoundException">If the file was not found in the database.</exception>
-    public virtual async Task<byte[]> SelectFromTextureAsync(string cdbName, Texture texture, CancellationToken cancellationToken = default)
-    {
-        await using MemoryStream memoryStream = new();
-        if (await TrySelectFromTextureAsync(cdbName, texture, memoryStream, cancellationToken))
-        {
-            return memoryStream.ToArray();
-        }
-        else
-        {
-            throw new FileNotFoundException("Texture file not found.", texture.Filename);
-        }
-    }
+    #endregion
 
     #endregion
 
@@ -1285,6 +1241,8 @@ public abstract class SQLDataStore : IDisposable
     {
         get;
     }
+
+    #region Insert
 
     /// <summary>
     /// The SQL statement to insert a row into the Texture Level of Detail table.
@@ -1400,6 +1358,10 @@ public abstract class SQLDataStore : IDisposable
         return insertIntoTextureLodCommand.ExecuteNonQueryAsync(cancellationToken);
     }
 
+    #endregion
+
+    #region Select
+
     /// <summary>
     /// The SQL statement to select a row from the Texture Level of Detail table.
     /// This requires seven parameters,
@@ -1429,32 +1391,17 @@ public abstract class SQLDataStore : IDisposable
     }
 
     /// <summary>
-    /// Tries to find and return a texture mipmap file from a CDB data store.
-    /// Returns <see langword="true"/> if the file was found, and writes the
-    /// file contents to the <paramref name="content"/> parameter.
+    /// Tries to find a texture mipmap file in the database.
+    /// If the file was found, runs <paramref name="fileFoundAction"/> on the file contents.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store.</param>
     /// <param name="textureLod">The texture mipmap identifier.</param>
-    /// <param name="content">An output variable that will receive the file contents.</param>
-    /// <returns><see langword="true"/> if the file was found and returned.</returns>
-    public virtual bool TrySelectFromTextureLod(string cdbName, TextureLod textureLod, [NotNullWhen(true)] out byte[] content)
-    {
-        using MemoryStream memoryStream = new();
-        bool succeeded = TrySelectFromTextureLod(cdbName, textureLod, memoryStream);
-        content = memoryStream.ToArray();
-        return succeeded;
-    }
-
-    /// <summary>
-    /// Tries to find and return a texture mipmap file from a CDB data store.
-    /// Returns <see langword="true"/> if the file was found, and writes the
-    /// file contents to the <paramref name="output"/> parameter.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="textureLod">The texture mipmap identifier.</param>
-    /// <param name="output">A stream that will receive the file contents.</param>
-    /// <returns><see langword="true"/> if the file was found and returned.</returns>
-    public virtual bool TrySelectFromTextureLod(string cdbName, TextureLod textureLod, Stream output)
+    /// <param name="fileFoundAction">The action to run if the file is found.
+    /// The stream will be automatically closed after the action returns or
+    /// throws an exception.</param>
+    /// <returns><see langword="true"/> if the file was found.</returns>
+    public virtual bool TrySelectFromTextureLod(string cdbName, TextureLod textureLod,
+        Action<Stream> fileFoundAction)
     {
         selectFromTextureLodCommand.Parameters[CdbParamName].Value = cdbName;
         SetTextureLodParameters(selectFromTextureLodCommand, textureLod);
@@ -1466,7 +1413,7 @@ public abstract class SQLDataStore : IDisposable
             while (dbDataReader.Read())
             {
                 using Stream stream = dbDataReader.GetStream(ContentColumnName);
-                stream.CopyTo(output);
+                fileFoundAction(stream);
                 return true;
             }
         } while (dbDataReader.NextResult());
@@ -1474,16 +1421,19 @@ public abstract class SQLDataStore : IDisposable
     }
 
     /// <summary>
-    /// Tries to find and return a texture mipmap file from a CDB data store.
-    /// Returns <see langword="true"/> if the file was found, and writes the
-    /// file contents to the <paramref name="output"/> parameter.
+    /// Tries to find a texture mipmap file in the database.
+    /// If the file was found, runs <paramref name="fileFoundAsyncAction"/> on the file contents.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store.</param>
     /// <param name="textureLod">The texture mipmap identifier.</param>
-    /// <param name="output">A stream that will receive the file contents.</param>
+    /// <param name="fileFoundAsyncAction">The action to run if the file is found.
+    /// The stream will be automatically closed after the action returns or
+    /// throws an exception.</param>
     /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns><see langword="true"/> if the file was found and returned.</returns>
-    public virtual async Task<bool> TrySelectFromTextureLodAsync(string cdbName, TextureLod textureLod, Stream output, CancellationToken cancellationToken = default)
+    /// <returns><see langword="true"/> if the file was found.</returns>
+    public virtual async Task<bool> TrySelectFromTextureLodAsync(string cdbName, TextureLod textureLod,
+        Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
+        CancellationToken cancellationToken)
     {
         selectFromTextureLodCommand.Parameters[CdbParamName].Value = cdbName;
         SetTextureLodParameters(selectFromTextureLodCommand, textureLod);
@@ -1495,33 +1445,14 @@ public abstract class SQLDataStore : IDisposable
             while (await dbDataReader.ReadAsync(cancellationToken))
             {
                 await using Stream stream = dbDataReader.GetStream(ContentColumnName);
-                await stream.CopyToAsync(output, cancellationToken);
+                await fileFoundAsyncAction(stream, cancellationToken);
                 return true;
             }
         } while (await dbDataReader.NextResultAsync(cancellationToken));
         return false;
     }
 
-    /// <summary>
-    /// Returns a texture mipmap file from a CDB data store.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="textureLod">The texture mipmap identifier.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The file contents.</returns>
-    /// <exception cref="FileNotFoundException">If the file was not found in the database.</exception>
-    public virtual async Task<byte[]> SelectFromTextureLodAsync(string cdbName, TextureLod textureLod, CancellationToken cancellationToken = default)
-    {
-        await using MemoryStream memoryStream = new();
-        if (await TrySelectFromTextureLodAsync(cdbName, textureLod, memoryStream, cancellationToken))
-        {
-            return memoryStream.ToArray();
-        }
-        else
-        {
-            throw new FileNotFoundException("Texture mipmap file not found.", textureLod.Filename);
-        }
-    }
+    #endregion
 
     #endregion
 
@@ -1583,6 +1514,8 @@ public abstract class SQLDataStore : IDisposable
     {
         get;
     }
+
+    #region Insert
 
     /// <summary>
     /// The SQL statement to insert a row into the Geotypical Model table.
@@ -1707,6 +1640,10 @@ public abstract class SQLDataStore : IDisposable
         return insertIntoGeotypicalModelCommand.ExecuteNonQueryAsync(cancellationToken);
     }
 
+    #endregion
+
+    #region Select
+
     /// <summary>
     /// The SQL statement to select a row from the Geotypical Model table.
     /// This takes ten parameters,
@@ -1739,32 +1676,17 @@ public abstract class SQLDataStore : IDisposable
     }
 
     /// <summary>
-    /// Tries to find and return a geotypical model file from a CDB data store.
-    /// Returns <see langword="true"/> if the file was found, and writes the
-    /// file contents to the <paramref name="content"/> parameter.
+    /// Tries to find a geotypical model file in the database.
+    /// If the file was found, runs <paramref name="fileFoundAction"/> on the file contents.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store.</param>
     /// <param name="geotypicalModel">The geotypical model identifier.</param>
-    /// <param name="content">An output variable that will receive the file contents.</param>
-    /// <returns><see langword="true"/> if the file was found and returned.</returns>
-    public virtual bool TrySelectFromGeotypicalModel(string cdbName, GeotypicalModel geotypicalModel, [NotNullWhen(true)] out byte[] content)
-    {
-        using MemoryStream memoryStream = new();
-        bool succeeded = TrySelectFromGeotypicalModel(cdbName, geotypicalModel, memoryStream);
-        content = memoryStream.ToArray();
-        return succeeded;
-    }
-
-    /// <summary>
-    /// Tries to find and return a geotypical model file from a CDB data store.
-    /// Returns <see langword="true"/> if the file was found, and writes the
-    /// file contents to the <paramref name="output"/> parameter.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="geotypicalModel">The geotypical model identifier.</param>
-    /// <param name="output">A stream that will receive the file contents.</param>
-    /// <returns><see langword="true"/> if the file was found and returned.</returns>
-    public virtual bool TrySelectFromGeotypicalModel(string cdbName, GeotypicalModel geotypicalModel, Stream output)
+    /// <param name="fileFoundAction">The action to run if the file is found.
+    /// The stream will be automatically closed after the action returns or
+    /// throws an exception.</param>
+    /// <returns><see langword="true"/> if the file was found.</returns>
+    public virtual bool TrySelectFromGeotypicalModel(string cdbName, GeotypicalModel geotypicalModel,
+        Action<Stream> fileFoundAction)
     {
         selectFromGeotypicalModelCommand.Parameters[CdbParamName].Value = cdbName;
         SetGeotypicalModelParameters(selectFromGeotypicalModelCommand, geotypicalModel);
@@ -1776,7 +1698,7 @@ public abstract class SQLDataStore : IDisposable
             while (dbDataReader.Read())
             {
                 using Stream stream = dbDataReader.GetStream(ContentColumnName);
-                stream.CopyTo(output);
+                fileFoundAction(stream);
                 return true;
             }
         } while (dbDataReader.NextResult());
@@ -1784,16 +1706,19 @@ public abstract class SQLDataStore : IDisposable
     }
 
     /// <summary>
-    /// Tries to find and return a geotypical model file from a CDB data store.
-    /// Returns <see langword="true"/> if the file was found, and writes the
-    /// file contents to the <paramref name="output"/> parameter.
+    /// Tries to find a geotypical model file in the database.
+    /// If the file was found, runs <paramref name="fileFoundAsyncAction"/> on the file contents.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store.</param>
     /// <param name="geotypicalModel">The geotypical model identifier.</param>
-    /// <param name="output">A stream that will receive the file contents.</param>
+    /// <param name="fileFoundAsyncAction">The action to run if the file is found.
+    /// The stream will be automatically closed after the action returns or
+    /// throws an exception.</param>
     /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns><see langword="true"/> if the file was found and returned.</returns>
-    public virtual async Task<bool> TrySelectFromGeotypicalModelAsync(string cdbName, GeotypicalModel geotypicalModel, Stream output, CancellationToken cancellationToken = default)
+    /// <returns><see langword="true"/> if the file was found.</returns>
+    public virtual async Task<bool> TrySelectFromGeotypicalModelAsync(string cdbName, GeotypicalModel geotypicalModel,
+        Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
+        CancellationToken cancellationToken)
     {
         selectFromGeotypicalModelCommand.Parameters[CdbParamName].Value = cdbName;
         SetGeotypicalModelParameters(selectFromGeotypicalModelCommand, geotypicalModel);
@@ -1805,33 +1730,14 @@ public abstract class SQLDataStore : IDisposable
             while (await dbDataReader.ReadAsync(cancellationToken))
             {
                 await using Stream stream = dbDataReader.GetStream(ContentColumnName);
-                await stream.CopyToAsync(output, cancellationToken);
+                await fileFoundAsyncAction(stream, cancellationToken);
                 return true;
             }
         } while (await dbDataReader.NextResultAsync(cancellationToken));
         return false;
     }
 
-    /// <summary>
-    /// Returns a geotypical model file from a CDB data store.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="geotypicalModel">The geotypical model identifier.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns></returns>
-    /// <exception cref="FileNotFoundException">If the file was not found in the database.</exception>
-    public virtual async Task<byte[]> SelectFromGeotypicalModelAsync(string cdbName, GeotypicalModel geotypicalModel, CancellationToken cancellationToken = default)
-    {
-        await using MemoryStream memoryStream = new();
-        if (await TrySelectFromGeotypicalModelAsync(cdbName, geotypicalModel, memoryStream, cancellationToken))
-        {
-            return memoryStream.ToArray();
-        }
-        else
-        {
-            throw new FileNotFoundException("Geotypical model file not found.", geotypicalModel.Filename);
-        }
-    }
+    #endregion
 
     #endregion
 
@@ -1844,6 +1750,8 @@ public abstract class SQLDataStore : IDisposable
     {
         get;
     }
+
+    #region Insert
 
     /// <summary>
     /// The SQL statement to insert a row into the Geotypical Model Level of Detail table.
@@ -1971,6 +1879,10 @@ public abstract class SQLDataStore : IDisposable
         return insertIntoGeotypicalModelLodCommand.ExecuteNonQueryAsync(cancellationToken);
     }
 
+    #endregion
+
+    #region Select
+
     /// <summary>
     /// The SQL statement to select a row from the Geotypical Model Level of Detail table.
     /// This takes eleven parameters,
@@ -2004,32 +1916,17 @@ public abstract class SQLDataStore : IDisposable
     }
 
     /// <summary>
-    /// Tries to find and return a geotypical model level of detail file from a CDB data store.
-    /// Returns <see langword="true"/> if the file was found, and writes the
-    /// file contents to the <paramref name="content"/> parameter.
+    /// Tries to find a geotypical model level of detail file in the database.
+    /// If the file was found, runs <paramref name="fileFoundAction"/> on the file contents.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store.</param>
     /// <param name="geotypicalModelLod">The geotypical model level of detail identifier.</param>
-    /// <param name="content">An output variable that will receive the file contents.</param>
-    /// <returns><see langword="true"/> if the file was found and returned.</returns>
-    public virtual bool TrySelectFromGeotypicalModelLod(string cdbName, GeotypicalModelLod geotypicalModelLod, [NotNullWhen(true)] out byte[] content)
-    {
-        using MemoryStream memoryStream = new();
-        bool succeeded = TrySelectFromGeotypicalModelLod(cdbName, geotypicalModelLod, memoryStream);
-        content = memoryStream.ToArray();
-        return succeeded;
-    }
-
-    /// <summary>
-    /// Tries to find and return a geotypical model level of detail file from a CDB data store.
-    /// Returns <see langword="true"/> if the file was found, and writes the
-    /// file contents to the <paramref name="output"/> parameter.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="geotypicalModelLod">The geotypical model level of detail identifier.</param>
-    /// <param name="output">A stream that will receive the file contents.</param>
-    /// <returns><see langword="true"/> if the file was found and returned.</returns>
-    public virtual bool TrySelectFromGeotypicalModelLod(string cdbName, GeotypicalModelLod geotypicalModelLod, Stream output)
+    /// <param name="fileFoundAction">The action to run if the file is found.
+    /// The stream will be automatically closed after the action returns or
+    /// throws an exception.</param>
+    /// <returns><see langword="true"/> if the file was found.</returns>
+    public virtual bool TrySelectFromGeotypicalModelLod(string cdbName, GeotypicalModelLod geotypicalModelLod,
+        Action<Stream> fileFoundAction)
     {
         selectFromGeotypicalModelLodCommand.Parameters[CdbParamName].Value = cdbName;
         SetGeotypicalModelLodParameters(selectFromGeotypicalModelLodCommand, geotypicalModelLod);
@@ -2041,7 +1938,7 @@ public abstract class SQLDataStore : IDisposable
             while (dbDataReader.Read())
             {
                 using Stream stream = dbDataReader.GetStream(ContentColumnName);
-                stream.CopyTo(output);
+                fileFoundAction(stream);
                 return true;
             }
         } while (dbDataReader.NextResult());
@@ -2049,16 +1946,19 @@ public abstract class SQLDataStore : IDisposable
     }
 
     /// <summary>
-    /// Tries to find and return a geotypical model level of detail file from a CDB data store.
-    /// Returns <see langword="true"/> if the file was found, and writes the
-    /// file contents to the <paramref name="output"/> parameter.
+    /// Tries to find a geotypical model level of detail file in the database.
+    /// If the file was found, runs <paramref name="fileFoundAsyncAction"/> on the file contents.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store.</param>
     /// <param name="geotypicalModelLod">The geotypical model level of detail identifier.</param>
-    /// <param name="output">A stream that will receive the file contents.</param>
+    /// <param name="fileFoundAsyncAction">The action to run if the file is found.
+    /// The stream will be automatically closed after the action returns or
+    /// throws an exception.</param>
     /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns><see langword="true"/> if the file was found and returned.</returns>
-    public virtual async Task<bool> TrySelectFromGeotypicalModelLodAsync(string cdbName, GeotypicalModelLod geotypicalModelLod, Stream output, CancellationToken cancellationToken = default)
+    /// <returns><see langword="true"/> if the file was found.</returns>
+    public virtual async Task<bool> TrySelectFromGeotypicalModelLodAsync(string cdbName, GeotypicalModelLod geotypicalModelLod,
+        Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
+        CancellationToken cancellationToken)
     {
         selectFromGeotypicalModelLodCommand.Parameters[CdbParamName].Value = cdbName;
         SetGeotypicalModelLodParameters(selectFromGeotypicalModelLodCommand, geotypicalModelLod);
@@ -2070,33 +1970,14 @@ public abstract class SQLDataStore : IDisposable
             while (await dbDataReader.ReadAsync(cancellationToken))
             {
                 await using Stream stream = dbDataReader.GetStream(ContentColumnName);
-                await stream.CopyToAsync(output, cancellationToken);
+                await fileFoundAsyncAction(stream, cancellationToken);
                 return true;
             }
         } while (await dbDataReader.NextResultAsync(cancellationToken));
         return false;
     }
 
-    /// <summary>
-    /// Returns a geotypical model level of detail file from a CDB data store.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="geotypicalModelLod">The geotypical model level of detail identifier.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The file contents.</returns>
-    /// <exception cref="FileNotFoundException">If the file was not found in the database.</exception>
-    public virtual async Task<byte[]> SelectFromGeotypicalModelLodAsync(string cdbName, GeotypicalModelLod geotypicalModelLod, CancellationToken cancellationToken = default)
-    {
-        await using MemoryStream memoryStream = new();
-        if (await TrySelectFromGeotypicalModelLodAsync(cdbName, geotypicalModelLod, memoryStream, cancellationToken))
-        {
-            return memoryStream.ToArray();
-        }
-        else
-        {
-            throw new FileNotFoundException("Geotypical model level of detail file not found.", geotypicalModelLod.Filename);
-        }
-    }
+    #endregion
 
     #endregion
 
@@ -2176,6 +2057,8 @@ public abstract class SQLDataStore : IDisposable
     {
         get;
     }
+
+    #region Insert
 
     /// <summary>
     /// The SQL statement to insert a row into the Moving Model table.
@@ -2306,6 +2189,10 @@ public abstract class SQLDataStore : IDisposable
         return insertIntoMovingModelCommand.ExecuteNonQueryAsync(cancellationToken);
     }
 
+    #endregion
+
+    #region Select
+
     /// <summary>
     /// The SQL statement to select a row from the Moving Model table.
     /// This takes twelve parameters,
@@ -2340,32 +2227,17 @@ public abstract class SQLDataStore : IDisposable
     }
 
     /// <summary>
-    /// Tries to find and return a moving model file from a CDB data store.
-    /// Returns <see langword="true"/> if the file was found, and writes the
-    /// file contents to the <paramref name="content"/> parameter.
+    /// Tries to find a moving model file in the database.
+    /// If the file was found, runs <paramref name="fileFoundAction"/> on the file contents.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store.</param>
     /// <param name="movingModel">The moving model identifier.</param>
-    /// <param name="content">An output variable that will receive the file contents.</param>
-    /// <returns><see langword="true"/> if the file was found and returned.</returns>
-    public virtual bool TrySelectFromMovingModel(string cdbName, MovingModel movingModel, [NotNullWhen(true)] out byte[] content)
-    {
-        using MemoryStream memoryStream = new();
-        bool succeeded = TrySelectFromMovingModel(cdbName, movingModel, memoryStream);
-        content = memoryStream.ToArray();
-        return succeeded;
-    }
-
-    /// <summary>
-    /// Tries to find and return a moving model file from a CDB data store.
-    /// Returns <see langword="true"/> if the file was found, and writes the
-    /// file contents to the <paramref name="output"/> parameter.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="movingModel">The moving model identifier.</param>
-    /// <param name="output">A stream that will receive the file contents.</param>
-    /// <returns><see langword="true"/> if the file was found and returned.</returns>
-    public virtual bool TrySelectFromMovingModel(string cdbName, MovingModel movingModel, Stream output)
+    /// <param name="fileFoundAction">The action to run if the file is found.
+    /// The stream will be automatically closed after the action returns or
+    /// throws an exception.</param>
+    /// <returns><see langword="true"/> if the file was found.</returns>
+    public virtual bool TrySelectFromMovingModel(string cdbName, MovingModel movingModel,
+        Action<Stream> fileFoundAction)
     {
         selectFromMovingModelCommand.Parameters[CdbParamName].Value = cdbName;
         SetMovingModelParameters(selectFromMovingModelCommand, movingModel);
@@ -2377,7 +2249,7 @@ public abstract class SQLDataStore : IDisposable
             while (dbDataReader.Read())
             {
                 using Stream stream = dbDataReader.GetStream(ContentColumnName);
-                stream.CopyTo(output);
+                fileFoundAction(stream);
                 return true;
             }
         } while (dbDataReader.NextResult());
@@ -2385,16 +2257,19 @@ public abstract class SQLDataStore : IDisposable
     }
 
     /// <summary>
-    /// Tries to find and return a moving model file from a CDB data store.
-    /// Returns <see langword="true"/> if the file was found, and writes the
-    /// file contents to the <paramref name="output"/> parameter.
+    /// Tries to find a moving model file in the database.
+    /// If the file was found, runs <paramref name="fileFoundAsyncAction"/> on the file contents.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store.</param>
     /// <param name="movingModel">The moving model identifier.</param>
-    /// <param name="output">A stream that will receive the file contents.</param>
+    /// <param name="fileFoundAsyncAction">The action to run if the file is found.
+    /// The stream will be automatically closed after the action returns or
+    /// throws an exception.</param>
     /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns><see langword="true"/> if the file was found and returned.</returns>
-    public virtual async Task<bool> TrySelectFromMovingModelAsync(string cdbName, MovingModel movingModel, Stream output, CancellationToken cancellationToken = default)
+    /// <returns><see langword="true"/> if the file was found.</returns>
+    public virtual async Task<bool> TrySelectFromMovingModelAsync(string cdbName, MovingModel movingModel,
+        Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
+        CancellationToken cancellationToken)
     {
         selectFromMovingModelCommand.Parameters[CdbParamName].Value = cdbName;
         SetMovingModelParameters(selectFromMovingModelCommand, movingModel);
@@ -2406,33 +2281,14 @@ public abstract class SQLDataStore : IDisposable
             while (await dbDataReader.ReadAsync(cancellationToken))
             {
                 await using Stream stream = dbDataReader.GetStream(ContentColumnName);
-                await stream.CopyToAsync(output, cancellationToken);
+                await fileFoundAsyncAction(stream, cancellationToken);
                 return true;
             }
         } while (await dbDataReader.NextResultAsync(cancellationToken));
         return false;
     }
 
-    /// <summary>
-    /// Returns a moving model file from a CDB data store.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="movingModel">The moving model identifier.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The file contents.</returns>
-    /// <exception cref="FileNotFoundException">If the file was not found in the database.</exception>
-    public virtual async Task<byte[]> SelectFromMovingModelAsync(string cdbName, MovingModel movingModel, CancellationToken cancellationToken = default)
-    {
-        await using MemoryStream memoryStream = new();
-        if (await TrySelectFromMovingModelAsync(cdbName, movingModel, memoryStream, cancellationToken))
-        {
-            return memoryStream.ToArray();
-        }
-        else
-        {
-            throw new FileNotFoundException("Moving model file not found.", movingModel.Filename);
-        }
-    }
+    #endregion
 
     #endregion
 
@@ -2445,6 +2301,8 @@ public abstract class SQLDataStore : IDisposable
     {
         get;
     }
+
+    #region Insert
 
     /// <summary>
     /// The SQL statement to insert a row into the Moving Model Level of Detail table.
@@ -2578,6 +2436,10 @@ public abstract class SQLDataStore : IDisposable
         return insertIntoMovingModelLodCommand.ExecuteNonQueryAsync(cancellationToken);
     }
 
+    #endregion
+
+    #region Select
+
     /// <summary>
     /// The SQL statement to select a row from the Moving Model Level of Detail table.
     /// This takes thirteen parameters,
@@ -2613,32 +2475,17 @@ public abstract class SQLDataStore : IDisposable
     }
 
     /// <summary>
-    /// Tries to find and return a moving model level of detail file from a CDB data store.
-    /// Returns <see langword="true"/> if the file was found, and writes the
-    /// file contents to the <paramref name="content"/> parameter.
+    /// Tries to find a moving model level of detail file in the database.
+    /// If the file was found, runs <paramref name="fileFoundAction"/> on the file contents.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store.</param>
     /// <param name="movingModelLod">The moving model level of detail identifier.</param>
-    /// <param name="content">An output variable that will receive the file contents.</param>
-    /// <returns><see langword="true"/> if the file was found and returned.</returns>
-    public virtual bool TrySelectFromMovingModelLod(string cdbName, MovingModelLod movingModelLod, [NotNullWhen(true)] out byte[] content)
-    {
-        using MemoryStream memoryStream = new();
-        bool succeeded = TrySelectFromMovingModelLod(cdbName, movingModelLod, memoryStream);
-        content = memoryStream.ToArray();
-        return succeeded;
-    }
-
-    /// <summary>
-    /// Tries to find and return a moving model level of detail file from a CDB data store.
-    /// Returns <see langword="true"/> if the file was found, and writes the
-    /// file contents to the <paramref name="output"/> parameter.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="movingModelLod">The moving model level of detail identifier.</param>
-    /// <param name="output">A stream that will receive the file contents.</param>
-    /// <returns><see langword="true"/> if the file was found and returned.</returns>
-    public virtual bool TrySelectFromMovingModelLod(string cdbName, MovingModelLod movingModelLod, Stream output)
+    /// <param name="fileFoundAction">The action to run if the file is found.
+    /// The stream will be automatically closed after the action returns or
+    /// throws an exception.</param>
+    /// <returns><see langword="true"/> if the file was found.</returns>
+    public virtual bool TrySelectFromMovingModelLod(string cdbName, MovingModelLod movingModelLod,
+        Action<Stream> fileFoundAction)
     {
         selectFromMovingModelLodCommand.Parameters[CdbParamName].Value = cdbName;
         SetMovingModelLodParameters(selectFromMovingModelLodCommand, movingModelLod);
@@ -2650,7 +2497,7 @@ public abstract class SQLDataStore : IDisposable
             while (dbDataReader.Read())
             {
                 using Stream stream = dbDataReader.GetStream(ContentColumnName);
-                stream.CopyTo(output);
+                fileFoundAction(stream);
                 return true;
             }
         } while (dbDataReader.NextResult());
@@ -2658,16 +2505,19 @@ public abstract class SQLDataStore : IDisposable
     }
 
     /// <summary>
-    /// Tries to find and return a moving model level of detail file from a CDB data store.
-    /// Returns <see langword="true"/> if the file was found, and writes the
-    /// file contents to the <paramref name="output"/> parameter.
+    /// Tries to find a moving model level of detail file in the database.
+    /// If the file was found, runs <paramref name="fileFoundAsyncAction"/> on the file contents.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store.</param>
     /// <param name="movingModelLod">The moving model level of detail identifier.</param>
-    /// <param name="output">A stream that will receive the file contents.</param>
+    /// <param name="fileFoundAsyncAction">The action to run if the file is found.
+    /// The stream will be automatically closed after the action returns or
+    /// throws an exception.</param>
     /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns><see langword="true"/> if the file was found and returned.</returns>
-    public virtual async Task<bool> TrySelectFromMovingModelLodAsync(string cdbName, MovingModelLod movingModelLod, Stream output, CancellationToken cancellationToken = default)
+    /// <returns><see langword="true"/> if the file was found.</returns>
+    public virtual async Task<bool> TrySelectFromMovingModelLodAsync(string cdbName, MovingModelLod movingModelLod,
+        Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
+        CancellationToken cancellationToken)
     {
         selectFromMovingModelLodCommand.Parameters[CdbParamName].Value = cdbName;
         SetMovingModelLodParameters(selectFromMovingModelLodCommand, movingModelLod);
@@ -2679,33 +2529,14 @@ public abstract class SQLDataStore : IDisposable
             while (await dbDataReader.ReadAsync(cancellationToken))
             {
                 await using Stream stream = dbDataReader.GetStream(ContentColumnName);
-                await stream.CopyToAsync(output, cancellationToken);
+                await fileFoundAsyncAction(stream, cancellationToken);
                 return true;
             }
         } while (await dbDataReader.NextResultAsync(cancellationToken));
         return false;
     }
 
-    /// <summary>
-    /// Returns a moving model level of detail file from a CDB data store.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="movingModelLod">The moving model level of detail identifier.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The file contents.</returns>
-    /// <exception cref="FileNotFoundException">If the file was not found in the database.</exception>
-    public virtual async Task<byte[]> SelectFromMovingModelLodAsync(string cdbName, MovingModelLod movingModelLod, CancellationToken cancellationToken = default)
-    {
-        await using MemoryStream memoryStream = new();
-        if (await TrySelectFromMovingModelLodAsync(cdbName, movingModelLod, memoryStream, cancellationToken))
-        {
-            return memoryStream.ToArray();
-        }
-        else
-        {
-            throw new FileNotFoundException("Moving model level of detail file not found.", movingModelLod.Filename);
-        }
-    }
+    #endregion
 
     #endregion
 
@@ -2718,6 +2549,8 @@ public abstract class SQLDataStore : IDisposable
     {
         get;
     }
+
+    #region Insert
 
     /// <summary>
     /// The name of the SQL parameter for a Tile latitude.
@@ -2878,6 +2711,10 @@ public abstract class SQLDataStore : IDisposable
         return insertIntoTileCommand.ExecuteNonQueryAsync(cancellationToken);
     }
 
+    #endregion
+
+    #region Select
+
     /// <summary>
     /// The SQL statement to select a row from the Tile table.
     /// This takes ten parameters,
@@ -2910,32 +2747,17 @@ public abstract class SQLDataStore : IDisposable
     }
 
     /// <summary>
-    /// Tries to find and return a tiled dataset file from a CDB data store.
-    /// Returns <see langword="true"/> if the file was found, and writes the
-    /// file contents to the <paramref name="content"/> parameter.
+    /// Tries to find a tiled dataset file in the database.
+    /// If the file was found, runs <paramref name="fileFoundAction"/> on the file contents.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store.</param>
     /// <param name="tile">The tile identifier.</param>
-    /// <param name="content">An output variable that will receive the file contents.</param>
-    /// <returns><see langword="true"/> if the file was found and returned.</returns>
-    public virtual bool TrySelectFromTile(string cdbName, Tile tile, [NotNullWhen(true)] out byte[] content)
-    {
-        using MemoryStream memoryStream = new();
-        bool succeeded = TrySelectFromTile(cdbName, tile, memoryStream);
-        content = memoryStream.ToArray();
-        return succeeded;
-    }
-
-    /// <summary>
-    /// Tries to find and return a tiled dataset file from a CDB data store.
-    /// Returns <see langword="true"/> if the file was found, and writes the
-    /// file contents to the <paramref name="output"/> parameter.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="tile">The tile identifier.</param>
-    /// <param name="output">A stream that will receive the file contents.</param>
-    /// <returns><see langword="true"/> if the file was found and returned.</returns>
-    public virtual bool TrySelectFromTile(string cdbName, Tile tile, Stream output)
+    /// <param name="fileFoundAction">The action to run if the file is found.
+    /// The stream will be automatically closed after the action returns or
+    /// throws an exception.</param>
+    /// <returns><see langword="true"/> if the file was found.</returns>
+    public virtual bool TrySelectFromTile(string cdbName, Tile tile,
+        Action<Stream> fileFoundAction)
     {
         selectFromTileCommand.Parameters[CdbParamName].Value = cdbName;
         SetTileParameters(selectFromTileCommand, tile);
@@ -2947,7 +2769,7 @@ public abstract class SQLDataStore : IDisposable
             while (dbDataReader.Read())
             {
                 using Stream stream = dbDataReader.GetStream(ContentColumnName);
-                stream.CopyTo(output);
+                fileFoundAction(stream);
                 return true;
             }
         } while (dbDataReader.NextResult());
@@ -2955,16 +2777,19 @@ public abstract class SQLDataStore : IDisposable
     }
 
     /// <summary>
-    /// Tries to find and return a tiled dataset file from a CDB data store.
-    /// Returns <see langword="true"/> if the file was found, and writes the
-    /// file contents to the <paramref name="output"/> parameter.
+    /// Tries to find a tiled dataset file in the database.
+    /// If the file was found, runs <paramref name="fileFoundAsyncAction"/> on the file contents.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store.</param>
     /// <param name="tile">The tile identifier.</param>
-    /// <param name="output">A stream that will receive the file contents.</param>
+    /// <param name="fileFoundAsyncAction">The action to run if the file is found.
+    /// The stream will be automatically closed after the action returns or
+    /// throws an exception.</param>
     /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns><see langword="true"/> if the file was found and returned.</returns>
-    public virtual async Task<bool> TrySelectFromTileAsync(string cdbName, Tile tile, Stream output, CancellationToken cancellationToken = default)
+    /// <returns><see langword="true"/> if the file was found.</returns>
+    public virtual async Task<bool> TrySelectFromTileAsync(string cdbName, Tile tile,
+        Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
+        CancellationToken cancellationToken)
     {
         selectFromTileCommand.Parameters[CdbParamName].Value = cdbName;
         SetTileParameters(selectFromTileCommand, tile);
@@ -2976,33 +2801,14 @@ public abstract class SQLDataStore : IDisposable
             while (await dbDataReader.ReadAsync(cancellationToken))
             {
                 await using Stream stream = dbDataReader.GetStream(ContentColumnName);
-                await stream.CopyToAsync(output, cancellationToken);
+                await fileFoundAsyncAction(stream, cancellationToken);
                 return true;
             }
         } while (await dbDataReader.NextResultAsync(cancellationToken));
         return false;
     }
 
-    /// <summary>
-    /// Returns a tiled dataset file from a CDB data store.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="tile">The tile identifier.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The file contents.</returns>
-    /// <exception cref="FileNotFoundException">If the file was not found in the database.</exception>
-    public virtual async Task<byte[]> SelectFromTileAsync(string cdbName, Tile tile, CancellationToken cancellationToken = default)
-    {
-        await using MemoryStream memoryStream = new();
-        if (await TrySelectFromTileAsync(cdbName, tile, memoryStream, cancellationToken))
-        {
-            return memoryStream.ToArray();
-        }
-        else
-        {
-            throw new FileNotFoundException("Tiled dataset file not found.", tile.Filename);
-        }
-    }
+    #endregion
 
     #endregion
 
@@ -3015,6 +2821,8 @@ public abstract class SQLDataStore : IDisposable
     {
         get;
     }
+
+    #region Insert
 
     /// <summary>
     /// The SQL statement to insert a row into the TileArchivedFeature table.
@@ -3154,6 +2962,10 @@ public abstract class SQLDataStore : IDisposable
         return insertIntoTileArchivedFeatureCommand.ExecuteNonQueryAsync(cancellationToken);
     }
 
+    #endregion
+
+    #region Select
+
     /// <summary>
     /// The SQL statement to select a row from the TileArchivedFeature table.
     /// This takes fifteen parameters,
@@ -3191,32 +3003,17 @@ public abstract class SQLDataStore : IDisposable
     }
 
     /// <summary>
-    /// Tries to find and return an un-archived tiled dataset feature file from a CDB data store.
-    /// Returns <see langword="true"/> if the file was found, and writes the
-    /// file contents to the <paramref name="content"/> parameter.
+    /// Tries to find an un-archived tiled dataset feature file in the database.
+    /// If the file was found, runs <paramref name="fileFoundAction"/> on the file contents.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store.</param>
     /// <param name="tileArchivedFeature">The tiled dataset feature identifier.</param>
-    /// <param name="content">An output variable that will receive the file contents.</param>
-    /// <returns><see langword="true"/> if the file was found and returned.</returns>
-    public virtual bool TrySelectFromTileArchivedFeature(string cdbName, TileArchivedFeature tileArchivedFeature, [NotNullWhen(true)] out byte[] content)
-    {
-        using MemoryStream memoryStream = new();
-        bool succeeded = TrySelectFromTileArchivedFeature(cdbName, tileArchivedFeature, memoryStream);
-        content = memoryStream.ToArray();
-        return succeeded;
-    }
-
-    /// <summary>
-    /// Tries to find and return an un-archived tiled dataset feature file from a CDB data store.
-    /// Returns <see langword="true"/> if the file was found, and writes the
-    /// file contents to the <paramref name="output"/> parameter.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="tileArchivedFeature">The tiled dataset feature identifier.</param>
-    /// <param name="output">A stream that will receive the file contents.</param>
-    /// <returns><see langword="true"/> if the file was found and returned.</returns>
-    public virtual bool TrySelectFromTileArchivedFeature(string cdbName, TileArchivedFeature tileArchivedFeature, Stream output)
+    /// <param name="fileFoundAction">The action to run if the file is found.
+    /// The stream will be automatically closed after the action returns or
+    /// throws an exception.</param>
+    /// <returns><see langword="true"/> if the file was found.</returns>
+    public virtual bool TrySelectFromTileArchivedFeature(string cdbName, TileArchivedFeature tileArchivedFeature,
+        Action<Stream> fileFoundAction)
     {
         selectFromTileArchivedFeatureCommand.Parameters[CdbParamName].Value = cdbName;
         SetTileArchivedFeatureParameters(selectFromTileArchivedFeatureCommand, tileArchivedFeature);
@@ -3228,7 +3025,7 @@ public abstract class SQLDataStore : IDisposable
             while (dbDataReader.Read())
             {
                 using Stream stream = dbDataReader.GetStream(ContentColumnName);
-                stream.CopyTo(output);
+                fileFoundAction(stream);
                 return true;
             }
         } while (dbDataReader.NextResult());
@@ -3236,16 +3033,19 @@ public abstract class SQLDataStore : IDisposable
     }
 
     /// <summary>
-    /// Tries to find and return an un-archived tiled dataset feature file from a CDB data store.
-    /// Returns <see langword="true"/> if the file was found, and writes the
-    /// file contents to the <paramref name="output"/> parameter.
+    /// Tries to find an un-archived tiled dataset feature file in the database.
+    /// If the file was found, runs <paramref name="fileFoundAsyncAction"/> on the file contents.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store.</param>
     /// <param name="tileArchivedFeature">The tiled dataset feature identifier.</param>
-    /// <param name="output">A stream that will receive the file contents.</param>
+    /// <param name="fileFoundAsyncAction">The action to run if the file is found.
+    /// The stream will be automatically closed after the action returns or
+    /// throws an exception.</param>
     /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns><see langword="true"/> if the file was found and returned.</returns>
-    public virtual async Task<bool> TrySelectFromTileArchivedFeatureAsync(string cdbName, TileArchivedFeature tileArchivedFeature, Stream output, CancellationToken cancellationToken = default)
+    /// <returns><see langword="true"/> if the file was found.</returns>
+    public virtual async Task<bool> TrySelectFromTileArchivedFeatureAsync(string cdbName, TileArchivedFeature tileArchivedFeature,
+        Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
+        CancellationToken cancellationToken)
     {
         selectFromTileArchivedFeatureCommand.Parameters[CdbParamName].Value = cdbName;
         SetTileArchivedFeatureParameters(selectFromTileArchivedFeatureCommand, tileArchivedFeature);
@@ -3257,33 +3057,14 @@ public abstract class SQLDataStore : IDisposable
             while (await dbDataReader.ReadAsync(cancellationToken))
             {
                 await using Stream stream = dbDataReader.GetStream(ContentColumnName);
-                await stream.CopyToAsync(output, cancellationToken);
+                await fileFoundAsyncAction(stream, cancellationToken);
                 return true;
             }
         } while (await dbDataReader.NextResultAsync(cancellationToken));
         return false;
     }
 
-    /// <summary>
-    /// Returns an un-archived tiled dataset feature file from a CDB data store.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="tileArchivedFeature">The tiled dataset feature identifier.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The file contents.</returns>
-    /// <exception cref="FileNotFoundException">If the file was not found in the database.</exception>
-    public virtual async Task<byte[]> SelectFromTileArchivedFeatureAsync(string cdbName, TileArchivedFeature tileArchivedFeature, CancellationToken cancellationToken = default)
-    {
-        await using MemoryStream memoryStream = new();
-        if (await TrySelectFromTileArchivedFeatureAsync(cdbName, tileArchivedFeature, memoryStream, cancellationToken))
-        {
-            return memoryStream.ToArray();
-        }
-        else
-        {
-            throw new FileNotFoundException("Tile unarchived feature file not found.", tileArchivedFeature.Filename);
-        }
-    }
+    #endregion
 
     #endregion
 
@@ -3296,6 +3077,8 @@ public abstract class SQLDataStore : IDisposable
     {
         get;
     }
+
+    #region Insert
 
     /// <summary>
     /// The SQL statement to insert a row into the TileArchivedTexture table.
@@ -3423,6 +3206,10 @@ public abstract class SQLDataStore : IDisposable
         return insertIntoTileArchivedTextureCommand.ExecuteNonQueryAsync(cancellationToken);
     }
 
+    #endregion
+
+    #region Select
+
     /// <summary>
     /// The SQL statement to select a row from the TileArchivedTexture table.
     /// This takes eleven parameters,
@@ -3456,32 +3243,17 @@ public abstract class SQLDataStore : IDisposable
     }
 
     /// <summary>
-    /// Tries to find and return an un-archived tiled dataset texture file from a CDB data store.
-    /// Returns <see langword="true"/> if the file was found, and writes the
-    /// file contents to the <paramref name="content"/> parameter.
+    /// Tries to find an un-archived tiled dataset texture file in the database.
+    /// If the file was found, runs <paramref name="fileFoundAction"/> on the file contents.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store.</param>
     /// <param name="tileArchivedTexture">The tiled dataset texture identifier.</param>
-    /// <param name="content">An output variable that will receive the file contents.</param>
-    /// <returns><see langword="true"/> if the file was found and returned.</returns>
-    public virtual bool TrySelectFromTileArchivedTexture(string cdbName, TileArchivedTexture tileArchivedTexture, [NotNullWhen(true)] out byte[] content)
-    {
-        using MemoryStream memoryStream = new();
-        bool succeeded = TrySelectFromTileArchivedTexture(cdbName, tileArchivedTexture, memoryStream);
-        content = memoryStream.ToArray();
-        return succeeded;
-    }
-
-    /// <summary>
-    /// Tries to find and return an un-archived tiled dataset texture file from a CDB data store.
-    /// Returns <see langword="true"/> if the file was found, and writes the
-    /// file contents to the <paramref name="output"/> parameter.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="tileArchivedTexture">The tiled dataset texture identifier.</param>
-    /// <param name="output">A stream that will receive the file contents.</param>
-    /// <returns><see langword="true"/> if the file was found and returned.</returns>
-    public virtual bool TrySelectFromTileArchivedTexture(string cdbName, TileArchivedTexture tileArchivedTexture, Stream output)
+    /// <param name="fileFoundAction">The action to run if the file is found.
+    /// The stream will be automatically closed after the action returns or
+    /// throws an exception.</param>
+    /// <returns><see langword="true"/> if the file was found.</returns>
+    public virtual bool TrySelectFromTileArchivedTexture(string cdbName, TileArchivedTexture tileArchivedTexture,
+        Action<Stream> fileFoundAction)
     {
         selectFromTileArchivedTextureCommand.Parameters[CdbParamName].Value = cdbName;
         SetTileArchivedTextureParameters(selectFromTileArchivedTextureCommand, tileArchivedTexture);
@@ -3493,7 +3265,7 @@ public abstract class SQLDataStore : IDisposable
             while (dbDataReader.Read())
             {
                 using Stream stream = dbDataReader.GetStream(ContentColumnName);
-                stream.CopyTo(output);
+                fileFoundAction(stream);
                 return true;
             }
         } while (dbDataReader.NextResult());
@@ -3501,16 +3273,19 @@ public abstract class SQLDataStore : IDisposable
     }
 
     /// <summary>
-    /// Tries to find and return an un-archived tiled dataset texture file from a CDB data store.
-    /// Returns <see langword="true"/> if the file was found, and writes the
-    /// file contents to the <paramref name="output"/> parameter.
+    /// Tries to find an un-archived tiled dataset texture file in the database.
+    /// If the file was found, runs <paramref name="fileFoundAsyncAction"/> on the file contents.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store.</param>
     /// <param name="tileArchivedTexture">The tiled dataset texture identifier.</param>
-    /// <param name="output">A stream that will receive the file contents.</param>
+    /// <param name="fileFoundAsyncAction">The action to run if the file is found.
+    /// The stream will be automatically closed after the action returns or
+    /// throws an exception.</param>
     /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns><see langword="true"/> if the file was found and returned.</returns>
-    public virtual async Task<bool> TrySelectFromTileArchivedTextureAsync(string cdbName, TileArchivedTexture tileArchivedTexture, Stream output, CancellationToken cancellationToken = default)
+    /// <returns><see langword="true"/> if the file was found.</returns>
+    public virtual async Task<bool> TrySelectFromTileArchivedTextureAsync(string cdbName, TileArchivedTexture tileArchivedTexture,
+        Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
+        CancellationToken cancellationToken)
     {
         selectFromTileArchivedTextureCommand.Parameters[CdbParamName].Value = cdbName;
         SetTileArchivedTextureParameters(selectFromTileArchivedTextureCommand, tileArchivedTexture);
@@ -3522,33 +3297,14 @@ public abstract class SQLDataStore : IDisposable
             while (await dbDataReader.ReadAsync(cancellationToken))
             {
                 await using Stream stream = dbDataReader.GetStream(ContentColumnName);
-                await stream.CopyToAsync(output, cancellationToken);
+                await fileFoundAsyncAction(stream, cancellationToken);
                 return true;
             }
         } while (await dbDataReader.NextResultAsync(cancellationToken));
         return false;
     }
 
-    /// <summary>
-    /// Returns an un-archived tiled dataset texture file from a CDB data store.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="tileArchivedTexture">The tiled dataset texture identifier.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The file contents.</returns>
-    /// <exception cref="FileNotFoundException">If the file was not found in the database.</exception>
-    public virtual async Task<byte[]> SelectFromTileArchivedTextureAsync(string cdbName, TileArchivedTexture tileArchivedTexture, CancellationToken cancellationToken = default)
-    {
-        await using MemoryStream memoryStream = new();
-        if (await TrySelectFromTileArchivedTextureAsync(cdbName, tileArchivedTexture, memoryStream, cancellationToken))
-        {
-            return memoryStream.ToArray();
-        }
-        else
-        {
-            throw new FileNotFoundException("Tile unarchived texture file not found.", tileArchivedTexture.Filename);
-        }
-    }
+    #endregion
 
     #endregion
 
@@ -3561,6 +3317,8 @@ public abstract class SQLDataStore : IDisposable
     {
         get;
     }
+
+    #region Insert
 
     /// <summary>
     /// The SQL statement to insert a row into the Navigation table.
@@ -3670,6 +3428,10 @@ public abstract class SQLDataStore : IDisposable
         return insertIntoNavigationCommand.ExecuteNonQueryAsync(cancellationToken);
     }
 
+    #endregion
+
+    #region Select
+
     /// <summary>
     /// The SQL statement to select a row from the Navigation table.
     /// This takes five parameters,
@@ -3697,32 +3459,17 @@ public abstract class SQLDataStore : IDisposable
     }
 
     /// <summary>
-    /// Tries to find and return a navigation file from a CDB data store.
-    /// Returns <see langword="true"/> if the file was found, and writes the
-    /// file contents to the <paramref name="content"/> parameter.
+    /// Tries to find a navigation file in the database.
+    /// If the file was found, runs <paramref name="fileFoundAction"/> on the file contents.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store.</param>
     /// <param name="navigation">The navigation identifier.</param>
-    /// <param name="content">An output variable that will receive the file contents.</param>
-    /// <returns><see langword="true"/> if the file was found and returned.</returns>
-    public virtual bool TrySelectFromNavigation(string cdbName, Navigation navigation, [NotNullWhen(true)] out byte[] content)
-    {
-        using MemoryStream memoryStream = new();
-        bool succeeded = TrySelectFromNavigation(cdbName, navigation, memoryStream);
-        content = memoryStream.ToArray();
-        return succeeded;
-    }
-
-    /// <summary>
-    /// Tries to find and return a navigation file from a CDB data store.
-    /// Returns <see langword="true"/> if the file was found, and writes the
-    /// file contents to the <paramref name="output"/> parameter.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="navigation">The navigation identifier.</param>
-    /// <param name="output">A stream that will receive the file contents.</param>
-    /// <returns><see langword="true"/> if the file was found and returned.</returns>
-    public virtual bool TrySelectFromNavigation(string cdbName, Navigation navigation, Stream output)
+    /// <param name="fileFoundAction">The action to run if the file is found.
+    /// The stream will be automatically closed after the action returns or
+    /// throws an exception.</param>
+    /// <returns><see langword="true"/> if the file was found.</returns>
+    public virtual bool TrySelectFromNavigation(string cdbName, Navigation navigation,
+        Action<Stream> fileFoundAction)
     {
         selectFromNavigationCommand.Parameters[CdbParamName].Value = cdbName;
         SetNavigationParameters(selectFromNavigationCommand, navigation);
@@ -3734,7 +3481,7 @@ public abstract class SQLDataStore : IDisposable
             while (dbDataReader.Read())
             {
                 using Stream stream = dbDataReader.GetStream(ContentColumnName);
-                stream.CopyTo(output);
+                fileFoundAction(stream);
                 return true;
             }
         } while (dbDataReader.NextResult());
@@ -3742,16 +3489,19 @@ public abstract class SQLDataStore : IDisposable
     }
 
     /// <summary>
-    /// Tries to find and return a navigation file from a CDB data store.
-    /// Returns <see langword="true"/> if the file was found, and writes the
-    /// file contents to the <paramref name="output"/> parameter.
+    /// Tries to find a navigation file in the database.
+    /// If the file was found, runs <paramref name="fileFoundAsyncAction"/> on the file contents.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store.</param>
     /// <param name="navigation">The navigation identifier.</param>
-    /// <param name="output">A stream that will receive the file contents.</param>
+    /// <param name="fileFoundAsyncAction">The action to run if the file is found.
+    /// The stream will be automatically closed after the action returns or
+    /// throws an exception.</param>
     /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns><see langword="true"/> if the file was found and returned.</returns>
-    public virtual async Task<bool> TrySelectFromNavigationAsync(string cdbName, Navigation navigation, Stream output, CancellationToken cancellationToken = default)
+    /// <returns><see langword="true"/> if the file was found.</returns>
+    public virtual async Task<bool> TrySelectFromNavigationAsync(string cdbName, Navigation navigation,
+        Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
+        CancellationToken cancellationToken)
     {
         selectFromNavigationCommand.Parameters[CdbParamName].Value = cdbName;
         SetNavigationParameters(selectFromNavigationCommand, navigation);
@@ -3763,34 +3513,14 @@ public abstract class SQLDataStore : IDisposable
             while (await dbDataReader.ReadAsync(cancellationToken))
             {
                 await using Stream stream = dbDataReader.GetStream(ContentColumnName);
-                await stream.CopyToAsync(output, cancellationToken);
+                await fileFoundAsyncAction(stream, cancellationToken);
                 return true;
             }
         } while (await dbDataReader.NextResultAsync(cancellationToken));
         return false;
     }
 
-    /// <summary>
-    /// Returns a navigation file from a CDB data store.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="navigation">The navigation identifier.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// 
-    /// <returns>The file contents.</returns>
-    /// <exception cref="FileNotFoundException">If the file was not found in the database.</exception>
-    public virtual async Task<byte[]> SelectFromNavigationAsync(string cdbName, Navigation navigation, CancellationToken cancellationToken = default)
-    {
-        await using MemoryStream memoryStream = new();
-        if (await TrySelectFromNavigationAsync(cdbName, navigation, memoryStream, cancellationToken))
-        {
-            return memoryStream.ToArray();
-        }
-        else
-        {
-            throw new FileNotFoundException("Navigation file not found.", navigation.Filename);
-        }
-    }
+    #endregion
 
     #endregion
 
@@ -4027,10 +3757,13 @@ public abstract class SQLDataStore : IDisposable
     private bool disposedValue;
 
     /// <summary>
-    /// Disposes of all resources owned by this object.
+    /// Performs application-defined tasks associated with freeing, releasing, or resetting
+    /// unmanaged resources.
     /// </summary>
-    /// <param name="disposing">Whether to dispose or not.
-    /// Ask Microsoft, it's their pattern.</param>
+    /// <param name="disposing"><see langword="true"/> if the call came from a
+    /// <see cref="IDisposable.Dispose"/> or <see cref="IAsyncDisposable.DisposeAsync"/> method,
+    /// <see langword="false"/> if it came from a finalizer.</param>
+    /// <seealso href="https://learn.microsoft.com/en-us/dotnet/standard/garbage-collection/implementing-dispose"/>
     protected virtual void Dispose(bool disposing)
     {
         if (!disposedValue)

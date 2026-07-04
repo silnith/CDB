@@ -1,7 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using Silnith.CDB;
 using System;
-using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -54,32 +53,21 @@ public class FileSystemCDB : ICDB
     public DirectoryInfo CdbRoot { get; }
 
     /// <inheritdoc/>
-    public bool TryReadFile(string filePathAndName, [NotNullWhen(true)] out byte[] content)
+    public bool TryReadFile(string filePathAndName, Action<Stream> fileFoundAction)
     {
         FileInfo file = new(Path.Combine(CdbRoot.FullName, filePathAndName));
         if (file.Exists)
         {
             logger.LogTrace("Found: {File}", file);
-            content = File.ReadAllBytes(file.FullName);
-            return true;
-        }
-        else
-        {
-            logger.LogTrace("Not found: {File}", file);
-            content = Array.Empty<byte>();
-            return false;
-        }
-    }
-
-    /// <inheritdoc/>
-    public bool TryReadFile(string filePathAndName, Stream output)
-    {
-        FileInfo file = new(Path.Combine(CdbRoot.FullName, filePathAndName));
-        if (file.Exists)
-        {
-            logger.LogTrace("Found: {File}", file);
-            using FileStream fileStream = file.OpenRead();
-            fileStream.CopyTo(output);
+            FileStreamOptions options = new()
+            {
+                Access = FileAccess.Read,
+                Mode = FileMode.Open,
+                Share = FileShare.Read,
+                Options = FileOptions.SequentialScan,
+            };
+            using FileStream fileStream = new(file.FullName, options);
+            fileFoundAction(fileStream);
             return true;
         }
         else
@@ -90,30 +78,23 @@ public class FileSystemCDB : ICDB
     }
 
     /// <inheritdoc/>
-    public async Task<byte[]> ReadFileAsync(string filePathAndName, CancellationToken cancellationToken = default)
+    public async Task<bool> TryReadFileAsync(string filePathAndName,
+        Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
+        CancellationToken cancellationToken)
     {
         FileInfo file = new(Path.Combine(CdbRoot.FullName, filePathAndName));
         if (file.Exists)
         {
             logger.LogTrace("Found: {File}", file);
-            return await File.ReadAllBytesAsync(file.FullName, cancellationToken);
-        }
-        else
-        {
-            logger.LogTrace("Not found: {File}", file);
-            throw new FileNotFoundException("message", file.FullName);
-        }
-    }
-
-    /// <inheritdoc/>
-    public async Task<bool> TryReadFileAsync(string filePathAndName, Stream output, CancellationToken cancellationToken = default)
-    {
-        FileInfo file = new(Path.Combine(CdbRoot.FullName, filePathAndName));
-        if (file.Exists)
-        {
-            logger.LogTrace("Found: {File}", file);
-            using FileStream fileStream = file.OpenRead();
-            fileStream.CopyTo(output);
+            FileStreamOptions options = new()
+            {
+                Access = FileAccess.Read,
+                Mode = FileMode.Open,
+                Share = FileShare.Read,
+                Options = FileOptions.SequentialScan | FileOptions.Asynchronous,
+            };
+            await using FileStream fileStream = new(file.FullName, options);
+            await fileFoundAsyncAction(fileStream, cancellationToken);
             return true;
         }
         else
@@ -127,6 +108,14 @@ public class FileSystemCDB : ICDB
 
     private bool disposedValue;
 
+    /// <summary>
+    /// Performs application-defined tasks associated with freeing, releasing, or resetting
+    /// unmanaged resources.
+    /// </summary>
+    /// <param name="disposing"><see langword="true"/> if the call came from a
+    /// <see cref="IDisposable.Dispose"/> or <see cref="IAsyncDisposable.DisposeAsync"/> method,
+    /// <see langword="false"/> if it came from a finalizer.</param>
+    /// <seealso href="https://learn.microsoft.com/en-us/dotnet/standard/garbage-collection/implementing-dispose"/>
     protected virtual void Dispose(bool disposing)
     {
         if (!disposedValue)

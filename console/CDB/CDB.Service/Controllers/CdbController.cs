@@ -26,8 +26,13 @@ public class CdbController : ControllerBase
         const string Message = $"{nameof(Get)}({{FileNameAndPath}})";
         using var _ = logger.BeginScope(Message, fileNameAndPath);
 
-        if (dataStore.TryReadFile(fileNameAndPath, out var content))
+        using MemoryStream memoryStream = new();
+        if (dataStore.TryReadFile(fileNameAndPath, stream =>
         {
+            stream.CopyTo(memoryStream);
+        }))
+        {
+            byte[] content = memoryStream.ToArray();
             logger.LogDebug("File found.  {Size}", content.LongLength);
 
             string filename = Path.GetFileName(fileNameAndPath);
