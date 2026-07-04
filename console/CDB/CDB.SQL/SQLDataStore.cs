@@ -551,13 +551,6 @@ public abstract class SQLDataStore : IDisposable
         dbTransaction.Commit();
     }
 
-    /*
-     * TODO: Should we consolidate these?
-     * MetadataNameParamName
-     * TextureNameParamName
-     * ModelNameParamName
-     */
-
     #region Shared SQL Parameters
 
     /// <summary>
@@ -687,7 +680,7 @@ public abstract class SQLDataStore : IDisposable
 
     /// <summary>
     /// Inserts a name into the table identifying all the unique data stores
-    /// contained in the SQLite database.
+    /// contained in the database.
     /// </summary>
     /// <remarks>
     /// <para>
@@ -706,7 +699,7 @@ public abstract class SQLDataStore : IDisposable
 
     /// <summary>
     /// Inserts a name into the table identifying all the unique data stores
-    /// contained in the SQLite database.
+    /// contained in the database.
     /// </summary>
     /// <remarks>
     /// <para>
@@ -821,17 +814,6 @@ public abstract class SQLDataStore : IDisposable
         get;
     }
 
-    private DbCommand CreateInsertIntoMetadataCommand(DbConnection dbConnection)
-    {
-        DbCommand dbCommand = dbConnection.CreateCommand();
-        dbCommand.CommandText = InsertIntoMetadataStatement;
-        CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
-        CreateAndAttachMetadataParameters(dbCommand);
-        CreateAndAttachParameter(dbCommand, ContentParamName, DbType.Binary);
-        dbCommand.Prepare();
-        return dbCommand;
-    }
-
     private void CreateAndAttachMetadataParameters(DbCommand dbCommand)
     {
         CreateAndAttachParameter(dbCommand, MetadataNameParamName, DbType.String);
@@ -844,8 +826,19 @@ public abstract class SQLDataStore : IDisposable
         dbCommand.Parameters[FileTypeParamName].Value = metadata.FileType;
     }
 
+    private DbCommand CreateInsertIntoMetadataCommand(DbConnection dbConnection)
+    {
+        DbCommand dbCommand = dbConnection.CreateCommand();
+        dbCommand.CommandText = InsertIntoMetadataStatement;
+        CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
+        CreateAndAttachMetadataParameters(dbCommand);
+        CreateAndAttachParameter(dbCommand, ContentParamName, DbType.Binary);
+        dbCommand.Prepare();
+        return dbCommand;
+    }
+
     /// <summary>
-    /// Inserts a metadata file into the CDB data store.
+    /// Inserts a metadata file into the database.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
     /// <param name="metadata">The metadata identifier.</param>
@@ -861,7 +854,7 @@ public abstract class SQLDataStore : IDisposable
     }
 
     /// <summary>
-    /// Inserts a metadata file into the CDB data store.
+    /// Inserts a metadata file into the database.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
     /// <param name="metadata">The metadata identifier.</param>
@@ -877,7 +870,7 @@ public abstract class SQLDataStore : IDisposable
     }
 
     /// <summary>
-    /// Inserts a metadata file into the CDB data store.
+    /// Inserts a metadata file into the database.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
     /// <param name="metadata">The metadata identifier.</param>
@@ -894,7 +887,7 @@ public abstract class SQLDataStore : IDisposable
     }
 
     /// <summary>
-    /// Inserts a metadata file into the CDB data store.
+    /// Inserts a metadata file into the database.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
     /// <param name="metadata">The metadata identifier.</param>
@@ -1070,7 +1063,7 @@ public abstract class SQLDataStore : IDisposable
     }
 
     /// <summary>
-    /// Inserts a texture file into the CDB data store.
+    /// Inserts a texture file into the database.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
     /// <param name="texture">The texture identifier.</param>
@@ -1086,7 +1079,7 @@ public abstract class SQLDataStore : IDisposable
     }
 
     /// <summary>
-    /// Inserts a texture file into the CDB data store.
+    /// Inserts a texture file into the database.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
     /// <param name="texture">The texture identifier.</param>
@@ -1102,7 +1095,7 @@ public abstract class SQLDataStore : IDisposable
     }
 
     /// <summary>
-    /// Inserts a texture file into the CDB data store.
+    /// Inserts a texture file into the database.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
     /// <param name="texture">The texture identifier.</param>
@@ -1119,7 +1112,7 @@ public abstract class SQLDataStore : IDisposable
     }
 
     /// <summary>
-    /// Inserts a texture file into the CDB data store.
+    /// Inserts a texture file into the database.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
     /// <param name="texture">The texture identifier.</param>
@@ -1293,7 +1286,7 @@ public abstract class SQLDataStore : IDisposable
     }
 
     /// <summary>
-    /// Inserts a texture mipmap file into the CDB data store.
+    /// Inserts a texture mipmap file into the database.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
     /// <param name="textureLod">The texture mipmap identifier.</param>
@@ -1309,7 +1302,7 @@ public abstract class SQLDataStore : IDisposable
     }
 
     /// <summary>
-    /// Inserts a texture mipmap file into the CDB data store.
+    /// Inserts a texture mipmap file into the database.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
     /// <param name="textureLod">The texture mipmap identifier.</param>
@@ -1325,7 +1318,7 @@ public abstract class SQLDataStore : IDisposable
     }
 
     /// <summary>
-    /// Inserts a texture mipmap file into the CDB data store.
+    /// Inserts a texture mipmap file into the database.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
     /// <param name="textureLod">The texture mipmap identifier.</param>
@@ -1342,7 +1335,7 @@ public abstract class SQLDataStore : IDisposable
     }
 
     /// <summary>
-    /// Inserts a texture mipmap file into the CDB data store.
+    /// Inserts a texture mipmap file into the database.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
     /// <param name="textureLod">The texture mipmap identifier.</param>
@@ -1575,7 +1568,7 @@ public abstract class SQLDataStore : IDisposable
     }
 
     /// <summary>
-    /// Inserts a geotypical model file into the CDB data store.
+    /// Inserts a geotypical model file into the database.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
     /// <param name="geotypicalModel">The geotypical model identifier.</param>
@@ -1591,7 +1584,7 @@ public abstract class SQLDataStore : IDisposable
     }
 
     /// <summary>
-    /// Inserts a geotypical model file into the CDB data store.
+    /// Inserts a geotypical model file into the database.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
     /// <param name="geotypicalModel">The geotypical model identifier.</param>
@@ -1607,7 +1600,7 @@ public abstract class SQLDataStore : IDisposable
     }
 
     /// <summary>
-    /// Inserts a geotypical model file into the CDB data store.
+    /// Inserts a geotypical model file into the database.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
     /// <param name="geotypicalModel">The geotypical model identifier.</param>
@@ -1624,7 +1617,7 @@ public abstract class SQLDataStore : IDisposable
     }
 
     /// <summary>
-    /// Inserts a geotypical model file into the CDB data store.
+    /// Inserts a geotypical model file into the database.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
     /// <param name="geotypicalModel">The geotypical model identifier.</param>
@@ -1814,7 +1807,7 @@ public abstract class SQLDataStore : IDisposable
     }
 
     /// <summary>
-    /// Inserts a geotypical model level of detail file into the CDB data store.
+    /// Inserts a geotypical model level of detail file into the database.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
     /// <param name="geotypicalModelLod">The geotypical model level of detail identifier.</param>
@@ -1830,7 +1823,7 @@ public abstract class SQLDataStore : IDisposable
     }
 
     /// <summary>
-    /// Inserts a geotypical model level of detail file into the CDB data store.
+    /// Inserts a geotypical model level of detail file into the database.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
     /// <param name="geotypicalModelLod">The geotypical model level of detail identifier.</param>
@@ -1846,7 +1839,7 @@ public abstract class SQLDataStore : IDisposable
     }
 
     /// <summary>
-    /// Inserts a geotypical model level of detail file into the CDB data store.
+    /// Inserts a geotypical model level of detail file into the database.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
     /// <param name="geotypicalModelLod">The geotypical model level of detail identifier.</param>
@@ -1863,7 +1856,7 @@ public abstract class SQLDataStore : IDisposable
     }
 
     /// <summary>
-    /// Inserts a geotypical model level of detail file into the CDB data store.
+    /// Inserts a geotypical model level of detail file into the database.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
     /// <param name="geotypicalModelLod">The geotypical model level of detail identifier.</param>
@@ -2124,7 +2117,7 @@ public abstract class SQLDataStore : IDisposable
     }
 
     /// <summary>
-    /// Inserts a moving model file into the CDB data store.
+    /// Inserts a moving model file into the database.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
     /// <param name="movingModel">The moving model identifier.</param>
@@ -2140,7 +2133,7 @@ public abstract class SQLDataStore : IDisposable
     }
 
     /// <summary>
-    /// Inserts a moving model file into the CDB data store.
+    /// Inserts a moving model file into the database.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
     /// <param name="movingModel">The moving model identifier.</param>
@@ -2156,7 +2149,7 @@ public abstract class SQLDataStore : IDisposable
     }
 
     /// <summary>
-    /// Inserts a moving model file into the CDB data store.
+    /// Inserts a moving model file into the database.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
     /// <param name="movingModel">The moving model identifier.</param>
@@ -2173,7 +2166,7 @@ public abstract class SQLDataStore : IDisposable
     }
 
     /// <summary>
-    /// Inserts a moving model file into the CDB data store.
+    /// Inserts a moving model file into the database.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
     /// <param name="movingModel">The moving model identifier.</param>
@@ -2371,7 +2364,7 @@ public abstract class SQLDataStore : IDisposable
     }
 
     /// <summary>
-    /// Inserts a moving model level of detail file into the CDB data store.
+    /// Inserts a moving model level of detail file into the database.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
     /// <param name="movingModelLod">The moving model level of detail identifier.</param>
@@ -2387,7 +2380,7 @@ public abstract class SQLDataStore : IDisposable
     }
 
     /// <summary>
-    /// Inserts a moving model level of detail file into the CDB data store.
+    /// Inserts a moving model level of detail file into the database.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
     /// <param name="movingModelLod">The moving model level of detail identifier.</param>
@@ -2403,7 +2396,7 @@ public abstract class SQLDataStore : IDisposable
     }
 
     /// <summary>
-    /// Inserts a moving model level of detail file into the CDB data store.
+    /// Inserts a moving model level of detail file into the database.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
     /// <param name="movingModelLod">The moving model level of detail identifier.</param>
@@ -2420,7 +2413,7 @@ public abstract class SQLDataStore : IDisposable
     }
 
     /// <summary>
-    /// Inserts a moving model level of detail file into the CDB data store.
+    /// Inserts a moving model level of detail file into the database.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
     /// <param name="movingModelLod">The moving model level of detail identifier.</param>
@@ -2646,7 +2639,7 @@ public abstract class SQLDataStore : IDisposable
     }
 
     /// <summary>
-    /// Inserts a tiled dataset file into the CDB data store.
+    /// Inserts a tiled dataset file into the database.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
     /// <param name="tile">The tile identifier.</param>
@@ -2662,7 +2655,7 @@ public abstract class SQLDataStore : IDisposable
     }
 
     /// <summary>
-    /// Inserts a tiled dataset file into the CDB data store.
+    /// Inserts a tiled dataset file into the database.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
     /// <param name="tile">The tile identifier.</param>
@@ -2678,7 +2671,7 @@ public abstract class SQLDataStore : IDisposable
     }
 
     /// <summary>
-    /// Inserts a tiled dataset file into the CDB data store.
+    /// Inserts a tiled dataset file into the database.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
     /// <param name="tile">The tile identifier.</param>
@@ -2695,7 +2688,7 @@ public abstract class SQLDataStore : IDisposable
     }
 
     /// <summary>
-    /// Inserts a tiled dataset file into the CDB data store.
+    /// Inserts a tiled dataset file into the database.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
     /// <param name="tile">The tile identifier.</param>
@@ -2897,7 +2890,7 @@ public abstract class SQLDataStore : IDisposable
     }
 
     /// <summary>
-    /// Inserts an un-archived tiled dataset feature file into the CDB data store.
+    /// Inserts an un-archived tiled dataset feature file into the database.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
     /// <param name="tileArchivedFeature">The un-archived tiled dataset feature identifier.</param>
@@ -2913,7 +2906,7 @@ public abstract class SQLDataStore : IDisposable
     }
 
     /// <summary>
-    /// Inserts an un-archived tiled dataset feature file into the CDB data store.
+    /// Inserts an un-archived tiled dataset feature file into the database.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
     /// <param name="tileArchivedFeature">The un-archived tiled dataset feature identifier.</param>
@@ -2929,7 +2922,7 @@ public abstract class SQLDataStore : IDisposable
     }
 
     /// <summary>
-    /// Inserts an un-archived tiled dataset feature file into the CDB data store.
+    /// Inserts an un-archived tiled dataset feature file into the database.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
     /// <param name="tileArchivedFeature">The un-archived tiled dataset feature identifier.</param>
@@ -2946,7 +2939,7 @@ public abstract class SQLDataStore : IDisposable
     }
 
     /// <summary>
-    /// Inserts an un-archived tiled dataset feature file into the CDB data store.
+    /// Inserts an un-archived tiled dataset feature file into the database.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
     /// <param name="tileArchivedFeature">The un-archived tiled dataset feature identifier.</param>
@@ -3141,7 +3134,7 @@ public abstract class SQLDataStore : IDisposable
     }
 
     /// <summary>
-    /// Inserts an un-archived tiled dataset texture file into the CDB data store.
+    /// Inserts an un-archived tiled dataset texture file into the database.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
     /// <param name="tileArchivedTexture">The un-archived tiled dataset texture identifier.</param>
@@ -3157,7 +3150,7 @@ public abstract class SQLDataStore : IDisposable
     }
 
     /// <summary>
-    /// Inserts an un-archived tiled dataset texture file into the CDB data store.
+    /// Inserts an un-archived tiled dataset texture file into the database.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
     /// <param name="tileArchivedTexture">The un-archived tiled dataset texture identifier.</param>
@@ -3173,7 +3166,7 @@ public abstract class SQLDataStore : IDisposable
     }
 
     /// <summary>
-    /// Inserts an un-archived tiled dataset texture file into the CDB data store.
+    /// Inserts an un-archived tiled dataset texture file into the database.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
     /// <param name="tileArchivedTexture">The un-archived tiled dataset texture identifier.</param>
@@ -3190,7 +3183,7 @@ public abstract class SQLDataStore : IDisposable
     }
 
     /// <summary>
-    /// Inserts an un-archived tiled dataset texture file into the CDB data store.
+    /// Inserts an un-archived tiled dataset texture file into the database.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
     /// <param name="tileArchivedTexture">The un-archived tiled dataset texture identifier.</param>
@@ -3363,7 +3356,7 @@ public abstract class SQLDataStore : IDisposable
     }
 
     /// <summary>
-    /// Inserts a navigation file into the CDB data store.
+    /// Inserts a navigation file into the database.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
     /// <param name="navigation">The navigation identifier.</param>
@@ -3379,7 +3372,7 @@ public abstract class SQLDataStore : IDisposable
     }
 
     /// <summary>
-    /// Inserts a navigation file into the CDB data store.
+    /// Inserts a navigation file into the database.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
     /// <param name="navigation">The navigation identifier.</param>
@@ -3395,7 +3388,7 @@ public abstract class SQLDataStore : IDisposable
     }
 
     /// <summary>
-    /// Inserts a navigation file into the CDB data store.
+    /// Inserts a navigation file into the database.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
     /// <param name="navigation">The navigation identifier.</param>
@@ -3412,7 +3405,7 @@ public abstract class SQLDataStore : IDisposable
     }
 
     /// <summary>
-    /// Inserts a navigation file into the CDB data store.
+    /// Inserts a navigation file into the database.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
     /// <param name="navigation">The navigation identifier.</param>
