@@ -3527,45 +3527,60 @@ public abstract class SQLDataStore : IDisposable
     {
         ILogger<SQLDataStore> logger = serviceProvider.GetRequiredService<ILogger<SQLDataStore>>();
 
+        FileStreamOptions fileStreamOptions = new()
+        {
+            Access = FileAccess.Read,
+            Mode = FileMode.Open,
+            Share = FileShare.Read,
+            Options = FileOptions.SequentialScan,
+        };
         void metadataAction(Metadata metadata, FileInfo file)
         {
             logger.LogInformation("Inserting Metadata {File}", file);
-            int rowsAffected = InsertIntoMetadata(cdbName, metadata, File.ReadAllBytes(file.FullName));
+            using FileStream fileStream = new(file.FullName, fileStreamOptions);
+            int rowsAffected = InsertIntoMetadata(cdbName, metadata, fileStream);
         }
         void geotypicalModelAction(GeotypicalModel geotypicalModel, FileInfo file)
         {
             logger.LogInformation("Inserting Geotypical Model {File}", file);
-            int rowsAffected = InsertIntoGeotypicalModel(cdbName, geotypicalModel, File.ReadAllBytes(file.FullName));
+            using FileStream fileStream = new(file.FullName, fileStreamOptions);
+            int rowsAffected = InsertIntoGeotypicalModel(cdbName, geotypicalModel, fileStream);
         }
         void geotypicalModelLodAction(GeotypicalModelLod geotypicalModelLod, FileInfo file)
         {
             logger.LogInformation("Inserting Geotypical Model LOD {File}", file);
-            int rowsAffected = InsertIntoGeotypicalModelLod(cdbName, geotypicalModelLod, File.ReadAllBytes(file.FullName));
+            using FileStream fileStream = new(file.FullName, fileStreamOptions);
+            int rowsAffected = InsertIntoGeotypicalModelLod(cdbName, geotypicalModelLod, fileStream);
         }
         void textureAction(Texture texture, FileInfo file)
         {
             logger.LogInformation("Inserting Texture {File}", file);
-            int rowsAffected = InsertIntoTexture(cdbName, texture, File.ReadAllBytes(file.FullName));
+            using FileStream fileStream = new(file.FullName, fileStreamOptions);
+            int rowsAffected = InsertIntoTexture(cdbName, texture, fileStream);
         }
         void textureLodAction(TextureLod textureLod, FileInfo file)
         {
             logger.LogInformation("Inserting Texture LOD {File}", file);
-            int rowsAffected = InsertIntoTextureLod(cdbName, textureLod, File.ReadAllBytes(file.FullName));
+            using FileStream fileStream = new(file.FullName, fileStreamOptions);
+            int rowsAffected = InsertIntoTextureLod(cdbName, textureLod, fileStream);
         }
         void movingModelAction(MovingModel movingModel, FileInfo file)
         {
             logger.LogInformation("Inserting Moving Model {File}", file);
-            int rowsAffected = InsertIntoMovingModel(cdbName, movingModel, File.ReadAllBytes(file.FullName));
+            using FileStream fileStream = new(file.FullName, fileStreamOptions);
+            int rowsAffected = InsertIntoMovingModel(cdbName, movingModel, fileStream);
         }
         void movingModelLodAction(MovingModelLod movingModelLod, FileInfo file)
         {
             logger.LogInformation("Inserting Moving Model LOD {File}", file);
-            int rowsAffected = InsertIntoMovingModelLod(cdbName, movingModelLod, File.ReadAllBytes(file.FullName));
+            using FileStream fileStream = new(file.FullName, fileStreamOptions);
+            int rowsAffected = InsertIntoMovingModelLod(cdbName, movingModelLod, fileStream);
         }
         void tileAction(Tile tile, FileInfo file)
         {
             logger.LogInformation("Inserting Tile {File}", file);
-            int rowsAffected = InsertIntoTile(cdbName, tile, File.ReadAllBytes(file.FullName));
+            using FileStream fileStream = new(file.FullName, fileStreamOptions);
+            int rowsAffected = InsertIntoTile(cdbName, tile, fileStream);
 
             if (CultureInfo.InvariantCulture.CompareInfo.Compare(tile.FileType, "zip", CompareOptions.IgnoreCase) == 0)
             {
@@ -3607,7 +3622,8 @@ public abstract class SQLDataStore : IDisposable
         void navigationAction(Navigation navigation, FileInfo file)
         {
             logger.LogInformation("Inserting Navigation {File}", file);
-            int rowsAffected = InsertIntoNavigation(cdbName, navigation, File.ReadAllBytes(file.FullName));
+            using FileStream fileStream = new(file.FullName, fileStreamOptions);
+            int rowsAffected = InsertIntoNavigation(cdbName, navigation, fileStream);
         }
 
         InsertIntoCDB(cdbName);
