@@ -77,6 +77,15 @@ internal class Program
                 cdbInformation.FeatureTypeNames[featureCode]));
         }
 
+        sqliteDataStore.WalkDirectory(cdbRoot, host.Services, (obj, fileInfo) =>
+        {
+            string relativePath = Path.GetRelativePath(cdb.CdbRoot.FullName, fileInfo.FullName);
+            cdb.TryReadFile(relativePath, stream =>
+            {
+                Console.WriteLine("Found {0}", relativePath);
+            });
+        });
+
         Console.WriteLine("Done");
     }
 }

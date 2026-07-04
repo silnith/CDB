@@ -3664,6 +3664,53 @@ public abstract class SQLDataStore : IDisposable
     }
 
     /// <summary>
+    /// Walks a filesystem directory that conforms to the CDB spec and takes an action for every file.
+    /// </summary>
+    /// <param name="cdbRoot">The CDB directory to walk.</param>
+    /// <param name="serviceProvider">A service provider that provides the necessary directory walkers.</param>
+    /// <param name="action">The action to take for every file.</param>
+    /// 
+    public void WalkDirectory(DirectoryInfo cdbRoot, IServiceProvider serviceProvider, Action<object, FileInfo> action)
+    {
+        // Metadata
+        {
+            MetadataVisitor metadataVisitor = serviceProvider.GetRequiredService<MetadataVisitor>();
+            metadataVisitor.VisitMetadata(cdbRoot,
+                (obj, fileInfo) => action(obj, fileInfo));
+        }
+        // GTModel
+        {
+            GeotypicalModelVisitor gtModelVisitor = serviceProvider.GetRequiredService<GeotypicalModelVisitor>();
+            gtModelVisitor.VisitGeotypicalModels(cdbRoot,
+                (obj, fileInfo) => action(obj, fileInfo),
+                (obj, fileInfo) => action(obj, fileInfo),
+                (obj, fileInfo) => action(obj, fileInfo),
+                (obj, fileInfo) => action(obj, fileInfo));
+        }
+        // MModel
+        {
+            MovingModelVisitor movingModelVisitor = serviceProvider.GetRequiredService<MovingModelVisitor>();
+            movingModelVisitor.VisitMovingModels(cdbRoot,
+                (obj, fileInfo) => action(obj, fileInfo),
+                (obj, fileInfo) => action(obj, fileInfo),
+                (obj, fileInfo) => action(obj, fileInfo),
+                (obj, fileInfo) => action(obj, fileInfo));
+        }
+        // Tiles
+        {
+            TileVisitor tiledDatasetVisitor = serviceProvider.GetRequiredService<TileVisitor>();
+            tiledDatasetVisitor.VisitTiles(cdbRoot,
+                (obj, fileInfo) => action(obj, fileInfo));
+        }
+        // Navigation
+        {
+            NavigationVisitor navigationVisitor = serviceProvider.GetRequiredService<NavigationVisitor>();
+            navigationVisitor.VisitNavigationDatasets(cdbRoot,
+                (obj, fileInfo) => action(obj, fileInfo));
+        }
+    }
+
+    /// <summary>
     /// Dumps the raw SQL statements that the data store uses.
     /// </summary>
     /// <remarks>
