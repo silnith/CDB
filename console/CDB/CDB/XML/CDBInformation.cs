@@ -76,25 +76,6 @@ public class CDBInformation
         dataStore.TryReadFile("Metadata/Feature_Data_Dictionary.xml", stream =>
         {
             FeatureDataDictionary = (Metadata.FeatureDataDictionary.Element?) featureDataDictionarySerializer.Deserialize(stream);
-            FeatureCategoryNames = FeatureDataDictionary!.Categories
-                .Select(a => new KeyValuePair<string, string>(a.Code, a.Label))
-                .ToImmutableSortedDictionary();
-            SortedDictionary<string, IReadOnlyDictionary<string, string>> foo = new();
-            foreach (var bar in FeatureDataDictionary!.Categories)
-            {
-                var category = bar.Code;
-                SortedDictionary<string, string> blah = new();
-                foreach (var baz in bar.Subcategories)
-                {
-                    var subcategory = baz.Code;
-                    var label = baz.Label;
-                    blah.Add(subcategory, label);
-                }
-                ImmutableSortedDictionary<string, string> immutableSortedDictionary = bar.Subcategories
-                    .Select(a => new KeyValuePair<string, string>(a.Code, a.Label))
-                    .ToImmutableSortedDictionary();
-                foo.Add(category, immutableSortedDictionary);
-            }
             SortedDictionary<string, string> categoryNames = new();
             SortedDictionary<string, string> subcategoryNames = new();
             SortedDictionary<FeatureCode, string> featureTypeNames = new();
