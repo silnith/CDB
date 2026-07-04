@@ -124,8 +124,17 @@ public class GeotypicalModelVisitor : VisitorBase
 
                     if (datasetFromDirectory != geotypicalModel.Dataset)
                     {
-                        logger.LogWarning("Directory {DirectoryDataset} does not match file {FileDataset}",
+                        if (geotypicalModel.Dataset.Value == 503 && datasetFromDirectory.Value == 500
+                            || geotypicalModel.Dataset.Value == 508 && datasetFromDirectory.Value == 506)
+                        {
+                            // See 3.4.1.3. GTModelDescriptor Naming Convention
+                            // See 3.4.3.2. GTModelInteriorDescriptor Naming Convention
+                        }
+                        else
+                        {
+                            logger.LogWarning("Directory {DirectoryDataset} does not match file {FileDataset}",
                             datasetFromDirectory, geotypicalModel.Dataset);
+                        }
                     }
                     if (featureCode != geotypicalModel.FeatureCode)
                     {
@@ -154,8 +163,17 @@ public class GeotypicalModelVisitor : VisitorBase
 
                         if (datasetFromDirectory != geotypicalModelLod.Dataset)
                         {
-                            logger.LogWarning("Directory {DirectoryDataset} does not match file {FileDataset}",
+                            if (geotypicalModelLod.Dataset.Value == 510 && datasetFromDirectory.Value == 500
+                                || geotypicalModelLod.Dataset.Value == 512 && datasetFromDirectory.Value == 502)
+                            {
+                                // See 3.4.1.2. GTModelGeometry Level of Detail Naming Convention
+                                // See 3.4.5.1. GTModelSignature Naming Convention
+                            }
+                            else
+                            {
+                                logger.LogWarning("Directory {DirectoryDataset} does not match file {FileDataset}",
                                 datasetFromDirectory, geotypicalModelLod.Dataset);
+                            }
                         }
                         if (featureCode != geotypicalModelLod.FeatureCode)
                         {
@@ -190,8 +208,19 @@ public class GeotypicalModelVisitor : VisitorBase
 
                         if (datasetFromDirectory != textureLod.Dataset)
                         {
-                            logger.LogWarning("Directory {DirectoryDataset} does not match file {FileDataset}",
+                            if (textureLod.Dataset.Value == 511 && datasetFromDirectory.Value == 501
+                                || textureLod.Dataset.Value == 504 && datasetFromDirectory.Value == 501
+                                || textureLod.Dataset.Value == 509 && datasetFromDirectory.Value == 507)
+                            {
+                                // See 3.4.2.1. GTModelTexture Naming Convention
+                                // See 3.4.2.2. GTModelMaterial Naming Convention
+                                // See 3.4.4.2. GTModelInteriorMaterial Naming Convention
+                            }
+                            else
+                            {
+                                logger.LogWarning("Directory {DirectoryDataset} does not match file {FileDataset}",
                                 datasetFromDirectory, textureLod.Dataset);
+                            }
                         }
                         if (CultureInfo.InvariantCulture.CompareInfo.Compare(textureName, textureLod.Name, CompareOptions.IgnoreCase) != 0)
                         {
@@ -215,8 +244,22 @@ public class GeotypicalModelVisitor : VisitorBase
 
                             if (datasetFromDirectory != texture.Dataset)
                             {
-                                logger.LogWarning("Directory {DirectoryDataset} does not match file {FileDataset}",
+                                if (texture.Dataset.Value == 505 && datasetFromDirectory.Value == 501
+                                    || texture.Dataset.Value == 511 && datasetFromDirectory.Value == 501
+                                    || texture.Dataset.Value == 509 && datasetFromDirectory.Value == 507
+                                    || texture.Dataset.Value == 513 && datasetFromDirectory.Value == 507)
+                                {
+                                    // See 3.4.2.3. GTModelCMT Naming Convention
+                                    // This might only be due to the *_mtd.xml problem.
+                                    // See 3.4.4.2. GTModelInteriorMaterial Naming Convention (_mtd file only)
+                                    // See ... 513 is missing from the standard
+                                    // TODO: Really need to figure out what to do with *_mtd.xml files.
+                                }
+                                else
+                                {
+                                    logger.LogWarning("Directory {DirectoryDataset} does not match file {FileDataset}",
                                     datasetFromDirectory, texture.Dataset);
+                                }
                             }
                             if (CultureInfo.InvariantCulture.CompareInfo.Compare(textureName, texture.Name, CompareOptions.IgnoreCase) != 0)
                             {

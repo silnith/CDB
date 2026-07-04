@@ -102,8 +102,15 @@ public class MovingModelVisitor : VisitorBase
 
                     if (datasetFromDirectory != movingModel.Dataset)
                     {
-                        logger.LogWarning("Directory {DirectoryDataset} does not match file {FileDataset}",
-                            datasetFromDirectory, movingModel.Dataset);
+                        if (movingModel.Dataset.Value == 603 && datasetFromDirectory.Value == 600)
+                        {
+                            // See 3.5.1.2. MModelDescriptor Naming Convention
+                        }
+                        else
+                        {
+                            logger.LogWarning("Directory {DirectoryDataset} does not match file {FileDataset}",
+                                datasetFromDirectory, movingModel.Dataset);
+                        }
                     }
                     if (disEntityType != movingModel.MMDC)
                     {
@@ -163,8 +170,15 @@ public class MovingModelVisitor : VisitorBase
 
                         if (datasetFromDirectory != textureLod.Dataset)
                         {
-                            logger.LogWarning("Directory {DirectoryDataset} does not match file {FileDataset}",
+                            if (textureLod.Dataset.Value == 604 && datasetFromDirectory.Value == 601)
+                            {
+                                // See 3.5.2.2. MModelMaterial Naming Convention
+                            }
+                            else
+                            {
+                                logger.LogWarning("Directory {DirectoryDataset} does not match file {FileDataset}",
                                 datasetFromDirectory, textureLod.Dataset);
+                            }
                         }
                         if (textureName != textureLod.Name)
                         {
@@ -184,8 +198,15 @@ public class MovingModelVisitor : VisitorBase
 
                             if (datasetFromDirectory != texture.Dataset)
                             {
-                                logger.LogWarning("Directory {DirectoryDataset} does not match file {FileDataset}",
+                                if (texture.Dataset.Value == 605 && datasetFromDirectory.Value == 601)
+                                {
+                                    // See 3.5.2.3. MModelCMT Naming Convention
+                                }
+                                else
+                                {
+                                    logger.LogWarning("Directory {DirectoryDataset} does not match file {FileDataset}",
                                     datasetFromDirectory, texture.Dataset);
+                                }
                             }
                             if (textureName != texture.Name)
                             {
