@@ -3,23 +3,23 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.6.33829.357
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CDB.SQLite", "CDB.SQLite\CDB.SQLite.csproj", "{52F1B3EA-D6A9-4205-B3D2-BDCBF129BBCB}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CDB", "CDB\CDB.csproj", "{AFD54011-ED9C-4BFE-A02C-B3F5122E3858}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CDB.Importer", "CDB.Importer\CDB.Importer.csproj", "{83F9EA5C-0C64-4600-B2F9-A16D0EF6E31B}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CDB.Service", "CDB.Service\CDB.Service.csproj", "{DD3E48DD-5699-4871-812D-3F165A05B279}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CDB.FileSystem", "CDB.FileSystem\CDB.FileSystem.csproj", "{295839B9-51D1-4285-B114-35F4DFD87D2A}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CDB.SQL", "CDB.SQL\CDB.SQL.csproj", "{E0DD60D4-FDE4-4B17-93FE-63396CC856BD}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CDB.SQLite", "CDB.SQLite\CDB.SQLite.csproj", "{52F1B3EA-D6A9-4205-B3D2-BDCBF129BBCB}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CDB.MySql", "CDB.MySql\CDB.MySql.csproj", "{0D582ABF-5637-4CBC-A713-024D4E46A216}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CDB.PostgreSQL", "CDB.PostgreSQL\CDB.PostgreSQL.csproj", "{B1F5F41E-8B53-4552-A5A3-855DB79FE051}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CDB.Oracle", "CDB.Oracle\CDB.Oracle.csproj", "{99D00F1C-3D3B-4985-B34E-0A02E98AFD31}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CDB.Importer", "CDB.Importer\CDB.Importer.csproj", "{83F9EA5C-0C64-4600-B2F9-A16D0EF6E31B}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CDB.Service", "CDB.Service\CDB.Service.csproj", "{DD3E48DD-5699-4871-812D-3F165A05B279}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
