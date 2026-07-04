@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System;
+using System.ComponentModel.DataAnnotations;
 using System.Globalization;
 using System.Text.RegularExpressions;
 
@@ -8,7 +9,7 @@ namespace Silnith.CDB;
 /// A distinct type for representing a level of detail.
 /// </summary>
 /// <param name="Value">The level of detail.</param>
-public record LevelOfDetail([property: Range(-10, 23)] int Value)
+public record LevelOfDetail([property: Range(-10, 23)] int Value) : IComparable<LevelOfDetail>
 {
     /// <summary>
     /// The pattern for levels of detail as they are used in model geometry directories.
@@ -132,4 +133,15 @@ public record LevelOfDetail([property: Range(-10, 23)] int Value)
     /// The form this level of detail takes when part of a filename.
     /// </summary>
     public string Code => Value < 0 ? $"LC{Value:D2}" : $"L{Value:D2}";
+
+    /// <inheritdoc/>
+    public int CompareTo(LevelOfDetail? other)
+    {
+        if (other is null)
+        {
+            return 1;
+        }
+
+        return Value.CompareTo(other.Value);
+    }
 }

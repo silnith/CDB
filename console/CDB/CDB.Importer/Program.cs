@@ -68,6 +68,14 @@ internal class Program
         {
             Console.WriteLine(string.Format(CultureInfo.InvariantCulture, "{0:D3}_{1}", code, name));
         }
+        foreach (FeatureCode featureCode in cdbInformation.ValidFeatureSubcodes.Keys)
+        {
+            Console.WriteLine(string.Format(CultureInfo.InvariantCulture, "{0} = {1}, {2}, {3}",
+                featureCode.Code,
+                cdbInformation.FeatureCategoryNames[featureCode.Category],
+                cdbInformation.FeatureSubcategoryNames[featureCode.Category + featureCode.Subcategory],
+                cdbInformation.FeatureTypeNames[featureCode]));
+        }
 
         Console.WriteLine("Done");
     }

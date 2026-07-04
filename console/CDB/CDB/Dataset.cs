@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System;
+using System.ComponentModel.DataAnnotations;
 using System.Globalization;
 using System.Text.RegularExpressions;
 
@@ -13,7 +14,7 @@ namespace Silnith.CDB;
 /// </para>
 /// </remarks>
 /// <param name="Value">The dataset code.</param>
-public record Dataset([property: Range(0, 999)] int Value)
+public record Dataset([property: Range(0, 999)] int Value) : IComparable<Dataset>
 {
     /// <summary>
     /// A pattern for datasets as they are used in CDB tiled dataset directories.
@@ -46,5 +47,16 @@ public record Dataset([property: Range(0, 999)] int Value)
     public static Dataset FromDirectoryMatch(Match match)
     {
         return new(int.Parse(match.Groups["dataset"].Value, CultureInfo.InvariantCulture));
+    }
+
+    /// <inheritdoc/>
+    public int CompareTo(Dataset? other)
+    {
+        if (other is null)
+        {
+            return 1;
+        }
+
+        return Value.CompareTo(other.Value);
     }
 }

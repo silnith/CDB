@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System;
+using System.ComponentModel.DataAnnotations;
 using System.Globalization;
 using System.Text.RegularExpressions;
 
@@ -30,7 +31,7 @@ namespace Silnith.CDB;
 public record FeatureCode(
     [property: MaxLength(1)] string Category,
     [property: MaxLength(1)] string Subcategory,
-    [property: Range(0, 999)] int Type)
+    [property: Range(0, 999)] int Type) : IComparable<FeatureCode>
 {
     /// <summary>
     /// Matches directory names of the form <c>A_Category</c>,
@@ -103,4 +104,27 @@ public record FeatureCode(
     /// The five-character code.
     /// </summary>
     public string Code => $"{Category}{Subcategory}{Type:D3}";
+
+    /// <inheritdoc/>
+    public int CompareTo(FeatureCode? other)
+    {
+        if (other is null)
+        {
+            return 1;
+        }
+
+        int categoryComparison = CultureInfo.InvariantCulture.CompareInfo.Compare(Category, other.Category, CompareOptions.IgnoreCase);
+        if (categoryComparison != 0)
+        {
+            return categoryComparison;
+        }
+
+        int subcategoryComparison = CultureInfo.InvariantCulture.CompareInfo.Compare(Subcategory, other.Subcategory, CompareOptions.IgnoreCase);
+        if (subcategoryComparison != 0)
+        {
+            return subcategoryComparison;
+        }
+
+        return Type.CompareTo(other.Type);
+    }
 }

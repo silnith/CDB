@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System;
+using System.ComponentModel.DataAnnotations;
 using System.Globalization;
 using System.Text.RegularExpressions;
 
@@ -29,7 +30,7 @@ public record DISEntity(
     [property: Range(0, 999)] int Category,
     [property: Range(0, 999)] int Subcategory,
     [property: Range(0, 999)] int Specific,
-    [property: Range(0, 999)] int Extra)
+    [property: Range(0, 999)] int Extra) : IComparable<DISEntity>
 {
     /// <summary>
     /// The pattern for the first four directories defined in 3.3.8.3 DIS Entity Type.
@@ -96,4 +97,51 @@ public record DISEntity(
     /// </summary>
     // TODO: Explain this!
     public string MovingModelDisCode => $"{Kind:D}_{Domain:D}_{Country:D}_{Category:D}_{Subcategory:D}_{Specific:D}_{Extra:D}";
+
+    /// <inheritdoc/>
+    public int CompareTo(DISEntity? other)
+    {
+        if (other is null)
+        {
+            return 1;
+        }
+
+        int kindComparison = Kind.CompareTo(other.Kind);
+        if (kindComparison != 0)
+        {
+            return kindComparison;
+        }
+
+        int domainComparison = Domain.CompareTo(other.Domain);
+        if (domainComparison != 0)
+        {
+            return domainComparison;
+        }
+
+        int countryComparison = Country.CompareTo(other.Country);
+        if (countryComparison != 0)
+        {
+            return countryComparison;
+        }
+
+        int categoryComparison = Category.CompareTo(other.Category);
+        if (categoryComparison != 0)
+        {
+            return categoryComparison;
+        }
+
+        int subcategoryComparison = Subcategory.CompareTo(other.Subcategory);
+        if (subcategoryComparison != 0)
+        {
+            return subcategoryComparison;
+        }
+
+        int specificComparison = Specific.CompareTo(other.Specific);
+        if (specificComparison != 0)
+        {
+            return specificComparison;
+        }
+
+        return Extra.CompareTo(other.Extra);
+    }
 }

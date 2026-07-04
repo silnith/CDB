@@ -9,7 +9,7 @@ namespace Silnith.CDB;
 /// A distinct type for latitude values.
 /// </summary>
 /// <param name="Value">The latitude value.</param>
-public record Latitude([property: Range(-90, 89)] int Value)
+public record Latitude([property: Range(-90, 89)] int Value) : IComparable<Latitude>
 {
     /// <summary>
     /// A pattern for latitude as it is used in CDB tiled dataset directories.
@@ -89,4 +89,15 @@ public record Latitude([property: Range(-90, 89)] int Value)
     /// absolute value of the latitude.
     /// </summary>
     public string Code => Value < 0 ? $"S{-Value:D2}" : $"N{Value:D2}";
+
+    /// <inheritdoc/>
+    public int CompareTo(Latitude? other)
+    {
+        if (other is null)
+        {
+            return 1;
+        }
+
+        return Value.CompareTo(other.Value);
+    }
 }
