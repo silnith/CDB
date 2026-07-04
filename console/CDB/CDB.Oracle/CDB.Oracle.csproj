@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net7.0</TargetFramework>
+        <AssemblyName>Silnith.CDB.Oracle</AssemblyName>
+        <RootNamespace>Silnith.CDB.Oracle</RootNamespace>
+        <ImplicitUsings>disable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Oracle.ManagedDataAccess.Core" Version="23.26.200" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\CDB.SQL\CDB.SQL.csproj" />
+        <ProjectReference Include="..\CDB\CDB.csproj" />
+    </ItemGroup>
+
+</Project>
