@@ -18,6 +18,13 @@ namespace Silnith.CDB.SQL;
 /// <summary>
 /// A CDB data store that uses an SQL database for its storage.
 /// </summary>
+/// <remarks>
+/// <para>
+/// This is an abstract base class.  In order to actually use this, you need to
+/// instantiate one of the concrete subclasses provided in the vendor-specific
+/// projects.
+/// </para>
+/// </remarks>
 public abstract class SQLDataStore : IDisposable
 {
     /// <summary>
@@ -41,411 +48,531 @@ public abstract class SQLDataStore : IDisposable
 
     /// <summary>
     /// The SQL prepared statement that inserts a new name into the CDB table.
-    /// This takes one parameter,
-    /// <see cref="CdbParamName"/>.
     /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    /// </list>
+    /// </remarks>
     /// <seealso cref="InsertIntoCDBStatement"/>
     private readonly DbCommand insertIntoCDBCommand;
 
     /// <summary>
     /// The SQL prepared statement that selects the CDB name from the CDB table.
-    /// This has no parameters.
-    /// This returns one column,
-    /// <see cref="CDBNameColumnName"/>.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This has no parameters.
+    /// </para>
+    /// <list type="bullet">
+    ///   <listheader><description>Selected Columns</description></listheader>
+    ///   <item><description><see cref="CDBNameColumnName"/></description></item>
+    /// </list>
+    /// </remarks>
     /// <seealso cref="SelectFromCDBStatement"/>
     private readonly DbCommand selectFromCDBCommand;
 
     /// <summary>
     /// The SQL prepared statement to insert a row into the Metadata table.
-    /// This requires four parameters,
-    /// <see cref="CdbParamName"/>,
-    /// <see cref="MetadataNameParamName"/>,
-    /// <see cref="FileTypeParamName"/>,
-    /// <see cref="ContentParamName"/>
     /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="MetadataNameParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    ///   <item><description><see cref="ContentParamName"/></description></item>
+    /// </list>
+    /// </remarks>
     /// <seealso cref="InsertIntoMetadataStatement"/>
     private readonly DbCommand insertIntoMetadataCommand;
 
     /// <summary>
-    /// The SQL prepared statement to select one row from the Metadata table.
-    /// This requires three parameters,
-    /// <see cref="CdbParamName"/>,
-    /// <see cref="MetadataNameParamName"/>,
-    /// <see cref="FileTypeParamName"/>.
-    /// It returns one column,
-    /// <see cref="ContentColumnName"/>.
+    /// The SQL prepared statement to select a row from the Metadata table.
     /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="MetadataNameParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    /// </list>
+    /// <list type="bullet">
+    ///   <listheader><description>Selected Columns</description></listheader>
+    ///   <item><description><see cref="ContentColumnName"/></description></item>
+    /// </list>
+    /// </remarks>
     /// <seealso cref="SelectFromMetadataStatement"/>
     private readonly DbCommand selectFromMetadataCommand;
 
     /// <summary>
     /// The SQL prepared statement to insert a row into the Texture table.
-    /// This requires seven parameters,
-    /// <see cref="CdbParamName"/>,
-    /// <see cref="DatasetParamName"/>,
-    /// <see cref="ComponentSelector1ParamName"/>,
-    /// <see cref="ComponentSelector2ParamName"/>,
-    /// <see cref="TextureNameParamName"/>,
-    /// <see cref="FileTypeParamName"/>,
-    /// <see cref="ContentParamName"/>.
     /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="TextureNameParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    ///   <item><description><see cref="ContentParamName"/></description></item>
+    /// </list>
+    /// </remarks>
     /// <seealso cref="InsertIntoTextureStatement"/>
     private readonly DbCommand insertIntoTextureCommand;
 
     /// <summary>
     /// The SQL prepared statement to select a row from the Texture table.
-    /// This requires six parameters,
-    /// <see cref="CdbParamName"/>,
-    /// <see cref="DatasetParamName"/>,
-    /// <see cref="ComponentSelector1ParamName"/>,
-    /// <see cref="ComponentSelector2ParamName"/>,
-    /// <see cref="TextureNameParamName"/>,
-    /// <see cref="FileTypeParamName"/>.
-    /// It returns one column,
-    /// <see cref="ContentColumnName"/>.
     /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="TextureNameParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    /// </list>
+    /// <list type="bullet">
+    ///   <listheader><description>Selected Columns</description></listheader>
+    ///   <item><description><see cref="ContentColumnName"/></description></item>
+    /// </list>
+    /// </remarks>
     /// <seealso cref="SelectFromTextureStatement"/>
     private readonly DbCommand selectFromTextureCommand;
 
     /// <summary>
     /// The SQL prepared statement to insert a row into the Texture Level of Detail table.
-    /// This requires eight parameters,
-    /// <see cref="CdbParamName"/>,
-    /// <see cref="DatasetParamName"/>,
-    /// <see cref="ComponentSelector1ParamName"/>,
-    /// <see cref="ComponentSelector2ParamName"/>,
-    /// <see cref="LevelOfDetailParamName"/>,
-    /// <see cref="TextureNameParamName"/>,
-    /// <see cref="FileTypeParamName"/>,
-    /// <see cref="ContentParamName"/>.
     /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="LevelOfDetailParamName"/></description></item>
+    ///   <item><description><see cref="TextureNameParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    ///   <item><description><see cref="ContentParamName"/></description></item>
+    /// </list>
+    /// </remarks>
     /// <seealso cref="InsertIntoTextureLodStatement"/>
     private readonly DbCommand insertIntoTextureLodCommand;
 
     /// <summary>
     /// The SQL prepared statement to select a row from the Texture Level of Detail table.
-    /// This requires seven parameters,
-    /// <see cref="CdbParamName"/>,
-    /// <see cref="DatasetParamName"/>,
-    /// <see cref="ComponentSelector1ParamName"/>,
-    /// <see cref="ComponentSelector2ParamName"/>,
-    /// <see cref="LevelOfDetailParamName"/>,
-    /// <see cref="TextureNameParamName"/>,
-    /// <see cref="FileTypeParamName"/>.
-    /// It returns one column,
-    /// <see cref="ContentColumnName"/>.
     /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="LevelOfDetailParamName"/></description></item>
+    ///   <item><description><see cref="TextureNameParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    /// </list>
+    /// <list type="bullet">
+    ///   <listheader><description>Selected Columns</description></listheader>
+    ///   <item><description><see cref="ContentColumnName"/></description></item>
+    /// </list>
+    /// </remarks>
     /// <seealso cref="SelectFromTextureLodStatement"/>
     private readonly DbCommand selectFromTextureLodCommand;
 
     /// <summary>
     /// The SQL prepared statement to insert a row into the Geotypical Model table.
-    /// This takes eleven parameters,
-    /// <see cref="CdbParamName"/>,
-    /// <see cref="DatasetParamName"/>,
-    /// <see cref="ComponentSelector1ParamName"/>,
-    /// <see cref="ComponentSelector2ParamName"/>,
-    /// <see cref="FeatureCategoryParamName"/>,
-    /// <see cref="FeatureSubcategoryParamName"/>,
-    /// <see cref="FeatureTypeParamName"/>,
-    /// <see cref="FeatureSubcodeParamName"/>,
-    /// <see cref="ModelNameParamName"/>,
-    /// <see cref="FileTypeParamName"/>,
-    /// <see cref="ContentParamName"/>.
     /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="FeatureCategoryParamName"/></description></item>
+    ///   <item><description><see cref="FeatureSubcategoryParamName"/></description></item>
+    ///   <item><description><see cref="FeatureTypeParamName"/></description></item>
+    ///   <item><description><see cref="FeatureSubcodeParamName"/></description></item>
+    ///   <item><description><see cref="ModelNameParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    ///   <item><description><see cref="ContentParamName"/></description></item>
+    /// </list>
+    /// </remarks>
     /// <seealso cref="InsertIntoGeotypicalModelStatement"/>
     private readonly DbCommand insertIntoGeotypicalModelCommand;
 
     /// <summary>
     /// The SQL prepared statement to select a row from the Geotypical Model table.
-    /// This takes ten parameters,
-    /// <see cref="CdbParamName"/>,
-    /// <see cref="DatasetParamName"/>,
-    /// <see cref="ComponentSelector1ParamName"/>,
-    /// <see cref="ComponentSelector2ParamName"/>,
-    /// <see cref="FeatureCategoryParamName"/>,
-    /// <see cref="FeatureSubcategoryParamName"/>,
-    /// <see cref="FeatureTypeParamName"/>,
-    /// <see cref="FeatureSubcodeParamName"/>,
-    /// <see cref="ModelNameParamName"/>,
-    /// <see cref="FileTypeParamName"/>.
-    /// It returns one column,
-    /// <see cref="ContentColumnName"/>.
     /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="FeatureCategoryParamName"/></description></item>
+    ///   <item><description><see cref="FeatureSubcategoryParamName"/></description></item>
+    ///   <item><description><see cref="FeatureTypeParamName"/></description></item>
+    ///   <item><description><see cref="FeatureSubcodeParamName"/></description></item>
+    ///   <item><description><see cref="ModelNameParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    /// </list>
+    /// <list type="bullet">
+    ///   <listheader><description>Selected Columns</description></listheader>
+    ///   <item><description><see cref="ContentColumnName"/></description></item>
+    /// </list>
+    /// </remarks>
     /// <seealso cref="SelectFromGeotypicalModelStatement"/>
     private readonly DbCommand selectFromGeotypicalModelCommand;
 
     /// <summary>
     /// The SQL prepared statement to insert a row into the Geotypical Model Level of Detail table.
-    /// This takes twelve parameters,
-    /// <see cref="CdbParamName"/>,
-    /// <see cref="DatasetParamName"/>,
-    /// <see cref="ComponentSelector1ParamName"/>,
-    /// <see cref="ComponentSelector2ParamName"/>,
-    /// <see cref="LevelOfDetailParamName"/>,
-    /// <see cref="FeatureCategoryParamName"/>,
-    /// <see cref="FeatureSubcategoryParamName"/>,
-    /// <see cref="FeatureTypeParamName"/>,
-    /// <see cref="FeatureSubcodeParamName"/>,
-    /// <see cref="ModelNameParamName"/>,
-    /// <see cref="FileTypeParamName"/>,
-    /// <see cref="ContentParamName"/>.
     /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="LevelOfDetailParamName"/></description></item>
+    ///   <item><description><see cref="FeatureCategoryParamName"/></description></item>
+    ///   <item><description><see cref="FeatureSubcategoryParamName"/></description></item>
+    ///   <item><description><see cref="FeatureTypeParamName"/></description></item>
+    ///   <item><description><see cref="FeatureSubcodeParamName"/></description></item>
+    ///   <item><description><see cref="ModelNameParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    ///   <item><description><see cref="ContentParamName"/></description></item>
+    /// </list>
+    /// </remarks>
     /// <seealso cref="InsertIntoGeotypicalModelLodStatement"/>
     private readonly DbCommand insertIntoGeotypicalModelLodCommand;
 
     /// <summary>
     /// The SQL prepared statement to select a row from the Geotypical Model Level of Detail table.
-    /// This takes eleven parameters,
-    /// <see cref="CdbParamName"/>,
-    /// <see cref="DatasetParamName"/>,
-    /// <see cref="ComponentSelector1ParamName"/>,
-    /// <see cref="ComponentSelector2ParamName"/>,
-    /// <see cref="LevelOfDetailParamName"/>,
-    /// <see cref="FeatureCategoryParamName"/>,
-    /// <see cref="FeatureSubcategoryParamName"/>,
-    /// <see cref="FeatureTypeParamName"/>,
-    /// <see cref="FeatureSubcodeParamName"/>,
-    /// <see cref="ModelNameParamName"/>,
-    /// <see cref="FileTypeParamName"/>.
-    /// It returns one column,
-    /// <see cref="ContentColumnName"/>.
     /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="LevelOfDetailParamName"/></description></item>
+    ///   <item><description><see cref="FeatureCategoryParamName"/></description></item>
+    ///   <item><description><see cref="FeatureSubcategoryParamName"/></description></item>
+    ///   <item><description><see cref="FeatureTypeParamName"/></description></item>
+    ///   <item><description><see cref="FeatureSubcodeParamName"/></description></item>
+    ///   <item><description><see cref="ModelNameParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    /// </list>
+    /// <list type="bullet">
+    ///   <listheader><description>Selected Columns</description></listheader>
+    ///   <item><description><see cref="ContentColumnName"/></description></item>
+    /// </list>
+    /// </remarks>
     /// <seealso cref="SelectFromGeotypicalModelLodStatement"/>
     private readonly DbCommand selectFromGeotypicalModelLodCommand;
 
     /// <summary>
     /// The SQL prepared statement to insert a row into the Moving Model table.
-    /// This takes thirteen parameters,
-    /// <see cref="CdbParamName"/>,
-    /// <see cref="DatasetParamName"/>,
-    /// <see cref="ComponentSelector1ParamName"/>,
-    /// <see cref="ComponentSelector2ParamName"/>,
-    /// <see cref="DISKindParamName"/>,
-    /// <see cref="DISDomainParamName"/>,
-    /// <see cref="DISCountryParamName"/>,
-    /// <see cref="DISCategoryParamName"/>,
-    /// <see cref="DISSubcategoryParamName"/>,
-    /// <see cref="DISSpecificParamName"/>,
-    /// <see cref="DISExtraParamName"/>,
-    /// <see cref="FileTypeParamName"/>,
-    /// <see cref="ContentParamName"/>.
     /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="DISKindParamName"/></description></item>
+    ///   <item><description><see cref="DISDomainParamName"/></description></item>
+    ///   <item><description><see cref="DISCountryParamName"/></description></item>
+    ///   <item><description><see cref="DISCategoryParamName"/></description></item>
+    ///   <item><description><see cref="DISSubcategoryParamName"/></description></item>
+    ///   <item><description><see cref="DISSpecificParamName"/></description></item>
+    ///   <item><description><see cref="DISExtraParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    ///   <item><description><see cref="ContentParamName"/></description></item>
+    /// </list>
+    /// </remarks>
     /// <seealso cref="InsertIntoMovingModelStatement"/>
     private readonly DbCommand insertIntoMovingModelCommand;
 
     /// <summary>
     /// The SQL prepared statement to select a row from the Moving Model table.
-    /// This takes twelve parameters,
-    /// <see cref="CdbParamName"/>,
-    /// <see cref="DatasetParamName"/>,
-    /// <see cref="ComponentSelector1ParamName"/>,
-    /// <see cref="ComponentSelector2ParamName"/>,
-    /// <see cref="DISKindParamName"/>,
-    /// <see cref="DISDomainParamName"/>,
-    /// <see cref="DISCountryParamName"/>,
-    /// <see cref="DISCategoryParamName"/>,
-    /// <see cref="DISSubcategoryParamName"/>,
-    /// <see cref="DISSpecificParamName"/>,
-    /// <see cref="DISExtraParamName"/>,
-    /// <see cref="FileTypeParamName"/>.
-    /// It returns one column,
-    /// <see cref="ContentColumnName"/>.
     /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="DISKindParamName"/></description></item>
+    ///   <item><description><see cref="DISDomainParamName"/></description></item>
+    ///   <item><description><see cref="DISCountryParamName"/></description></item>
+    ///   <item><description><see cref="DISCategoryParamName"/></description></item>
+    ///   <item><description><see cref="DISSubcategoryParamName"/></description></item>
+    ///   <item><description><see cref="DISSpecificParamName"/></description></item>
+    ///   <item><description><see cref="DISExtraParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    /// </list>
+    /// <list type="bullet">
+    ///   <listheader><description>Selected Columns</description></listheader>
+    ///   <item><description><see cref="ContentColumnName"/></description></item>
+    /// </list>
+    /// </remarks>
     /// <seealso cref="SelectFromMovingModelStatement"/>
     private readonly DbCommand selectFromMovingModelCommand;
 
     /// <summary>
     /// The SQL prepared statement to insert a row into the Moving Model Level of Detail table.
-    /// This takes fourteen parameters,
-    /// <see cref="CdbParamName"/>,
-    /// <see cref="DatasetParamName"/>,
-    /// <see cref="ComponentSelector1ParamName"/>,
-    /// <see cref="ComponentSelector2ParamName"/>,
-    /// <see cref="LevelOfDetailParamName"/>,
-    /// <see cref="DISKindParamName"/>,
-    /// <see cref="DISDomainParamName"/>,
-    /// <see cref="DISCountryParamName"/>,
-    /// <see cref="DISCategoryParamName"/>,
-    /// <see cref="DISSubcategoryParamName"/>,
-    /// <see cref="DISSpecificParamName"/>,
-    /// <see cref="DISExtraParamName"/>,
-    /// <see cref="FileTypeParamName"/>,
-    /// <see cref="ContentParamName"/>.
     /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="LevelOfDetailParamName"/></description></item>
+    ///   <item><description><see cref="DISKindParamName"/></description></item>
+    ///   <item><description><see cref="DISDomainParamName"/></description></item>
+    ///   <item><description><see cref="DISCountryParamName"/></description></item>
+    ///   <item><description><see cref="DISCategoryParamName"/></description></item>
+    ///   <item><description><see cref="DISSubcategoryParamName"/></description></item>
+    ///   <item><description><see cref="DISSpecificParamName"/></description></item>
+    ///   <item><description><see cref="DISExtraParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    ///   <item><description><see cref="ContentParamName"/></description></item>
+    /// </list>
+    /// </remarks>
     /// <seealso cref="InsertIntoMovingModelLodStatement"/>
     private readonly DbCommand insertIntoMovingModelLodCommand;
 
     /// <summary>
     /// The SQL prepared statement to select a row from the Moving Model Level of Detail table.
-    /// This takes thirteen parameters,
-    /// <see cref="CdbParamName"/>,
-    /// <see cref="DatasetParamName"/>,
-    /// <see cref="ComponentSelector1ParamName"/>,
-    /// <see cref="ComponentSelector2ParamName"/>,
-    /// <see cref="LevelOfDetailParamName"/>,
-    /// <see cref="DISKindParamName"/>,
-    /// <see cref="DISDomainParamName"/>,
-    /// <see cref="DISCountryParamName"/>,
-    /// <see cref="DISCategoryParamName"/>,
-    /// <see cref="DISSubcategoryParamName"/>,
-    /// <see cref="DISSpecificParamName"/>,
-    /// <see cref="DISExtraParamName"/>,
-    /// <see cref="FileTypeParamName"/>.
-    /// It returns one column,
-    /// <see cref="ContentColumnName"/>.
     /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="LevelOfDetailParamName"/></description></item>
+    ///   <item><description><see cref="DISKindParamName"/></description></item>
+    ///   <item><description><see cref="DISDomainParamName"/></description></item>
+    ///   <item><description><see cref="DISCountryParamName"/></description></item>
+    ///   <item><description><see cref="DISCategoryParamName"/></description></item>
+    ///   <item><description><see cref="DISSubcategoryParamName"/></description></item>
+    ///   <item><description><see cref="DISSpecificParamName"/></description></item>
+    ///   <item><description><see cref="DISExtraParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    /// </list>
+    /// <list type="bullet">
+    ///   <listheader><description>Selected Columns</description></listheader>
+    ///   <item><description><see cref="ContentColumnName"/></description></item>
+    /// </list>
+    /// </remarks>
     /// <seealso cref="SelectFromMovingModelLodStatement"/>
     private readonly DbCommand selectFromMovingModelLodCommand;
 
     /// <summary>
     /// The SQL prepared statement to insert a row into the Tile table.
-    /// This takes eleven parameters,
-    /// <see cref="CdbParamName"/>,
-    /// <see cref="LatitudeParamName"/>,
-    /// <see cref="LongitudeParamName"/>,
-    /// <see cref="DatasetParamName"/>,
-    /// <see cref="ComponentSelector1ParamName"/>,
-    /// <see cref="ComponentSelector2ParamName"/>,
-    /// <see cref="LevelOfDetailParamName"/>,
-    /// <see cref="UpParamName"/>,
-    /// <see cref="RightParamName"/>,
-    /// <see cref="FileTypeParamName"/>,
-    /// <see cref="ContentParamName"/>.
     /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="LatitudeParamName"/></description></item>
+    ///   <item><description><see cref="LongitudeParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="LevelOfDetailParamName"/></description></item>
+    ///   <item><description><see cref="UpParamName"/></description></item>
+    ///   <item><description><see cref="RightParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    ///   <item><description><see cref="ContentParamName"/></description></item>
+    /// </list>
+    /// </remarks>
     /// <seealso cref="InsertIntoTileStatement"/>
     private readonly DbCommand insertIntoTileCommand;
 
     /// <summary>
     /// The SQL prepared statement to select a row from the Tile table.
-    /// This takes ten parameters,
-    /// <see cref="CdbParamName"/>,
-    /// <see cref="LatitudeParamName"/>,
-    /// <see cref="LongitudeParamName"/>,
-    /// <see cref="DatasetParamName"/>,
-    /// <see cref="ComponentSelector1ParamName"/>,
-    /// <see cref="ComponentSelector2ParamName"/>,
-    /// <see cref="LevelOfDetailParamName"/>,
-    /// <see cref="UpParamName"/>,
-    /// <see cref="RightParamName"/>,
-    /// <see cref="FileTypeParamName"/>.
-    /// It returns one column,
-    /// <see cref="ContentColumnName"/>.
     /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="LatitudeParamName"/></description></item>
+    ///   <item><description><see cref="LongitudeParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="LevelOfDetailParamName"/></description></item>
+    ///   <item><description><see cref="UpParamName"/></description></item>
+    ///   <item><description><see cref="RightParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    /// </list>
+    /// <list type="bullet">
+    ///   <listheader><description>Selected Columns</description></listheader>
+    ///   <item><description><see cref="ContentColumnName"/></description></item>
+    /// </list>
+    /// </remarks>
     /// <seealso cref="SelectFromTileStatement"/>
     private readonly DbCommand selectFromTileCommand;
 
     /// <summary>
     /// The SQL prepared statement to insert a row into the TileArchivedFeature table.
-    /// This takes sixteen parameters,
-    /// <see cref="CdbParamName"/>,
-    /// <see cref="LatitudeParamName"/>,
-    /// <see cref="LongitudeParamName"/>,
-    /// <see cref="DatasetParamName"/>,
-    /// <see cref="ComponentSelector1ParamName"/>,
-    /// <see cref="ComponentSelector2ParamName"/>,
-    /// <see cref="LevelOfDetailParamName"/>,
-    /// <see cref="UpParamName"/>,
-    /// <see cref="RightParamName"/>,
-    /// <see cref="FeatureCategoryParamName"/>,
-    /// <see cref="FeatureSubcategoryParamName"/>,
-    /// <see cref="FeatureTypeParamName"/>,
-    /// <see cref="FeatureSubcodeParamName"/>,
-    /// <see cref="ModelNameParamName"/>,
-    /// <see cref="FileTypeParamName"/>,
-    /// <see cref="ContentParamName"/>.
     /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="LatitudeParamName"/></description></item>
+    ///   <item><description><see cref="LongitudeParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="LevelOfDetailParamName"/></description></item>
+    ///   <item><description><see cref="UpParamName"/></description></item>
+    ///   <item><description><see cref="RightParamName"/></description></item>
+    ///   <item><description><see cref="FeatureCategoryParamName"/></description></item>
+    ///   <item><description><see cref="FeatureSubcategoryParamName"/></description></item>
+    ///   <item><description><see cref="FeatureTypeParamName"/></description></item>
+    ///   <item><description><see cref="FeatureSubcodeParamName"/></description></item>
+    ///   <item><description><see cref="ModelNameParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    ///   <item><description><see cref="ContentParamName"/></description></item>
+    /// </list>
+    /// </remarks>
     /// <seealso cref="InsertIntoTileArchivedFeatureStatement"/>
     private readonly DbCommand insertIntoTileArchivedFeatureCommand;
 
     /// <summary>
     /// The SQL prepared statement to select a row from the TileArchivedFeature table.
-    /// This takes fifteen parameters,
-    /// <see cref="CdbParamName"/>,
-    /// <see cref="LatitudeParamName"/>,
-    /// <see cref="LongitudeParamName"/>,
-    /// <see cref="DatasetParamName"/>,
-    /// <see cref="ComponentSelector1ParamName"/>,
-    /// <see cref="ComponentSelector2ParamName"/>,
-    /// <see cref="LevelOfDetailParamName"/>,
-    /// <see cref="UpParamName"/>,
-    /// <see cref="RightParamName"/>,
-    /// <see cref="FeatureCategoryParamName"/>,
-    /// <see cref="FeatureSubcategoryParamName"/>,
-    /// <see cref="FeatureTypeParamName"/>,
-    /// <see cref="FeatureSubcodeParamName"/>,
-    /// <see cref="ModelNameParamName"/>,
-    /// <see cref="FileTypeParamName"/>.
-    /// It returns one column,
-    /// <see cref="ContentColumnName"/>.
     /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="LatitudeParamName"/></description></item>
+    ///   <item><description><see cref="LongitudeParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="LevelOfDetailParamName"/></description></item>
+    ///   <item><description><see cref="UpParamName"/></description></item>
+    ///   <item><description><see cref="RightParamName"/></description></item>
+    ///   <item><description><see cref="FeatureCategoryParamName"/></description></item>
+    ///   <item><description><see cref="FeatureSubcategoryParamName"/></description></item>
+    ///   <item><description><see cref="FeatureTypeParamName"/></description></item>
+    ///   <item><description><see cref="FeatureSubcodeParamName"/></description></item>
+    ///   <item><description><see cref="ModelNameParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    /// </list>
+    /// <list type="bullet">
+    ///   <listheader><description>Selected Columns</description></listheader>
+    ///   <item><description><see cref="ContentColumnName"/></description></item>
+    /// </list>
+    /// </remarks>
     /// <seealso cref="SelectFromTileArchivedFeatureStatement"/>
     private readonly DbCommand selectFromTileArchivedFeatureCommand;
 
     /// <summary>
     /// The SQL prepared statement to insert a row into the TileArchivedTexture table.
-    /// This takes twelve parameters,
-    /// <see cref="CdbParamName"/>,
-    /// <see cref="LatitudeParamName"/>,
-    /// <see cref="LongitudeParamName"/>,
-    /// <see cref="DatasetParamName"/>,
-    /// <see cref="ComponentSelector1ParamName"/>,
-    /// <see cref="ComponentSelector2ParamName"/>,
-    /// <see cref="LevelOfDetailParamName"/>,
-    /// <see cref="UpParamName"/>,
-    /// <see cref="RightParamName"/>,
-    /// <see cref="TextureNameParamName"/>,
-    /// <see cref="FileTypeParamName"/>,
-    /// <see cref="ContentParamName"/>.
     /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="LatitudeParamName"/></description></item>
+    ///   <item><description><see cref="LongitudeParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="LevelOfDetailParamName"/></description></item>
+    ///   <item><description><see cref="UpParamName"/></description></item>
+    ///   <item><description><see cref="RightParamName"/></description></item>
+    ///   <item><description><see cref="TextureNameParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    ///   <item><description><see cref="ContentParamName"/></description></item>
+    /// </list>
+    /// </remarks>
     /// <seealso cref="InsertIntoTileArchivedTextureStatement"/>
     private readonly DbCommand insertIntoTileArchivedTextureCommand;
 
     /// <summary>
     /// The SQL prepared statement to select a row from the TileArchivedTexture table.
-    /// This takes eleven parameters,
-    /// <see cref="CdbParamName"/>,
-    /// <see cref="LatitudeParamName"/>,
-    /// <see cref="LongitudeParamName"/>,
-    /// <see cref="DatasetParamName"/>,
-    /// <see cref="ComponentSelector1ParamName"/>,
-    /// <see cref="ComponentSelector2ParamName"/>,
-    /// <see cref="LevelOfDetailParamName"/>,
-    /// <see cref="UpParamName"/>,
-    /// <see cref="RightParamName"/>,
-    /// <see cref="TextureNameParamName"/>,
-    /// <see cref="FileTypeParamName"/>.
-    /// It returns one column,
-    /// <see cref="ContentColumnName"/>.
     /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="LatitudeParamName"/></description></item>
+    ///   <item><description><see cref="LongitudeParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="LevelOfDetailParamName"/></description></item>
+    ///   <item><description><see cref="UpParamName"/></description></item>
+    ///   <item><description><see cref="RightParamName"/></description></item>
+    ///   <item><description><see cref="TextureNameParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    /// </list>
+    /// <list type="bullet">
+    ///   <listheader><description>Selected Columns</description></listheader>
+    ///   <item><description><see cref="ContentColumnName"/></description></item>
+    /// </list>
+    /// </remarks>
     /// <seealso cref="SelectFromTileArchivedTextureStatement"/>
     private readonly DbCommand selectFromTileArchivedTextureCommand;
 
     /// <summary>
     /// The SQL prepared statement to insert a row into the Navigation table.
-    /// This takes six parameters,
-    /// <see cref="CdbParamName"/>,
-    /// <see cref="DatasetParamName"/>,
-    /// <see cref="ComponentSelector1ParamName"/>,
-    /// <see cref="ComponentSelector2ParamName"/>,
-    /// <see cref="FileTypeParamName"/>,
-    /// <see cref="ContentParamName"/>.
     /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    ///   <item><description><see cref="ContentParamName"/></description></item>
+    /// </list>
+    /// </remarks>
     /// <seealso cref="InsertIntoNavigationStatement"/>
     private readonly DbCommand insertIntoNavigationCommand;
 
     /// <summary>
     /// The SQL prepared statement to select a row from the Navigation table.
-    /// This takes five parameters,
-    /// <see cref="CdbParamName"/>,
-    /// <see cref="DatasetParamName"/>,
-    /// <see cref="ComponentSelector1ParamName"/>,
-    /// <see cref="ComponentSelector2ParamName"/>,
-    /// <see cref="FileTypeParamName"/>.
-    /// It returns one column,
-    /// <see cref="ContentColumnName"/>.
     /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    /// </list>
+    /// <list type="bullet">
+    ///   <listheader><description>Selected Columns</description></listheader>
+    ///   <item><description><see cref="ContentColumnName"/></description></item>
+    /// </list>
+    /// </remarks>
     /// <seealso cref="SelectFromNavigationStatement"/>
     private readonly DbCommand selectFromNavigationCommand;
 
@@ -661,9 +788,13 @@ public abstract class SQLDataStore : IDisposable
 
     /// <summary>
     /// The SQL statement that inserts a new name into the CDB table.
-    /// This takes one parameter,
-    /// <see cref="CdbParamName"/>.
     /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    /// </list>
+    /// </remarks>
     protected abstract string InsertIntoCDBStatement
     {
         get;
@@ -723,10 +854,16 @@ public abstract class SQLDataStore : IDisposable
 
     /// <summary>
     /// The SQL statement that selects the CDB name from the CDB table.
-    /// This has no parameters.
-    /// This returns one column,
-    /// <see cref="CDBNameColumnName"/>.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This has no parameters.
+    /// </para>
+    /// <list type="bullet">
+    ///   <listheader><description>Selected Columns</description></listheader>
+    ///   <item><description><see cref="CDBNameColumnName"/></description></item>
+    /// </list>
+    /// </remarks>
     protected abstract string SelectFromCDBStatement
     {
         get;
@@ -802,13 +939,17 @@ public abstract class SQLDataStore : IDisposable
     #region Insert
 
     /// <summary>
-    /// The SQL statement to insert a row in the Metadata table.
-    /// This requires four parameters,
-    /// <see cref="CdbParamName"/>,
-    /// <see cref="MetadataNameParamName"/>,
-    /// <see cref="FileTypeParamName"/>,
-    /// <see cref="ContentParamName"/>
+    /// The SQL statement to insert a row into the Metadata table.
     /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="MetadataNameParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    ///   <item><description><see cref="ContentParamName"/></description></item>
+    /// </list>
+    /// </remarks>
     protected abstract string InsertIntoMetadataStatement
     {
         get;
@@ -908,14 +1049,20 @@ public abstract class SQLDataStore : IDisposable
     #region Select
 
     /// <summary>
-    /// The SQL statement to select one row from the Metadata table.
-    /// This requires three parameters,
-    /// <see cref="CdbParamName"/>,
-    /// <see cref="MetadataNameParamName"/>,
-    /// <see cref="FileTypeParamName"/>.
-    /// It returns one column,
-    /// <see cref="ContentColumnName"/>.
+    /// The SQL statement to select a row from the Metadata table.
     /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="MetadataNameParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    /// </list>
+    /// <list type="bullet">
+    ///   <listheader><description>Selected Columns</description></listheader>
+    ///   <item><description><see cref="ContentColumnName"/></description></item>
+    /// </list>
+    /// </remarks>
     protected abstract string SelectFromMetadataStatement
     {
         get;
@@ -1019,15 +1166,19 @@ public abstract class SQLDataStore : IDisposable
 
     /// <summary>
     /// The SQL statement to insert a row into the Texture table.
-    /// This requires seven parameters,
-    /// <see cref="CdbParamName"/>,
-    /// <see cref="DatasetParamName"/>,
-    /// <see cref="ComponentSelector1ParamName"/>,
-    /// <see cref="ComponentSelector2ParamName"/>,
-    /// <see cref="TextureNameParamName"/>,
-    /// <see cref="FileTypeParamName"/>,
-    /// <see cref="ContentParamName"/>.
     /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="TextureNameParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    ///   <item><description><see cref="ContentParamName"/></description></item>
+    /// </list>
+    /// </remarks>
     protected abstract string InsertIntoTextureStatement
     {
         get;
@@ -1134,16 +1285,22 @@ public abstract class SQLDataStore : IDisposable
 
     /// <summary>
     /// The SQL statement to select a row from the Texture table.
-    /// This requires six parameters,
-    /// <see cref="CdbParamName"/>,
-    /// <see cref="DatasetParamName"/>,
-    /// <see cref="ComponentSelector1ParamName"/>,
-    /// <see cref="ComponentSelector2ParamName"/>,
-    /// <see cref="TextureNameParamName"/>,
-    /// <see cref="FileTypeParamName"/>.
-    /// It returns one column,
-    /// <see cref="ContentColumnName"/>.
     /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="TextureNameParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    /// </list>
+    /// <list type="bullet">
+    ///   <listheader><description>Selected Columns</description></listheader>
+    ///   <item><description><see cref="ContentColumnName"/></description></item>
+    /// </list>
+    /// </remarks>
     protected abstract string SelectFromTextureStatement
     {
         get;
@@ -1239,16 +1396,20 @@ public abstract class SQLDataStore : IDisposable
 
     /// <summary>
     /// The SQL statement to insert a row into the Texture Level of Detail table.
-    /// This requires eight parameters,
-    /// <see cref="CdbParamName"/>,
-    /// <see cref="DatasetParamName"/>,
-    /// <see cref="ComponentSelector1ParamName"/>,
-    /// <see cref="ComponentSelector2ParamName"/>,
-    /// <see cref="LevelOfDetailParamName"/>,
-    /// <see cref="TextureNameParamName"/>,
-    /// <see cref="FileTypeParamName"/>,
-    /// <see cref="ContentParamName"/>.
     /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="LevelOfDetailParamName"/></description></item>
+    ///   <item><description><see cref="TextureNameParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    ///   <item><description><see cref="ContentParamName"/></description></item>
+    /// </list>
+    /// </remarks>
     protected abstract string InsertIntoTextureLodStatement
     {
         get;
@@ -1357,17 +1518,23 @@ public abstract class SQLDataStore : IDisposable
 
     /// <summary>
     /// The SQL statement to select a row from the Texture Level of Detail table.
-    /// This requires seven parameters,
-    /// <see cref="CdbParamName"/>,
-    /// <see cref="DatasetParamName"/>,
-    /// <see cref="ComponentSelector1ParamName"/>,
-    /// <see cref="ComponentSelector2ParamName"/>,
-    /// <see cref="LevelOfDetailParamName"/>,
-    /// <see cref="TextureNameParamName"/>,
-    /// <see cref="FileTypeParamName"/>.
-    /// It returns one column,
-    /// <see cref="ContentColumnName"/>.
     /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="LevelOfDetailParamName"/></description></item>
+    ///   <item><description><see cref="TextureNameParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    /// </list>
+    /// <list type="bullet">
+    ///   <listheader><description>Selected Columns</description></listheader>
+    ///   <item><description><see cref="ContentColumnName"/></description></item>
+    /// </list>
+    /// </remarks>
     protected abstract string SelectFromTextureLodStatement
     {
         get;
@@ -1512,19 +1679,23 @@ public abstract class SQLDataStore : IDisposable
 
     /// <summary>
     /// The SQL statement to insert a row into the Geotypical Model table.
-    /// This takes eleven parameters,
-    /// <see cref="CdbParamName"/>,
-    /// <see cref="DatasetParamName"/>,
-    /// <see cref="ComponentSelector1ParamName"/>,
-    /// <see cref="ComponentSelector2ParamName"/>,
-    /// <see cref="FeatureCategoryParamName"/>,
-    /// <see cref="FeatureSubcategoryParamName"/>,
-    /// <see cref="FeatureTypeParamName"/>,
-    /// <see cref="FeatureSubcodeParamName"/>,
-    /// <see cref="ModelNameParamName"/>,
-    /// <see cref="FileTypeParamName"/>,
-    /// <see cref="ContentParamName"/>.
     /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="FeatureCategoryParamName"/></description></item>
+    ///   <item><description><see cref="FeatureSubcategoryParamName"/></description></item>
+    ///   <item><description><see cref="FeatureTypeParamName"/></description></item>
+    ///   <item><description><see cref="FeatureSubcodeParamName"/></description></item>
+    ///   <item><description><see cref="ModelNameParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    ///   <item><description><see cref="ContentParamName"/></description></item>
+    /// </list>
+    /// </remarks>
     protected abstract string InsertIntoGeotypicalModelStatement
     {
         get;
@@ -1639,20 +1810,26 @@ public abstract class SQLDataStore : IDisposable
 
     /// <summary>
     /// The SQL statement to select a row from the Geotypical Model table.
-    /// This takes ten parameters,
-    /// <see cref="CdbParamName"/>,
-    /// <see cref="DatasetParamName"/>,
-    /// <see cref="ComponentSelector1ParamName"/>,
-    /// <see cref="ComponentSelector2ParamName"/>,
-    /// <see cref="FeatureCategoryParamName"/>,
-    /// <see cref="FeatureSubcategoryParamName"/>,
-    /// <see cref="FeatureTypeParamName"/>,
-    /// <see cref="FeatureSubcodeParamName"/>,
-    /// <see cref="ModelNameParamName"/>,
-    /// <see cref="FileTypeParamName"/>.
-    /// It returns one column,
-    /// <see cref="ContentColumnName"/>.
     /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="FeatureCategoryParamName"/></description></item>
+    ///   <item><description><see cref="FeatureSubcategoryParamName"/></description></item>
+    ///   <item><description><see cref="FeatureTypeParamName"/></description></item>
+    ///   <item><description><see cref="FeatureSubcodeParamName"/></description></item>
+    ///   <item><description><see cref="ModelNameParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    /// </list>
+    /// <list type="bullet">
+    ///   <listheader><description>Selected Columns</description></listheader>
+    ///   <item><description><see cref="ContentColumnName"/></description></item>
+    /// </list>
+    /// </remarks>
     protected abstract string SelectFromGeotypicalModelStatement
     {
         get;
@@ -1748,20 +1925,24 @@ public abstract class SQLDataStore : IDisposable
 
     /// <summary>
     /// The SQL statement to insert a row into the Geotypical Model Level of Detail table.
-    /// This takes twelve parameters,
-    /// <see cref="CdbParamName"/>,
-    /// <see cref="DatasetParamName"/>,
-    /// <see cref="ComponentSelector1ParamName"/>,
-    /// <see cref="ComponentSelector2ParamName"/>,
-    /// <see cref="LevelOfDetailParamName"/>,
-    /// <see cref="FeatureCategoryParamName"/>,
-    /// <see cref="FeatureSubcategoryParamName"/>,
-    /// <see cref="FeatureTypeParamName"/>,
-    /// <see cref="FeatureSubcodeParamName"/>,
-    /// <see cref="ModelNameParamName"/>,
-    /// <see cref="FileTypeParamName"/>,
-    /// <see cref="ContentParamName"/>.
     /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="LevelOfDetailParamName"/></description></item>
+    ///   <item><description><see cref="FeatureCategoryParamName"/></description></item>
+    ///   <item><description><see cref="FeatureSubcategoryParamName"/></description></item>
+    ///   <item><description><see cref="FeatureTypeParamName"/></description></item>
+    ///   <item><description><see cref="FeatureSubcodeParamName"/></description></item>
+    ///   <item><description><see cref="ModelNameParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    ///   <item><description><see cref="ContentParamName"/></description></item>
+    /// </list>
+    /// </remarks>
     protected abstract string InsertIntoGeotypicalModelLodStatement
     {
         get;
@@ -1878,21 +2059,27 @@ public abstract class SQLDataStore : IDisposable
 
     /// <summary>
     /// The SQL statement to select a row from the Geotypical Model Level of Detail table.
-    /// This takes eleven parameters,
-    /// <see cref="CdbParamName"/>,
-    /// <see cref="DatasetParamName"/>,
-    /// <see cref="ComponentSelector1ParamName"/>,
-    /// <see cref="ComponentSelector2ParamName"/>,
-    /// <see cref="LevelOfDetailParamName"/>,
-    /// <see cref="FeatureCategoryParamName"/>,
-    /// <see cref="FeatureSubcategoryParamName"/>,
-    /// <see cref="FeatureTypeParamName"/>,
-    /// <see cref="FeatureSubcodeParamName"/>,
-    /// <see cref="ModelNameParamName"/>,
-    /// <see cref="FileTypeParamName"/>.
-    /// It returns one column,
-    /// <see cref="ContentColumnName"/>.
     /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="LevelOfDetailParamName"/></description></item>
+    ///   <item><description><see cref="FeatureCategoryParamName"/></description></item>
+    ///   <item><description><see cref="FeatureSubcategoryParamName"/></description></item>
+    ///   <item><description><see cref="FeatureTypeParamName"/></description></item>
+    ///   <item><description><see cref="FeatureSubcodeParamName"/></description></item>
+    ///   <item><description><see cref="ModelNameParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    /// </list>
+    /// <list type="bullet">
+    ///   <listheader><description>Selected Columns</description></listheader>
+    ///   <item><description><see cref="ContentColumnName"/></description></item>
+    /// </list>
+    /// </remarks>
     protected abstract string SelectFromGeotypicalModelLodStatement
     {
         get;
@@ -2055,21 +2242,25 @@ public abstract class SQLDataStore : IDisposable
 
     /// <summary>
     /// The SQL statement to insert a row into the Moving Model table.
-    /// This takes thirteen parameters,
-    /// <see cref="CdbParamName"/>,
-    /// <see cref="DatasetParamName"/>,
-    /// <see cref="ComponentSelector1ParamName"/>,
-    /// <see cref="ComponentSelector2ParamName"/>,
-    /// <see cref="DISKindParamName"/>,
-    /// <see cref="DISDomainParamName"/>,
-    /// <see cref="DISCountryParamName"/>,
-    /// <see cref="DISCategoryParamName"/>,
-    /// <see cref="DISSubcategoryParamName"/>,
-    /// <see cref="DISSpecificParamName"/>,
-    /// <see cref="DISExtraParamName"/>,
-    /// <see cref="FileTypeParamName"/>,
-    /// <see cref="ContentParamName"/>.
     /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="DISKindParamName"/></description></item>
+    ///   <item><description><see cref="DISDomainParamName"/></description></item>
+    ///   <item><description><see cref="DISCountryParamName"/></description></item>
+    ///   <item><description><see cref="DISCategoryParamName"/></description></item>
+    ///   <item><description><see cref="DISSubcategoryParamName"/></description></item>
+    ///   <item><description><see cref="DISSpecificParamName"/></description></item>
+    ///   <item><description><see cref="DISExtraParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    ///   <item><description><see cref="ContentParamName"/></description></item>
+    /// </list>
+    /// </remarks>
     protected abstract string InsertIntoMovingModelStatement
     {
         get;
@@ -2188,22 +2379,28 @@ public abstract class SQLDataStore : IDisposable
 
     /// <summary>
     /// The SQL statement to select a row from the Moving Model table.
-    /// This takes twelve parameters,
-    /// <see cref="CdbParamName"/>,
-    /// <see cref="DatasetParamName"/>,
-    /// <see cref="ComponentSelector1ParamName"/>,
-    /// <see cref="ComponentSelector2ParamName"/>,
-    /// <see cref="DISKindParamName"/>,
-    /// <see cref="DISDomainParamName"/>,
-    /// <see cref="DISCountryParamName"/>,
-    /// <see cref="DISCategoryParamName"/>,
-    /// <see cref="DISSubcategoryParamName"/>,
-    /// <see cref="DISSpecificParamName"/>,
-    /// <see cref="DISExtraParamName"/>,
-    /// <see cref="FileTypeParamName"/>.
-    /// It returns one column,
-    /// <see cref="ContentColumnName"/>.
     /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="DISKindParamName"/></description></item>
+    ///   <item><description><see cref="DISDomainParamName"/></description></item>
+    ///   <item><description><see cref="DISCountryParamName"/></description></item>
+    ///   <item><description><see cref="DISCategoryParamName"/></description></item>
+    ///   <item><description><see cref="DISSubcategoryParamName"/></description></item>
+    ///   <item><description><see cref="DISSpecificParamName"/></description></item>
+    ///   <item><description><see cref="DISExtraParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    /// </list>
+    /// <list type="bullet">
+    ///   <listheader><description>Selected Columns</description></listheader>
+    ///   <item><description><see cref="ContentColumnName"/></description></item>
+    /// </list>
+    /// </remarks>
     protected abstract string SelectFromMovingModelStatement
     {
         get;
@@ -2299,22 +2496,26 @@ public abstract class SQLDataStore : IDisposable
 
     /// <summary>
     /// The SQL statement to insert a row into the Moving Model Level of Detail table.
-    /// This takes fourteen parameters,
-    /// <see cref="CdbParamName"/>,
-    /// <see cref="DatasetParamName"/>,
-    /// <see cref="ComponentSelector1ParamName"/>,
-    /// <see cref="ComponentSelector2ParamName"/>,
-    /// <see cref="LevelOfDetailParamName"/>,
-    /// <see cref="DISKindParamName"/>,
-    /// <see cref="DISDomainParamName"/>,
-    /// <see cref="DISCountryParamName"/>,
-    /// <see cref="DISCategoryParamName"/>,
-    /// <see cref="DISSubcategoryParamName"/>,
-    /// <see cref="DISSpecificParamName"/>,
-    /// <see cref="DISExtraParamName"/>,
-    /// <see cref="FileTypeParamName"/>,
-    /// <see cref="ContentParamName"/>.
     /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="LevelOfDetailParamName"/></description></item>
+    ///   <item><description><see cref="DISKindParamName"/></description></item>
+    ///   <item><description><see cref="DISDomainParamName"/></description></item>
+    ///   <item><description><see cref="DISCountryParamName"/></description></item>
+    ///   <item><description><see cref="DISCategoryParamName"/></description></item>
+    ///   <item><description><see cref="DISSubcategoryParamName"/></description></item>
+    ///   <item><description><see cref="DISSpecificParamName"/></description></item>
+    ///   <item><description><see cref="DISExtraParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    ///   <item><description><see cref="ContentParamName"/></description></item>
+    /// </list>
+    /// </remarks>
     protected abstract string InsertIntoMovingModelLodStatement
     {
         get;
@@ -2435,23 +2636,29 @@ public abstract class SQLDataStore : IDisposable
 
     /// <summary>
     /// The SQL statement to select a row from the Moving Model Level of Detail table.
-    /// This takes thirteen parameters,
-    /// <see cref="CdbParamName"/>,
-    /// <see cref="DatasetParamName"/>,
-    /// <see cref="ComponentSelector1ParamName"/>,
-    /// <see cref="ComponentSelector2ParamName"/>,
-    /// <see cref="LevelOfDetailParamName"/>,
-    /// <see cref="DISKindParamName"/>,
-    /// <see cref="DISDomainParamName"/>,
-    /// <see cref="DISCountryParamName"/>,
-    /// <see cref="DISCategoryParamName"/>,
-    /// <see cref="DISSubcategoryParamName"/>,
-    /// <see cref="DISSpecificParamName"/>,
-    /// <see cref="DISExtraParamName"/>,
-    /// <see cref="FileTypeParamName"/>.
-    /// It returns one column,
-    /// <see cref="ContentColumnName"/>.
     /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="LevelOfDetailParamName"/></description></item>
+    ///   <item><description><see cref="DISKindParamName"/></description></item>
+    ///   <item><description><see cref="DISDomainParamName"/></description></item>
+    ///   <item><description><see cref="DISCountryParamName"/></description></item>
+    ///   <item><description><see cref="DISCategoryParamName"/></description></item>
+    ///   <item><description><see cref="DISSubcategoryParamName"/></description></item>
+    ///   <item><description><see cref="DISSpecificParamName"/></description></item>
+    ///   <item><description><see cref="DISExtraParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    /// </list>
+    /// <list type="bullet">
+    ///   <listheader><description>Selected Columns</description></listheader>
+    ///   <item><description><see cref="ContentColumnName"/></description></item>
+    /// </list>
+    /// </remarks>
     protected abstract string SelectFromMovingModelLodStatement
     {
         get;
@@ -2583,19 +2790,23 @@ public abstract class SQLDataStore : IDisposable
 
     /// <summary>
     /// The SQL statement to insert a row into the Tile table.
-    /// This takes eleven parameters,
-    /// <see cref="CdbParamName"/>,
-    /// <see cref="LatitudeParamName"/>,
-    /// <see cref="LongitudeParamName"/>,
-    /// <see cref="DatasetParamName"/>,
-    /// <see cref="ComponentSelector1ParamName"/>,
-    /// <see cref="ComponentSelector2ParamName"/>,
-    /// <see cref="LevelOfDetailParamName"/>,
-    /// <see cref="UpParamName"/>,
-    /// <see cref="RightParamName"/>,
-    /// <see cref="FileTypeParamName"/>,
-    /// <see cref="ContentParamName"/>.
     /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="LatitudeParamName"/></description></item>
+    ///   <item><description><see cref="LongitudeParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="LevelOfDetailParamName"/></description></item>
+    ///   <item><description><see cref="UpParamName"/></description></item>
+    ///   <item><description><see cref="RightParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    ///   <item><description><see cref="ContentParamName"/></description></item>
+    /// </list>
+    /// </remarks>
     protected abstract string InsertIntoTileStatement
     {
         get;
@@ -2710,20 +2921,26 @@ public abstract class SQLDataStore : IDisposable
 
     /// <summary>
     /// The SQL statement to select a row from the Tile table.
-    /// This takes ten parameters,
-    /// <see cref="CdbParamName"/>,
-    /// <see cref="LatitudeParamName"/>,
-    /// <see cref="LongitudeParamName"/>,
-    /// <see cref="DatasetParamName"/>,
-    /// <see cref="ComponentSelector1ParamName"/>,
-    /// <see cref="ComponentSelector2ParamName"/>,
-    /// <see cref="LevelOfDetailParamName"/>,
-    /// <see cref="UpParamName"/>,
-    /// <see cref="RightParamName"/>,
-    /// <see cref="FileTypeParamName"/>.
-    /// It returns one column,
-    /// <see cref="ContentColumnName"/>.
     /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="LatitudeParamName"/></description></item>
+    ///   <item><description><see cref="LongitudeParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="LevelOfDetailParamName"/></description></item>
+    ///   <item><description><see cref="UpParamName"/></description></item>
+    ///   <item><description><see cref="RightParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    /// </list>
+    /// <list type="bullet">
+    ///   <listheader><description>Selected Columns</description></listheader>
+    ///   <item><description><see cref="ContentColumnName"/></description></item>
+    /// </list>
+    /// </remarks>
     protected abstract string SelectFromTileStatement
     {
         get;
@@ -2819,24 +3036,28 @@ public abstract class SQLDataStore : IDisposable
 
     /// <summary>
     /// The SQL statement to insert a row into the TileArchivedFeature table.
-    /// This takes sixteen parameters,
-    /// <see cref="CdbParamName"/>,
-    /// <see cref="LatitudeParamName"/>,
-    /// <see cref="LongitudeParamName"/>,
-    /// <see cref="DatasetParamName"/>,
-    /// <see cref="ComponentSelector1ParamName"/>,
-    /// <see cref="ComponentSelector2ParamName"/>,
-    /// <see cref="LevelOfDetailParamName"/>,
-    /// <see cref="UpParamName"/>,
-    /// <see cref="RightParamName"/>,
-    /// <see cref="FeatureCategoryParamName"/>,
-    /// <see cref="FeatureSubcategoryParamName"/>,
-    /// <see cref="FeatureTypeParamName"/>,
-    /// <see cref="FeatureSubcodeParamName"/>,
-    /// <see cref="ModelNameParamName"/>,
-    /// <see cref="FileTypeParamName"/>,
-    /// <see cref="ContentParamName"/>.
     /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="LatitudeParamName"/></description></item>
+    ///   <item><description><see cref="LongitudeParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="LevelOfDetailParamName"/></description></item>
+    ///   <item><description><see cref="UpParamName"/></description></item>
+    ///   <item><description><see cref="RightParamName"/></description></item>
+    ///   <item><description><see cref="FeatureCategoryParamName"/></description></item>
+    ///   <item><description><see cref="FeatureSubcategoryParamName"/></description></item>
+    ///   <item><description><see cref="FeatureTypeParamName"/></description></item>
+    ///   <item><description><see cref="FeatureSubcodeParamName"/></description></item>
+    ///   <item><description><see cref="ModelNameParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    ///   <item><description><see cref="ContentParamName"/></description></item>
+    /// </list>
+    /// </remarks>
     protected abstract string InsertIntoTileArchivedFeatureStatement
     {
         get;
@@ -2961,25 +3182,31 @@ public abstract class SQLDataStore : IDisposable
 
     /// <summary>
     /// The SQL statement to select a row from the TileArchivedFeature table.
-    /// This takes fifteen parameters,
-    /// <see cref="CdbParamName"/>,
-    /// <see cref="LatitudeParamName"/>,
-    /// <see cref="LongitudeParamName"/>,
-    /// <see cref="DatasetParamName"/>,
-    /// <see cref="ComponentSelector1ParamName"/>,
-    /// <see cref="ComponentSelector2ParamName"/>,
-    /// <see cref="LevelOfDetailParamName"/>,
-    /// <see cref="UpParamName"/>,
-    /// <see cref="RightParamName"/>,
-    /// <see cref="FeatureCategoryParamName"/>,
-    /// <see cref="FeatureSubcategoryParamName"/>,
-    /// <see cref="FeatureTypeParamName"/>,
-    /// <see cref="FeatureSubcodeParamName"/>,
-    /// <see cref="ModelNameParamName"/>,
-    /// <see cref="FileTypeParamName"/>.
-    /// It returns one column,
-    /// <see cref="ContentColumnName"/>.
     /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="LatitudeParamName"/></description></item>
+    ///   <item><description><see cref="LongitudeParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="LevelOfDetailParamName"/></description></item>
+    ///   <item><description><see cref="UpParamName"/></description></item>
+    ///   <item><description><see cref="RightParamName"/></description></item>
+    ///   <item><description><see cref="FeatureCategoryParamName"/></description></item>
+    ///   <item><description><see cref="FeatureSubcategoryParamName"/></description></item>
+    ///   <item><description><see cref="FeatureTypeParamName"/></description></item>
+    ///   <item><description><see cref="FeatureSubcodeParamName"/></description></item>
+    ///   <item><description><see cref="ModelNameParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    /// </list>
+    /// <list type="bullet">
+    ///   <listheader><description>Selected Columns</description></listheader>
+    ///   <item><description><see cref="ContentColumnName"/></description></item>
+    /// </list>
+    /// </remarks>
     protected abstract string SelectFromTileArchivedFeatureStatement
     {
         get;
@@ -3075,20 +3302,24 @@ public abstract class SQLDataStore : IDisposable
 
     /// <summary>
     /// The SQL statement to insert a row into the TileArchivedTexture table.
-    /// This takes twelve parameters,
-    /// <see cref="CdbParamName"/>,
-    /// <see cref="LatitudeParamName"/>,
-    /// <see cref="LongitudeParamName"/>,
-    /// <see cref="DatasetParamName"/>,
-    /// <see cref="ComponentSelector1ParamName"/>,
-    /// <see cref="ComponentSelector2ParamName"/>,
-    /// <see cref="LevelOfDetailParamName"/>,
-    /// <see cref="UpParamName"/>,
-    /// <see cref="RightParamName"/>,
-    /// <see cref="TextureNameParamName"/>,
-    /// <see cref="FileTypeParamName"/>,
-    /// <see cref="ContentParamName"/>.
     /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="LatitudeParamName"/></description></item>
+    ///   <item><description><see cref="LongitudeParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="LevelOfDetailParamName"/></description></item>
+    ///   <item><description><see cref="UpParamName"/></description></item>
+    ///   <item><description><see cref="RightParamName"/></description></item>
+    ///   <item><description><see cref="TextureNameParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    ///   <item><description><see cref="ContentParamName"/></description></item>
+    /// </list>
+    /// </remarks>
     protected abstract string InsertIntoTileArchivedTextureStatement
     {
         get;
@@ -3205,21 +3436,27 @@ public abstract class SQLDataStore : IDisposable
 
     /// <summary>
     /// The SQL statement to select a row from the TileArchivedTexture table.
-    /// This takes eleven parameters,
-    /// <see cref="CdbParamName"/>,
-    /// <see cref="LatitudeParamName"/>,
-    /// <see cref="LongitudeParamName"/>,
-    /// <see cref="DatasetParamName"/>,
-    /// <see cref="ComponentSelector1ParamName"/>,
-    /// <see cref="ComponentSelector2ParamName"/>,
-    /// <see cref="LevelOfDetailParamName"/>,
-    /// <see cref="UpParamName"/>,
-    /// <see cref="RightParamName"/>,
-    /// <see cref="TextureNameParamName"/>,
-    /// <see cref="FileTypeParamName"/>.
-    /// It returns one column,
-    /// <see cref="ContentColumnName"/>.
     /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="LatitudeParamName"/></description></item>
+    ///   <item><description><see cref="LongitudeParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="LevelOfDetailParamName"/></description></item>
+    ///   <item><description><see cref="UpParamName"/></description></item>
+    ///   <item><description><see cref="RightParamName"/></description></item>
+    ///   <item><description><see cref="TextureNameParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    /// </list>
+    /// <list type="bullet">
+    ///   <listheader><description>Selected Columns</description></listheader>
+    ///   <item><description><see cref="ContentColumnName"/></description></item>
+    /// </list>
+    /// </remarks>
     protected abstract string SelectFromTileArchivedTextureStatement
     {
         get;
@@ -3315,14 +3552,18 @@ public abstract class SQLDataStore : IDisposable
 
     /// <summary>
     /// The SQL statement to insert a row into the Navigation table.
-    /// This takes six parameters,
-    /// <see cref="CdbParamName"/>,
-    /// <see cref="DatasetParamName"/>,
-    /// <see cref="ComponentSelector1ParamName"/>,
-    /// <see cref="ComponentSelector2ParamName"/>,
-    /// <see cref="FileTypeParamName"/>,
-    /// <see cref="ContentParamName"/>.
     /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    ///   <item><description><see cref="ContentParamName"/></description></item>
+    /// </list>
+    /// </remarks>
     protected abstract string InsertIntoNavigationStatement
     {
         get;
@@ -3427,15 +3668,21 @@ public abstract class SQLDataStore : IDisposable
 
     /// <summary>
     /// The SQL statement to select a row from the Navigation table.
-    /// This takes five parameters,
-    /// <see cref="CdbParamName"/>,
-    /// <see cref="DatasetParamName"/>,
-    /// <see cref="ComponentSelector1ParamName"/>,
-    /// <see cref="ComponentSelector2ParamName"/>,
-    /// <see cref="FileTypeParamName"/>.
-    /// It returns one column,
-    /// <see cref="ContentColumnName"/>.
     /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    /// </list>
+    /// <list type="bullet">
+    ///   <listheader><description>Selected Columns</description></listheader>
+    ///   <item><description><see cref="ContentColumnName"/></description></item>
+    /// </list>
+    /// </remarks>
     protected abstract string SelectFromNavigationStatement
     {
         get;
