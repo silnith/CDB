@@ -4,6 +4,8 @@ An API for an OGC CDB.
 
 I got sick of seeing something called a "DB" that wasn't a proper SQL database.  So I made it into one.
 
+[OGC CDB Standard 1.3 Volume 1](<https://docs.ogc.org/is/15-113r7/15-113r7.html>)
+
 ## Copyright
 
 Everything in here I wrote on my own time using only my own personal resources, and publicly available
