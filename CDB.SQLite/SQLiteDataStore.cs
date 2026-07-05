@@ -12,11 +12,27 @@ namespace Silnith.CDB.SQLite;
 /// </summary>
 /// <remarks>
 /// <para>
-/// SQLite cannot handle a Stream as an input object.  Therefore this implementation
-/// must override all the insert methods that take <see cref="Stream"/> parameters
-/// and convert them to byte arrays.
+/// SQLite cannot handle a stream as an input object.  Therefore this
+/// implementation must override all the insert methods that take
+/// <see cref="Stream"/> parameters and convert them to byte arrays.
+/// </para>
+/// <para>
+/// If a select statement for a column of type blob also includes the implicit
+/// <c>rowid</c> column, then the SQLite driver will return the blob column as
+/// type <see cref="SqliteBlob"/>, which supports streaming the blob contents.
+/// </para>
+/// <para>
+/// If not, the driver will return the entire blob as a
+/// <see cref="MemoryStream"/>, which is fully buffered in memory.
+/// </para>
+/// <para>
+/// Therefore, this implementation appends the implicit <c>rowid</c> column to
+/// all of the <c>select</c> statements.  The additional column comes after the
+/// expected <see cref="ContentColumnName"/> so the query logic does not need
+/// to be modified.  The additional row is never actually read.
 /// </para>
 /// </remarks>
+/// <seealso href="https://learn.microsoft.com/en-us/dotnet/standard/data/sqlite/blob-io"/>
 public class SQLiteDataStore : SQLDataStore
 {
     private const string varcharColumnType = "text";
@@ -301,17 +317,6 @@ public class SQLiteDataStore : SQLDataStore
         await content.CopyToAsync(memoryStream, cancellationToken);
         return await InsertIntoMetadataAsync(cdbName, metadata, memoryStream.ToArray(), cancellationToken);
     }
-
-    /*
-     * If a select statement for a column of type blob also includes the
-     * implicit rowid column, then the SQLite driver will return the blob
-     * column as type SqliteBlob, which supports streaming the blob contents.
-     * 
-     * If not, the driver will return the entire blob as a MemoryStream,
-     * which is fully buffered in memory.
-     * 
-     * https://learn.microsoft.com/en-us/dotnet/standard/data/sqlite/blob-io
-     */
 
     private const string selectFromMetadata = $"""
         select
