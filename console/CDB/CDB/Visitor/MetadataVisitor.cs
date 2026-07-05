@@ -71,10 +71,10 @@ public class MetadataVisitor : VisitorBase
             string extension = file.Extension.Substring(1);
             Metadata metadata = new(name, extension);
 
-            if (!recognizedMetadata.Contains(name))
-            {
-                logger.LogInformation("Unrecognized Metadata {Metadata}", metadata);
-            }
+            //if (!recognizedMetadata.Contains(name))
+            //{
+            //    logger.LogInformation("Unrecognized Metadata {Metadata}", metadata);
+            //}
 
             visitMetadataFile(metadata, file);
         }
