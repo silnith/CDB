@@ -36,18 +36,25 @@ public class CdbController : ControllerBase
             logger.LogDebug("File found.  {Size}", content.LongLength);
 
             string filename = Path.GetFileName(fileNameAndPath);
+            // application/gml+xml
+            // application/gltf-buffer
+            // application/geo+json
+            // image/tiff; application=geotiff
             string contentType = Path.GetExtension(fileNameAndPath).ToLowerInvariant() switch
             {
+                ".bmp" => "image/bmp",
                 ".dbf" => "application/vnd.dbf",
+                //".dbt" => "application/vnd.dbt",
                 ".flt" => "model/flt",
                 ".gif" => MediaTypeNames.Image.Gif,
                 ".gpkg" => "application/geopackage+sqlite3",
+                ".glb" => "model/gltf-binary",
+                ".gltf" => "model/gltf+json",
                 ".jpg" or ".jpeg" => MediaTypeNames.Image.Jpeg,
                 ".jp2" or ".jpg2" => "image/jp2",
                 ".jsn" or ".json" => MediaTypeNames.Application.Json,
-                ".pdf" => MediaTypeNames.Application.Pdf,
+                ".png" => "image/png",
                 ".rgb" or ".rgba" => "image/sgi",
-                ".rtf" => MediaTypeNames.Application.Rtf,
                 ".shp" => "application/vnd.shp",
                 ".shx" => "application/vnd.shp.shx",
                 ".tif" or ".tiff" => MediaTypeNames.Image.Tiff,
