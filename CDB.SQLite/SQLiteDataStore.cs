@@ -31,6 +31,12 @@ namespace Silnith.CDB.SQLite;
 /// expected <see cref="ContentColumnName"/> so the query logic does not need
 /// to be modified.  The additional row is never actually read.
 /// </para>
+/// <para>
+/// Because SQLite is an embedded database, all of the logic for querying and
+/// modifying it happens in-process, in the thread that called it.  Therefore
+/// there is no efficiency gained by using the <c>async</c> API.  It is
+/// faster and more efficient to use the synchronous API.
+/// </para>
 /// </remarks>
 /// <seealso href="https://learn.microsoft.com/en-us/dotnet/standard/data/sqlite/blob-io"/>
 public class SQLiteDataStore : SQLDataStore
