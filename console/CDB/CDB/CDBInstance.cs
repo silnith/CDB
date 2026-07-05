@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -43,7 +44,28 @@ public class CDBInstance : ICDB
         return false;
     }
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Walks the list of CDB versions and finds the first containing the
+    /// specified file.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This initiates file open operations in all CDB versions simultaneously
+    /// using the default thread pool.  However, it inserts a barrier after the
+    /// file is opened but before it is passed to the <paramref name="fileFoundAsyncAction"/>,
+    /// so it can order the found files and pass the correct one to the action.
+    /// </para>
+    /// <para>
+    /// If no file is found, the action is not called.
+    /// </para>
+    /// </remarks>
+    /// <param name="filePathAndName">The relative path and filename of the file to read.
+    /// The path should be relative to the CDB root.</param>
+    /// <param name="fileFoundAsyncAction">The action to run if the file is found.
+    /// The stream will be automatically closed after the action returns or
+    /// throws an exception.</param>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    /// <returns><see langword="true"/> if the file was found.</returns>
     public async Task<bool> TryReadFileAsync(string filePathAndName,
         Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
         CancellationToken cancellationToken)
@@ -53,7 +75,8 @@ public class CDBInstance : ICDB
          * partially-completed read requests that are no longer necessary once
          * a higher priority read has completed.
          */
-        CancellationTokenSource cancellationTokenSource = new();
+        CancellationTokenSource leftoverTasks = new();
+        CancellationToken leftoverTasksCancellationToken = leftoverTasks.Token;
         /*
          * First invoke a parallel read request for each CDB in the list of CDB
          * versions.
@@ -61,7 +84,8 @@ public class CDBInstance : ICDB
         Queue<(Task<bool>, TaskCompletionSource)> queue = new();
         foreach (ICDB cdb in cdbs)
         {
-            TaskCompletionSource taskCompletionSource = new();
+            TaskCompletionSource barrierSource = new();
+            Task barrierTask = barrierSource.Task;
             /*
              * The purpose of this local function is to insert a barrier before
              * the execution of the client-supplied action.
@@ -77,13 +101,14 @@ public class CDBInstance : ICDB
              * processing of the opened files until we can walk them in the
              * proper sequence.
              */
-            async Task wrappedAsyncAction(Stream stream, CancellationToken token)
+            async Task wrappedAsyncAction(Stream stream, CancellationToken leftoverTaskToken)
             {
-                await taskCompletionSource.Task;
-                if (!token.IsCancellationRequested)
+                await barrierTask;
+                if (leftoverTaskToken.IsCancellationRequested)
                 {
-                    await fileFoundAsyncAction(stream, cancellationToken);
+                    return;
                 }
+                await fileFoundAsyncAction(stream, cancellationToken);
             }
 
             /*
@@ -95,45 +120,55 @@ public class CDBInstance : ICDB
                  * The wrappedAsyncAction receives the token from the cancellationTokenSource
                  * instead of the cancellation token passed in by the caller.
                  */
-                return cdb.TryReadFileAsync(filePathAndName, wrappedAsyncAction, cancellationTokenSource.Token);
+                return cdb.TryReadFileAsync(filePathAndName, wrappedAsyncAction, leftoverTasksCancellationToken);
             }
 
-            Task<bool> task = Task.Run(callTryReadFileAsync, cancellationTokenSource.Token);
-            (Task<bool>, TaskCompletionSource) item = (task, taskCompletionSource);
+            Task<bool> task = Task.Run(callTryReadFileAsync, leftoverTasksCancellationToken);
+            (Task<bool>, TaskCompletionSource) item = (task, barrierSource);
             queue.Enqueue(item);
         }
         /*
-         * Next, walk the file read operations in order and all them access to
+         * Next, walk the file read operations in order and allow them access to
          * the processing action provided by the caller, one at a time.
          * If any one of them succeeds, cease calling any others.
          */
         bool success = false;
         while (queue.TryDequeue(out (Task<bool>, TaskCompletionSource) tuple))
         {
-            (Task<bool> task, TaskCompletionSource taskCompletionSource) = tuple;
+            (Task<bool> readTask, TaskCompletionSource barrierSource) = tuple;
             /*
              * This allows the wrappedAsyncAction to proceed, if it was ever called.
+             * If not, the task will return false anyway.
              */
-            taskCompletionSource.SetResult();
-            if (await task)
+            barrierSource.SetResult();
+            if (await readTask)
             {
                 success = true;
                 /*
                  * One of the files was found and processed.
                  * Cancel all the other pending operations.
                  */
-                cancellationTokenSource.Cancel();
+                leftoverTasks.Cancel();
                 break;
             }
         }
         /*
          * Finally, walk the file read operations that were never allowed to
-         * proceed, and cancel them all.
+         * proceed, and cancel all the barrier tasks.  This allows them to exit.
          */
         while (queue.TryDequeue(out (Task<bool>, TaskCompletionSource) tuple))
         {
-            (Task<bool> _, TaskCompletionSource taskCompletionSource) = tuple;
-            _ = taskCompletionSource.TrySetCanceled(cancellationTokenSource.Token);
+            (Task<bool> _, TaskCompletionSource barrierSource) = tuple;
+            /*
+             * We could either cancel the barrier task, or set it as completed.
+             * If completed, the wrappedAsyncAction will proceed and find that
+             * the leftover task token is cancelled, so it will exit.
+             * If cancelled, the wrappedAsyncAction will throw a task cancelled
+             * exception, and exit.
+             * Either way, the delegate will not be called.
+             */
+            _ = barrierSource.TrySetCanceled(leftoverTasksCancellationToken);
+            //_ = barrierSource.TrySetResult();
         }
         return success;
     }
