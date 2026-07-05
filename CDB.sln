@@ -21,7 +21,17 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CDB.Importer", "CDB.Importe
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CDB.Service", "CDB.Service\CDB.Service.csproj", "{DD3E48DD-5699-4871-812D-3F165A05B279}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CDB.Tests", "CDB.Tests\CDB.Tests.csproj", "{904D082C-5A73-4D8A-BFBB-4F911860EE26}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CDB.Tests", "CDB.Tests\CDB.Tests.csproj", "{904D082C-5A73-4D8A-BFBB-4F911860EE26}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{0395811C-89FE-406A-81BC-626EE6493269}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+		.gitattributes = .gitattributes
+		.gitignore = .gitignore
+		Directory.Build.props = Directory.Build.props
+		LICENSE = LICENSE
+		README.md = README.md
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

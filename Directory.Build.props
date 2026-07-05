@@ -9,7 +9,7 @@
         <EnablePackageValidation>true</EnablePackageValidation>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
         <RollForward>LatestMajor</RollForward>
-        <PackageProjectUrl>https://github.com/silnith/examples-dotnet</PackageProjectUrl>
+        <PackageProjectUrl>https://github.com/silnith/CDB</PackageProjectUrl>
         <PublishRepositoryUrl>true</PublishRepositoryUrl>
         <EmbedAllSources>true</EmbedAllSources>
         <EmbedUntrackedSources>true</EmbedUntrackedSources>
