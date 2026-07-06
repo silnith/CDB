@@ -61,8 +61,8 @@ public class FileSystemCDB : ICDB
             logger.LogTrace("Found: {File}", file);
             FileStreamOptions options = new()
             {
-                Access = FileAccess.Read,
                 Mode = FileMode.Open,
+                Access = FileAccess.Read,
                 Share = FileShare.Read,
                 Options = FileOptions.SequentialScan,
             };
@@ -88,8 +88,8 @@ public class FileSystemCDB : ICDB
             logger.LogTrace("Found: {File}", file);
             FileStreamOptions options = new()
             {
-                Access = FileAccess.Read,
                 Mode = FileMode.Open,
+                Access = FileAccess.Read,
                 Share = FileShare.Read,
                 Options = FileOptions.SequentialScan | FileOptions.Asynchronous,
             };
