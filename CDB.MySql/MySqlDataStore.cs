@@ -9,6 +9,9 @@ namespace Silnith.CDB.MySql;
 /// </summary>
 public class MySqlDataStore : SQLDataStore
 {
+
+    #region Column Types
+
     private const string varcharColumnType = "national character varying";
     private const string varchar32ColumnType = "national character varying(32)";
     private const string char1ColumnType = "national character(1)";
@@ -17,150 +20,9 @@ public class MySqlDataStore : SQLDataStore
     private const string numeric7ColumnType = "numeric(7,0)";
     private const string blobColumnType = "longblob";
 
-    #region SQL Parameters
-
-    #region Universal Parameters
-
-    private const string cdbParamName = "@cdb";
-
-    /// <inheritdoc/>
-    protected override string CdbParamName => cdbParamName;
-
-    private const string datasetParamName = "@dataset";
-
-    /// <inheritdoc/>
-    protected override string DatasetParamName => datasetParamName;
-
-    private const string cs1ParamName = "@component_selector_1";
-
-    /// <inheritdoc/>
-    protected override string ComponentSelector1ParamName => cs1ParamName;
-
-    private const string cs2ParamName = "@component_selector_2";
-
-    /// <inheritdoc/>
-    protected override string ComponentSelector2ParamName => cs2ParamName;
-
-    private const string lodParamName = "@level_of_detail";
-
-    /// <inheritdoc/>
-    protected override string LevelOfDetailParamName => lodParamName;
-
-    private const string fileTypeParamName = "@file_type";
-
-    /// <inheritdoc/>
-    protected override string FileTypeParamName => fileTypeParamName;
-
-    private const string contentParamName = "@content";
-
-    /// <inheritdoc/>
-    protected override string ContentParamName => contentParamName;
-
     #endregion
 
-    private const string metadataNameParamName = "@metadata_name";
-
-    /// <inheritdoc/>
-    protected override string MetadataNameParamName => metadataNameParamName;
-
-    private const string textureNameParamName = "@texture_name";
-
-    /// <inheritdoc/>
-    protected override string TextureNameParamName => textureNameParamName;
-
-    private const string modelNameParamName = "@model_name";
-
-    /// <inheritdoc/>
-    protected override string ModelNameParamName => modelNameParamName;
-
-    #region Feature Code Parameters
-
-    private const string featureCategoryParamName = "@feature_category";
-
-    /// <inheritdoc/>
-    protected override string FeatureCategoryParamName => featureCategoryParamName;
-
-    private const string featureSubcategoryParamName = "@feature_subcategory";
-
-    /// <inheritdoc/>
-    protected override string FeatureSubcategoryParamName => featureSubcategoryParamName;
-
-    private const string featureTypeParamName = "@feature_type";
-
-    /// <inheritdoc/>
-    protected override string FeatureTypeParamName => featureTypeParamName;
-
-    private const string featureSubcodeParamName = "@feature_subcode";
-
-    /// <inheritdoc/>
-    protected override string FeatureSubcodeParamName => featureSubcodeParamName;
-
-    #endregion
-
-    #region DIS Code Parameters
-
-    private const string disKindParamName = "@dis_kind";
-
-    /// <inheritdoc/>
-    protected override string DISKindParamName => disKindParamName;
-
-    private const string disDomainParamName = "@dis_domain";
-
-    /// <inheritdoc/>
-    protected override string DISDomainParamName => disDomainParamName;
-
-    private const string disCountryParamName = "@dis_country";
-
-    /// <inheritdoc/>
-    protected override string DISCountryParamName => disCountryParamName;
-
-    private const string disCategoryParamName = "@is_category";
-
-    /// <inheritdoc/>
-    protected override string DISCategoryParamName => disCategoryParamName;
-
-    private const string disSubcategoryParamName = "@dis_subcategory";
-
-    /// <inheritdoc/>
-    protected override string DISSubcategoryParamName => disSubcategoryParamName;
-
-    private const string disSpecificParamName = "@dis_specific";
-
-    /// <inheritdoc/>
-    protected override string DISSpecificParamName => disSpecificParamName;
-
-    private const string disExtraParamName = "@dis_extra";
-
-    /// <inheritdoc/>
-    protected override string DISExtraParamName => disExtraParamName;
-
-    #endregion
-
-    #region Tile Parameters
-
-    private const string latitudeParamName = "@latitude";
-
-    /// <inheritdoc/>
-    protected override string LatitudeParamName => latitudeParamName;
-
-    private const string longitudeParamName = "@longitude";
-
-    /// <inheritdoc/>
-    protected override string LongitudeParamName => longitudeParamName;
-
-    private const string upParamName = "@up";
-
-    /// <inheritdoc/>
-    protected override string UpParamName => upParamName;
-
-    private const string rightParamName = "@right";
-
-    /// <inheritdoc/>
-    protected override string RightParamName => rightParamName;
-
-    #endregion
-
-    #endregion
+    #region Table Names
 
     private const string cdbTableName = "CDB";
     private const string metadataTableName = "Metadata";
@@ -174,6 +36,10 @@ public class MySqlDataStore : SQLDataStore
     private const string tileArchivedFeatureTableName = "TileArchivedFeature";
     private const string tileArchivedTextureTableName = "TileArchivedTexture";
     private const string navigationTableName = "Navigation";
+
+    #endregion
+
+    #region Column Names
 
     private const string cdbColumnName = "cdb";
     private const string metadataNameColumnName = "metadata_name";
@@ -201,11 +67,37 @@ public class MySqlDataStore : SQLDataStore
     private const string fileTypeColumnName = "file_type";
     private const string contentColumnName = "content";
 
-    /// <inheritdoc/>
-    protected override string CDBNameColumnName => cdbColumnName;
+    #endregion
 
-    /// <inheritdoc/>
-    protected override string ContentColumnName => contentColumnName;
+    #region SQL Parameters
+
+    private const string cdbParamName = "@cdb";
+    private const string metadataNameParamName = "@metadata_name";
+    private const string datasetParamName = "@dataset";
+    private const string cs1ParamName = "@component_selector_1";
+    private const string cs2ParamName = "@component_selector_2";
+    private const string textureNameParamName = "@texture_name";
+    private const string lodParamName = "@level_of_detail";
+    private const string featureCategoryParamName = "@feature_category";
+    private const string featureSubcategoryParamName = "@feature_subcategory";
+    private const string featureTypeParamName = "@feature_type";
+    private const string featureSubcodeParamName = "@feature_subcode";
+    private const string modelNameParamName = "@model_name";
+    private const string disKindParamName = "@dis_kind";
+    private const string disDomainParamName = "@dis_domain";
+    private const string disCountryParamName = "@dis_country";
+    private const string disCategoryParamName = "@dis_category";
+    private const string disSubcategoryParamName = "@dis_subcategory";
+    private const string disSpecificParamName = "@dis_specific";
+    private const string disExtraParamName = "@dis_extra";
+    private const string latitudeParamName = "@latitude";
+    private const string longitudeParamName = "@longitude";
+    private const string upParamName = "@up";
+    private const string rightParamName = "@right";
+    private const string fileTypeParamName = "@file_type";
+    private const string contentParamName = "@content";
+
+    #endregion
 
     #region CDB
 
@@ -215,9 +107,6 @@ public class MySqlDataStore : SQLDataStore
         )
         """;
 
-    /// <inheritdoc/>
-    protected override string CreateTableCDBStatement => createTableCDB;
-
     private const string insertIntoCDB = $"""
         insert into "{cdbTableName}" (
             "{cdbColumnName}"
@@ -226,16 +115,10 @@ public class MySqlDataStore : SQLDataStore
         )
         """;
 
-    /// <inheritdoc/>
-    protected override string InsertIntoCDBStatement => insertIntoCDB;
-
     private const string selectFromCDB = $"""
         select "{cdbColumnName}"
         from "{cdbTableName}"
         """;
-
-    /// <inheritdoc/>
-    protected override string SelectFromCDBStatement => selectFromCDB;
 
     #endregion
 
@@ -255,9 +138,6 @@ public class MySqlDataStore : SQLDataStore
         )
         """;
 
-    /// <inheritdoc/>
-    protected override string CreateTableMetadataStatement => createTableMetadata;
-
     private const string insertIntoMetadata = $"""
         insert into "{metadataTableName}" (
             "{cdbColumnName}",
@@ -272,9 +152,6 @@ public class MySqlDataStore : SQLDataStore
         )
         """;
 
-    /// <inheritdoc/>
-    protected override string InsertIntoMetadataStatement => insertIntoMetadata;
-
     private const string selectFromMetadata = $"""
         select
             "{contentColumnName}"
@@ -283,9 +160,6 @@ public class MySqlDataStore : SQLDataStore
             and "{metadataNameColumnName}" = {metadataNameParamName}
             and "{fileTypeColumnName}" = {fileTypeParamName}
         """;
-
-    /// <inheritdoc/>
-    protected override string SelectFromMetadataStatement => selectFromMetadata;
 
     #endregion
 
@@ -311,9 +185,6 @@ public class MySqlDataStore : SQLDataStore
         )
         """;
 
-    /// <inheritdoc/>
-    protected override string CreateTableTextureStatement => createTableTexture;
-
     private const string insertIntoTexture = $"""
         insert into "{textureTableName}" (
             "{cdbColumnName}",
@@ -334,9 +205,6 @@ public class MySqlDataStore : SQLDataStore
         )
         """;
 
-    /// <inheritdoc/>
-    protected override string InsertIntoTextureStatement => insertIntoTexture;
-
     private const string selectFromTexture = $"""
         select
             "{contentColumnName}"
@@ -348,9 +216,6 @@ public class MySqlDataStore : SQLDataStore
             and "{textureNameColumnName}" = {textureNameParamName}
             and "{fileTypeColumnName}" = {fileTypeParamName}
         """;
-
-    /// <inheritdoc/>
-    protected override string SelectFromTextureStatement => selectFromTexture;
 
     #endregion
 
@@ -378,9 +243,6 @@ public class MySqlDataStore : SQLDataStore
         )
         """;
 
-    /// <inheritdoc/>
-    protected override string CreateTableTextureLodStatement => createTableTextureLod;
-
     private const string insertIntoTextureLod = $"""
         insert into "{textureLodTableName}" (
             "{cdbColumnName}",
@@ -403,9 +265,6 @@ public class MySqlDataStore : SQLDataStore
         )
         """;
 
-    /// <inheritdoc/>
-    protected override string InsertIntoTextureLodStatement => insertIntoTextureLod;
-
     private const string selectFromTextureLod = $"""
         select
             "{contentColumnName}"
@@ -418,9 +277,6 @@ public class MySqlDataStore : SQLDataStore
             and "{textureNameColumnName}" = {textureNameParamName}
             and "{fileTypeColumnName}" = {fileTypeParamName}
         """;
-
-    /// <inheritdoc/>
-    protected override string SelectFromTextureLodStatement => selectFromTextureLod;
 
     #endregion
 
@@ -454,9 +310,6 @@ public class MySqlDataStore : SQLDataStore
         )
         """;
 
-    /// <inheritdoc/>
-    protected override string CreateTableGeotypicalModelStatement => createTableGeotypicalModel;
-
     private const string insertIntoGeotypicalModel = $"""
         insert into "{geotypicalModelTableName}" (
             "{cdbColumnName}",
@@ -485,9 +338,6 @@ public class MySqlDataStore : SQLDataStore
         )
         """;
 
-    /// <inheritdoc/>
-    protected override string InsertIntoGeotypicalModelStatement => insertIntoGeotypicalModel;
-
     private const string selectFromGeotypicalModel = $"""
         select
             "{contentColumnName}"
@@ -503,9 +353,6 @@ public class MySqlDataStore : SQLDataStore
             and "{modelNameColumnName}" = {modelNameParamName}
             and "{fileTypeColumnName}" = {fileTypeParamName}
         """;
-
-    /// <inheritdoc/>
-    protected override string SelectFromGeotypicalModelStatement => selectFromGeotypicalModel;
 
     #endregion
 
@@ -541,9 +388,6 @@ public class MySqlDataStore : SQLDataStore
         )
         """;
 
-    /// <inheritdoc/>
-    protected override string CreateTableGeotypicalModelLodStatement => createTableGeotypicalModelLod;
-
     private const string insertIntoGeotypicalModelLod = $"""
         insert into "{geotypicalModelLodTableName}" (
             "{cdbColumnName}",
@@ -574,9 +418,6 @@ public class MySqlDataStore : SQLDataStore
         )
         """;
 
-    /// <inheritdoc/>
-    protected override string InsertIntoGeotypicalModelLodStatement => insertIntoGeotypicalModelLod;
-
     private const string selectFromGeotypicalModelLod = $"""
         select
             "{contentColumnName}"
@@ -593,9 +434,6 @@ public class MySqlDataStore : SQLDataStore
             and "{modelNameColumnName}" = {modelNameParamName}
             and "{fileTypeColumnName}" = {fileTypeParamName}
         """;
-
-    /// <inheritdoc/>
-    protected override string SelectFromGeotypicalModelLodStatement => selectFromGeotypicalModelLod;
 
     #endregion
 
@@ -633,9 +471,6 @@ public class MySqlDataStore : SQLDataStore
         )
         """;
 
-    /// <inheritdoc/>
-    protected override string CreateTableMovingModelStatement => createTableMovingModel;
-
     private const string insertIntoMovingModel = $"""
         insert into "{movingModelTableName}" (
             "{cdbColumnName}",
@@ -668,9 +503,6 @@ public class MySqlDataStore : SQLDataStore
         )
         """;
 
-    /// <inheritdoc/>
-    protected override string InsertIntoMovingModelStatement => insertIntoMovingModel;
-
     private const string selectFromMovingModel = $"""
         select
             "{contentColumnName}"
@@ -688,9 +520,6 @@ public class MySqlDataStore : SQLDataStore
             and "{disExtraColumnName}" = {disExtraParamName}
             and "{fileTypeColumnName}" = {fileTypeParamName}
         """;
-
-    /// <inheritdoc/>
-    protected override string SelectFromMovingModelStatement => selectFromMovingModel;
 
     #endregion
 
@@ -730,9 +559,6 @@ public class MySqlDataStore : SQLDataStore
         )
         """;
 
-    /// <inheritdoc/>
-    protected override string CreateTableMovingModelLodStatement => createTableMovingModelLod;
-
     private const string insertIntoMovingModelLod = $"""
         insert into "{movingModelLodTableName}" (
             "{cdbColumnName}",
@@ -767,9 +593,6 @@ public class MySqlDataStore : SQLDataStore
         )
         """;
 
-    /// <inheritdoc/>
-    protected override string InsertIntoMovingModelLodStatement => insertIntoMovingModelLod;
-
     private const string selectFromMovingModelLod = $"""
         select
             "{contentColumnName}"
@@ -788,9 +611,6 @@ public class MySqlDataStore : SQLDataStore
             and "{disExtraColumnName}" = {disExtraParamName}
             and "{fileTypeColumnName}" = {fileTypeParamName}
         """;
-
-    /// <inheritdoc/>
-    protected override string SelectFromMovingModelLodStatement => selectFromMovingModelLod;
 
     #endregion
 
@@ -824,9 +644,6 @@ public class MySqlDataStore : SQLDataStore
         )
         """;
 
-    /// <inheritdoc/>
-    protected override string CreateTableTileStatement => createTableTile;
-
     private const string insertIntoTile = $"""
         insert into "{tileTableName}" (
             "{cdbColumnName}",
@@ -855,9 +672,6 @@ public class MySqlDataStore : SQLDataStore
         )
         """;
 
-    /// <inheritdoc/>
-    protected override string InsertIntoTileStatement => insertIntoTile;
-
     private const string selectFromTile = $"""
         select
             "{contentColumnName}"
@@ -873,9 +687,6 @@ public class MySqlDataStore : SQLDataStore
             and "{rightColumnName}" = {rightParamName}
             and "{fileTypeColumnName}" = {fileTypeParamName}
         """;
-
-    /// <inheritdoc/>
-    protected override string SelectFromTileStatement => selectFromTile;
 
     #endregion
 
@@ -919,9 +730,6 @@ public class MySqlDataStore : SQLDataStore
         )
         """;
 
-    /// <inheritdoc/>
-    protected override string CreateTableTileArchivedFeatureStatement => createTableTileArchivedFeature;
-
     private const string insertIntoTileArchivedFeature = $"""
         insert into "{tileArchivedFeatureTableName}" (
             "{cdbColumnName}",
@@ -960,9 +768,6 @@ public class MySqlDataStore : SQLDataStore
         )
         """;
 
-    /// <inheritdoc/>
-    protected override string InsertIntoTileArchivedFeatureStatement => insertIntoTileArchivedFeature;
-
     private const string selectFromTileArchivedFeature = $"""
         select
             "{contentColumnName}"
@@ -983,9 +788,6 @@ public class MySqlDataStore : SQLDataStore
             and "{modelNameColumnName}" = {modelNameParamName}
             and "{fileTypeColumnName}" = {fileTypeParamName}
         """;
-
-    /// <inheritdoc/>
-    protected override string SelectFromTileArchivedFeatureStatement => selectFromTileArchivedFeature;
 
     #endregion
 
@@ -1021,9 +823,6 @@ public class MySqlDataStore : SQLDataStore
         )
         """;
 
-    /// <inheritdoc/>
-    protected override string CreateTableTileArchivedTextureStatement => createTableTileArchivedTexture;
-
     private const string insertIntoTileArchivedTexture = $"""
         insert into "{tileArchivedTextureTableName}" (
             "{cdbColumnName}",
@@ -1054,9 +853,6 @@ public class MySqlDataStore : SQLDataStore
         )
         """;
 
-    /// <inheritdoc/>
-    protected override string InsertIntoTileArchivedTextureStatement => insertIntoTileArchivedTexture;
-
     private const string selectFromTileArchivedTexture = $"""
         select
             "{contentColumnName}"
@@ -1073,9 +869,6 @@ public class MySqlDataStore : SQLDataStore
             and "{textureNameColumnName}" = {textureNameParamName}
             and "{fileTypeColumnName}" = {fileTypeParamName}
         """;
-
-    /// <inheritdoc/>
-    protected override string SelectFromTileArchivedTextureStatement => selectFromTileArchivedTexture;
 
     #endregion
 
@@ -1099,9 +892,6 @@ public class MySqlDataStore : SQLDataStore
         )
         """;
 
-    /// <inheritdoc/>
-    protected override string CreateTableNavigationStatement => createTableNavigation;
-
     private const string insertIntoNavigation = $"""
         insert into "{navigationTableName}" (
             "{cdbColumnName}",
@@ -1120,9 +910,6 @@ public class MySqlDataStore : SQLDataStore
         )
         """;
 
-    /// <inheritdoc/>
-    protected override string InsertIntoNavigationStatement => insertIntoNavigation;
-
     private const string selectFromNavigation = $"""
         select
             "{contentColumnName}"
@@ -1133,9 +920,6 @@ public class MySqlDataStore : SQLDataStore
             and "{cs2ColumnName}" = {cs2ParamName}
             and "{fileTypeColumnName}" = {fileTypeParamName}
         """;
-
-    /// <inheritdoc/>
-    protected override string SelectFromNavigationStatement => selectFromNavigation;
 
     #endregion
 
@@ -1148,5 +932,198 @@ public class MySqlDataStore : SQLDataStore
         : base(mysqlConnection, createSchema)
     {
     }
+
+    #region Inherited Properties
+
+    /// <inheritdoc/>
+    protected override string CDBNameColumnName => cdbColumnName;
+
+    /// <inheritdoc/>
+    protected override string ContentColumnName => contentColumnName;
+
+    /// <inheritdoc/>
+    protected override string CdbParamName => cdbParamName;
+
+    /// <inheritdoc/>
+    protected override string MetadataNameParamName => metadataNameParamName;
+
+    /// <inheritdoc/>
+    protected override string DatasetParamName => datasetParamName;
+
+    /// <inheritdoc/>
+    protected override string ComponentSelector1ParamName => cs1ParamName;
+
+    /// <inheritdoc/>
+    protected override string ComponentSelector2ParamName => cs2ParamName;
+
+    /// <inheritdoc/>
+    protected override string TextureNameParamName => textureNameParamName;
+
+    /// <inheritdoc/>
+    protected override string LevelOfDetailParamName => lodParamName;
+
+    /// <inheritdoc/>
+    protected override string FeatureCategoryParamName => featureCategoryParamName;
+
+    /// <inheritdoc/>
+    protected override string FeatureSubcategoryParamName => featureSubcategoryParamName;
+
+    /// <inheritdoc/>
+    protected override string FeatureTypeParamName => featureTypeParamName;
+
+    /// <inheritdoc/>
+    protected override string FeatureSubcodeParamName => featureSubcodeParamName;
+
+    /// <inheritdoc/>
+    protected override string ModelNameParamName => modelNameParamName;
+
+    /// <inheritdoc/>
+    protected override string DISKindParamName => disKindParamName;
+
+    /// <inheritdoc/>
+    protected override string DISDomainParamName => disDomainParamName;
+
+    /// <inheritdoc/>
+    protected override string DISCountryParamName => disCountryParamName;
+
+    /// <inheritdoc/>
+    protected override string DISCategoryParamName => disCategoryParamName;
+
+    /// <inheritdoc/>
+    protected override string DISSubcategoryParamName => disSubcategoryParamName;
+
+    /// <inheritdoc/>
+    protected override string DISSpecificParamName => disSpecificParamName;
+
+    /// <inheritdoc/>
+    protected override string DISExtraParamName => disExtraParamName;
+
+    /// <inheritdoc/>
+    protected override string LatitudeParamName => latitudeParamName;
+
+    /// <inheritdoc/>
+    protected override string LongitudeParamName => longitudeParamName;
+
+    /// <inheritdoc/>
+    protected override string UpParamName => upParamName;
+
+    /// <inheritdoc/>
+    protected override string RightParamName => rightParamName;
+
+    /// <inheritdoc/>
+    protected override string FileTypeParamName => fileTypeParamName;
+
+    /// <inheritdoc/>
+    protected override string ContentParamName => contentParamName;
+
+    /// <inheritdoc/>
+    protected override string CreateTableCDBStatement => createTableCDB;
+
+    /// <inheritdoc/>
+    protected override string InsertIntoCDBStatement => insertIntoCDB;
+
+    /// <inheritdoc/>
+    protected override string SelectFromCDBStatement => selectFromCDB;
+
+    /// <inheritdoc/>
+    protected override string CreateTableMetadataStatement => createTableMetadata;
+
+    /// <inheritdoc/>
+    protected override string InsertIntoMetadataStatement => insertIntoMetadata;
+
+    /// <inheritdoc/>
+    protected override string SelectFromMetadataStatement => selectFromMetadata;
+
+    /// <inheritdoc/>
+    protected override string CreateTableTextureStatement => createTableTexture;
+
+    /// <inheritdoc/>
+    protected override string InsertIntoTextureStatement => insertIntoTexture;
+
+    /// <inheritdoc/>
+    protected override string SelectFromTextureStatement => selectFromTexture;
+
+    /// <inheritdoc/>
+    protected override string CreateTableTextureLodStatement => createTableTextureLod;
+
+    /// <inheritdoc/>
+    protected override string InsertIntoTextureLodStatement => insertIntoTextureLod;
+
+    /// <inheritdoc/>
+    protected override string SelectFromTextureLodStatement => selectFromTextureLod;
+
+    /// <inheritdoc/>
+    protected override string CreateTableGeotypicalModelStatement => createTableGeotypicalModel;
+
+    /// <inheritdoc/>
+    protected override string InsertIntoGeotypicalModelStatement => insertIntoGeotypicalModel;
+
+    /// <inheritdoc/>
+    protected override string SelectFromGeotypicalModelStatement => selectFromGeotypicalModel;
+
+    /// <inheritdoc/>
+    protected override string CreateTableGeotypicalModelLodStatement => createTableGeotypicalModelLod;
+
+    /// <inheritdoc/>
+    protected override string InsertIntoGeotypicalModelLodStatement => insertIntoGeotypicalModelLod;
+
+    /// <inheritdoc/>
+    protected override string SelectFromGeotypicalModelLodStatement => selectFromGeotypicalModelLod;
+
+    /// <inheritdoc/>
+    protected override string CreateTableMovingModelStatement => createTableMovingModel;
+
+    /// <inheritdoc/>
+    protected override string InsertIntoMovingModelStatement => insertIntoMovingModel;
+
+    /// <inheritdoc/>
+    protected override string SelectFromMovingModelStatement => selectFromMovingModel;
+
+    /// <inheritdoc/>
+    protected override string CreateTableMovingModelLodStatement => createTableMovingModelLod;
+
+    /// <inheritdoc/>
+    protected override string InsertIntoMovingModelLodStatement => insertIntoMovingModelLod;
+
+    /// <inheritdoc/>
+    protected override string SelectFromMovingModelLodStatement => selectFromMovingModelLod;
+
+    /// <inheritdoc/>
+    protected override string CreateTableTileStatement => createTableTile;
+
+    /// <inheritdoc/>
+    protected override string InsertIntoTileStatement => insertIntoTile;
+
+    /// <inheritdoc/>
+    protected override string SelectFromTileStatement => selectFromTile;
+
+    /// <inheritdoc/>
+    protected override string CreateTableTileArchivedFeatureStatement => createTableTileArchivedFeature;
+
+    /// <inheritdoc/>
+    protected override string InsertIntoTileArchivedFeatureStatement => insertIntoTileArchivedFeature;
+
+    /// <inheritdoc/>
+    protected override string SelectFromTileArchivedFeatureStatement => selectFromTileArchivedFeature;
+
+    /// <inheritdoc/>
+    protected override string CreateTableTileArchivedTextureStatement => createTableTileArchivedTexture;
+
+    /// <inheritdoc/>
+    protected override string InsertIntoTileArchivedTextureStatement => insertIntoTileArchivedTexture;
+
+    /// <inheritdoc/>
+    protected override string SelectFromTileArchivedTextureStatement => selectFromTileArchivedTexture;
+
+    /// <inheritdoc/>
+    protected override string CreateTableNavigationStatement => createTableNavigation;
+
+    /// <inheritdoc/>
+    protected override string InsertIntoNavigationStatement => insertIntoNavigation;
+
+    /// <inheritdoc/>
+    protected override string SelectFromNavigationStatement => selectFromNavigation;
+
+    #endregion
 
 }
