@@ -11,7 +11,7 @@ namespace Silnith.CDB.Visitor;
 /// and calls a delegate for every file that matches the expected
 /// structure and name.
 /// </summary>
-public class TileVisitor : VisitorBase
+public class TiledDatasetVisitor : VisitorBase
 {
     /// <summary>
     /// A pattern that matches level 5 directories.
@@ -28,7 +28,7 @@ public class TileVisitor : VisitorBase
     } = new(@"^U(?<up>\d+)$",
         RegexOptions.CultureInvariant | RegexOptions.IgnoreCase | RegexOptions.NonBacktracking);
 
-    private readonly ILogger<TileVisitor> logger;
+    private readonly ILogger<TiledDatasetVisitor> logger;
 
     private readonly LevelOfDetailDirectoryWalker levelOfDetailDirectoryWalker;
 
@@ -37,7 +37,7 @@ public class TileVisitor : VisitorBase
     /// </summary>
     /// <param name="logger">A logger.</param>
     /// <param name="levelOfDetailDirectoryWalker">A visitor for levels of detail directories.</param>
-    public TileVisitor(ILogger<TileVisitor> logger,
+    public TiledDatasetVisitor(ILogger<TiledDatasetVisitor> logger,
         LevelOfDetailDirectoryWalker levelOfDetailDirectoryWalker)
     {
         ArgumentNullException.ThrowIfNull(logger);

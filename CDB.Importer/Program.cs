@@ -21,12 +21,12 @@ internal class Program
         hostApplicationBuilder.Services.AddSingleton<FeatureCodeDirectoryWalker>();
         hostApplicationBuilder.Services.AddSingleton<LevelOfDetailDirectoryWalker>();
         hostApplicationBuilder.Services.AddSingleton<TextureDirectoryVisitor>();
-        hostApplicationBuilder.Services.AddSingleton<TileVisitor>();
+        hostApplicationBuilder.Services.AddSingleton<TiledDatasetVisitor>();
 
         hostApplicationBuilder.Services.AddSingleton<MetadataVisitor>();
         hostApplicationBuilder.Services.AddSingleton<GeotypicalModelVisitor>();
         hostApplicationBuilder.Services.AddSingleton<MovingModelVisitor>();
-        hostApplicationBuilder.Services.AddSingleton<TileVisitor>();
+        hostApplicationBuilder.Services.AddSingleton<TiledDatasetVisitor>();
         hostApplicationBuilder.Services.AddSingleton<NavigationVisitor>();
 
         return hostApplicationBuilder.Build();

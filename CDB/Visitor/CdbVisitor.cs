@@ -12,7 +12,7 @@ public class CdbVisitor : VisitorBase
     private readonly MetadataVisitor metadataVisitor;
     private readonly GeotypicalModelVisitor geotypicalModelVisitor;
     private readonly MovingModelVisitor movingModelVisitor;
-    private readonly TileVisitor tileVisitor;
+    private readonly TiledDatasetVisitor tiledDatasetVisitor;
     private readonly NavigationVisitor navigationVisitor;
 
     /// <summary>
@@ -22,20 +22,20 @@ public class CdbVisitor : VisitorBase
     /// <param name="metadataVisitor">A visitor for the Metadata directory.</param>
     /// <param name="geotypicalModelVisitor">A visitor for the GTModel directory.</param>
     /// <param name="movingModelVisitor">A visitor for the MModel directory.</param>
-    /// <param name="tileVisitor">A visitor for the Tiles directory.</param>
+    /// <param name="tiledDatasetVisitor">A visitor for the Tiles directory.</param>
     /// <param name="navigationVisitor">A visitor for the Navigation directory.</param>
     public CdbVisitor(ILogger<CdbVisitor> logger,
         MetadataVisitor metadataVisitor,
         GeotypicalModelVisitor geotypicalModelVisitor,
         MovingModelVisitor movingModelVisitor,
-        TileVisitor tileVisitor,
+        TiledDatasetVisitor tiledDatasetVisitor,
         NavigationVisitor navigationVisitor)
     {
         this.logger = logger;
         this.metadataVisitor = metadataVisitor;
         this.geotypicalModelVisitor = geotypicalModelVisitor;
         this.movingModelVisitor = movingModelVisitor;
-        this.tileVisitor = tileVisitor;
+        this.tiledDatasetVisitor = tiledDatasetVisitor;
         this.navigationVisitor = navigationVisitor;
     }
 
@@ -67,7 +67,7 @@ public class CdbVisitor : VisitorBase
             (texture, file) => { },
             (textureLod, file) => { });
         logger.LogTrace("Walking Tiles for {CDB}", cdbDir);
-        tileVisitor.VisitTiles(cdbDir,
+        tiledDatasetVisitor.VisitTiles(cdbDir,
             (tile, file) => { });
         logger.LogTrace("Walking Navigation for {CDB}", cdbDir);
         navigationVisitor.VisitNavigationDatasets(cdbDir,

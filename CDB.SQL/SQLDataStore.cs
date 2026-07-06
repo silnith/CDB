@@ -3900,7 +3900,7 @@ public abstract class SQLDataStore : IDisposable
         }
         // Tiles
         {
-            TileVisitor tiledDatasetVisitor = serviceProvider.GetRequiredService<TileVisitor>();
+            TiledDatasetVisitor tiledDatasetVisitor = serviceProvider.GetRequiredService<TiledDatasetVisitor>();
             tiledDatasetVisitor.VisitTiles(cdbRoot, tileAction);
         }
         // Navigation
@@ -3945,7 +3945,7 @@ public abstract class SQLDataStore : IDisposable
         }
         // Tiles
         {
-            TileVisitor tiledDatasetVisitor = serviceProvider.GetRequiredService<TileVisitor>();
+            TiledDatasetVisitor tiledDatasetVisitor = serviceProvider.GetRequiredService<TiledDatasetVisitor>();
             tiledDatasetVisitor.VisitTiles(cdbRoot,
                 (obj, fileInfo) => action(obj, fileInfo));
         }
