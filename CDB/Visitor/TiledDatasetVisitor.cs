@@ -36,7 +36,7 @@ public class TiledDatasetVisitor : VisitorBase
     /// A constructor for dependency injection.
     /// </summary>
     /// <param name="logger">A logger.</param>
-    /// <param name="levelOfDetailDirectoryWalker">A visitor for levels of detail directories.</param>
+    /// <param name="levelOfDetailDirectoryWalker">A level of detail directory walker.</param>
     public TiledDatasetVisitor(ILogger<TiledDatasetVisitor> logger,
         LevelOfDetailDirectoryWalker levelOfDetailDirectoryWalker)
     {
@@ -48,14 +48,7 @@ public class TiledDatasetVisitor : VisitorBase
     }
 
     /// <summary>
-    /// Called for every file in a tiled dataset directory hierarchy.
-    /// </summary>
-    /// <param name="tile">The details of the tile extracted from the filename.</param>
-    /// <param name="fileInfo">The file.</param>
-    public delegate void VisitTiledDatasetFile(Tile tile, FileInfo fileInfo);
-
-    /// <summary>
-    /// Walks the Tiles directory and visits all recognized files.
+    /// Walks the <c>Tiles</c> directory and visits all recognized files.
     /// </summary>
     /// <remarks>
     /// <para>
@@ -64,8 +57,9 @@ public class TiledDatasetVisitor : VisitorBase
     /// </para>
     /// </remarks>
     /// <param name="cdbDir">The CDB root directory.</param>
-    /// <param name="visitTile">The action to call for every file found.</param>
-    public void VisitTiles(DirectoryInfo cdbDir, VisitTiledDatasetFile visitTile)
+    /// <param name="processTiledDatasetFile">The action to take for every tiled dataset file.</param>
+    public void VisitTiles(DirectoryInfo cdbDir,
+        Action<Tile, FileInfo> processTiledDatasetFile)
     {
         DirectoryInfo tilesDir = new(Path.Combine(cdbDir.FullName, "Tiles"));
         if (!tilesDir.Exists)
@@ -132,30 +126,30 @@ public class TiledDatasetVisitor : VisitorBase
 
                                 if (latitudeFromDirectory != tile.LatitudeValue)
                                 {
-                                    logger.LogError("Directory level 1 {DirectoryLatitude} does not match file {FileLatitude}.", latitudeFromDirectory, tile.LatitudeValue);
+                                    logger.LogError("Latitude from directory level 1 {DirectoryLatitude} does not match file {FileLatitude}.", latitudeFromDirectory, tile.LatitudeValue);
                                 }
                                 if (longitudeFromDirectory != tile.LongitudeValue)
                                 {
-                                    logger.LogError("Directory level 2 {DirectoryLongitude} does not match file {FileLongitude}.", longitudeFromDirectory, tile.LongitudeValue);
+                                    logger.LogError("Longitude from directory level 2 {DirectoryLongitude} does not match file {FileLongitude}.", longitudeFromDirectory, tile.LongitudeValue);
                                 }
                                 if (datasetFromDirectory != tile.DatasetValue)
                                 {
-                                    logger.LogError("Directory level 3 {DirectoryDataset} does not match file {FileDataset}.", datasetFromDirectory, tile.DatasetValue);
+                                    logger.LogError("Dataset from directory level 3 {DirectoryDataset} does not match file {FileDataset}.", datasetFromDirectory, tile.DatasetValue);
                                 }
                                 if (levelOfDetailFromDirectory is not null && levelOfDetailFromDirectory != tile.Level)
                                 {
-                                    logger.LogError("Directory level 4 {DirectoryLod} does not match file {FileLod}", levelOfDetailFromDirectory, tile.Level);
+                                    logger.LogError("Level of detail from directory level 4 {DirectoryLod} does not match file {FileLod}", levelOfDetailFromDirectory, tile.Level);
                                 }
-                                if (levelOfDetailFromDirectory is null && tile.Level.Value < 0)
+                                if (levelOfDetailFromDirectory is null && tile.Level.Value >= 0)
                                 {
-                                    logger.LogError("File {Tile} should be in level 4 directory LC.", tile);
+                                    logger.LogError("File {Tile} should be in level 4 directory {LevelOfDetailDirectory}.", tile, $"L{tile.Level.Value:D2}");
                                 }
                                 if (upFromDirectory != tile.Up)
                                 {
-                                    logger.LogError("Directory level 5 {DirectoryUref} does not match file {FileUref}", upFromDirectory, tile.Up);
+                                    logger.LogError("Up value from directory level 5 {DirectoryUref} does not match file {FileUref}", upFromDirectory, tile.Up);
                                 }
 
-                                visitTile(tile, file);
+                                processTiledDatasetFile(tile, file);
                             }
                         }
                     });

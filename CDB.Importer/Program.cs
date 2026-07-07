@@ -20,7 +20,7 @@ internal class Program
         hostApplicationBuilder.Services.AddSingleton<DISEntityDirectoryWalker>();
         hostApplicationBuilder.Services.AddSingleton<FeatureCodeDirectoryWalker>();
         hostApplicationBuilder.Services.AddSingleton<LevelOfDetailDirectoryWalker>();
-        hostApplicationBuilder.Services.AddSingleton<TextureDirectoryVisitor>();
+        hostApplicationBuilder.Services.AddSingleton<TextureDirectoryWalker>();
         hostApplicationBuilder.Services.AddSingleton<TiledDatasetVisitor>();
 
         hostApplicationBuilder.Services.AddSingleton<MetadataVisitor>();

@@ -6,7 +6,7 @@ using System.IO;
 namespace Silnith.CDB.Visitor;
 
 /// <summary>
-/// Visits all the files in the CDB Metadata directory.
+/// Visits all the files in the CDB <c>Metadata</c> directory.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -48,14 +48,13 @@ public class MetadataVisitor : VisitorBase
         this.logger = logger;
     }
 
-    public delegate void MetadataFileVisitor(Metadata metadata, FileInfo file);
-
     /// <summary>
-    /// Walks the Metadata directory and visits all files.
+    /// Walks the <c>Metadata</c> directory and visits all files.
     /// </summary>
     /// <param name="cdbDir">The CDB root directory.</param>
-    /// <param name="visitMetadataFile">The action to take for each metadata file.</param>
-    public void VisitMetadata(DirectoryInfo cdbDir, MetadataFileVisitor visitMetadataFile)
+    /// <param name="processMetadataFile">The action to take for every metadata file.</param>
+    public void VisitMetadata(DirectoryInfo cdbDir,
+        Action<Metadata, FileInfo> processMetadataFile)
     {
         DirectoryInfo metadataDir = new(Path.Combine(cdbDir.FullName, "Metadata"));
         if (!metadataDir.Exists)
@@ -71,12 +70,7 @@ public class MetadataVisitor : VisitorBase
             string extension = file.Extension.Substring(1);
             Metadata metadata = new(name, extension);
 
-            //if (!recognizedMetadata.Contains(name))
-            //{
-            //    logger.LogInformation("Unrecognized Metadata {Metadata}", metadata);
-            //}
-
-            visitMetadataFile(metadata, file);
+            processMetadataFile(metadata, file);
         }
     }
 }

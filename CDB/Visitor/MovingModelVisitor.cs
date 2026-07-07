@@ -20,33 +20,35 @@ public class MovingModelVisitor : VisitorBase
 
     private readonly DISEntityDirectoryWalker disEntityDirectoryWalker;
 
-    private readonly TextureDirectoryVisitor textureDirectoryVisitor;
+    private readonly TextureDirectoryWalker textureDirectoryWalker;
 
     private readonly LevelOfDetailDirectoryWalker levelOfDetailDirectoryWalker;
 
+    /// <summary>
+    /// A constructor for dependency injection.
+    /// </summary>
+    /// <param name="logger">A logger.</param>
+    /// <param name="levelOfDetailDirectoryWalker">A level of detail directory walker.</param>
+    /// <param name="textureDirectoryWalker">A texture directory walker.</param>
+    /// <param name="disEntityDirectoryWalker">A DIS entity directory walker.</param>
     public MovingModelVisitor(ILogger<MovingModelVisitor> logger,
         DISEntityDirectoryWalker disEntityDirectoryWalker,
-        TextureDirectoryVisitor textureDirectoryVisitor,
+        TextureDirectoryWalker textureDirectoryWalker,
         LevelOfDetailDirectoryWalker levelOfDetailDirectoryWalker)
     {
         ArgumentNullException.ThrowIfNull(logger);
         ArgumentNullException.ThrowIfNull(disEntityDirectoryWalker);
-        ArgumentNullException.ThrowIfNull(textureDirectoryVisitor);
+        ArgumentNullException.ThrowIfNull(textureDirectoryWalker);
         ArgumentNullException.ThrowIfNull(levelOfDetailDirectoryWalker);
 
         this.logger = logger;
         this.disEntityDirectoryWalker = disEntityDirectoryWalker;
-        this.textureDirectoryVisitor = textureDirectoryVisitor;
+        this.textureDirectoryWalker = textureDirectoryWalker;
         this.levelOfDetailDirectoryWalker = levelOfDetailDirectoryWalker;
     }
 
-    public delegate void MovingModelAction(MovingModel movingModel, FileInfo file);
-    public delegate void MovingModelLodAction(MovingModelLod movingModelLod, FileInfo file);
-    public delegate void TextureAction(Texture texture, FileInfo file);
-    public delegate void TextureLodAction(TextureLod modelTexture, FileInfo file);
-
     /// <summary>
-    /// Walks the MModel directory and visits all recognized files.
+    /// Walks the <c>MModel</c> directory and visits all recognized files.
     /// </summary>
     /// <remarks>
     /// <para>
@@ -55,15 +57,15 @@ public class MovingModelVisitor : VisitorBase
     /// </para>
     /// </remarks>
     /// <param name="cdbDir">The CDB root directory.</param>
-    /// <param name="movingModelAction">The action to take for each moving model file.</param>
-    /// <param name="movingModelLodAction">The action to take for each moving model level of detail file.</param>
-    /// <param name="textureAction">The action to take for each texture file.</param>
-    /// <param name="textureLodAction">The action to take for each texture level of detail file.</param>
+    /// <param name="processMovingModelFile">The action to take for every moving model file.</param>
+    /// <param name="processMovingModelLodFile">The action to take for every moving model level of detail file.</param>
+    /// <param name="processTextureFile">The action to take for every texture file.</param>
+    /// <param name="processTextureLodFile">The action to take for every texture level of detail file.</param>
     public void VisitMovingModels(DirectoryInfo cdbDir,
-        MovingModelAction movingModelAction,
-        MovingModelLodAction movingModelLodAction,
-        TextureAction textureAction,
-        TextureLodAction textureLodAction)
+        Action<MovingModel, FileInfo> processMovingModelFile,
+        Action<MovingModelLod, FileInfo> processMovingModelLodFile,
+        Action<Texture, FileInfo> processTextureFile,
+        Action<TextureLod, FileInfo> processTextureLodFile)
     {
         DirectoryInfo mModelDir = new(Path.Combine(cdbDir.FullName, "MModel"));
         if (!mModelDir.Exists)
@@ -108,17 +110,17 @@ public class MovingModelVisitor : VisitorBase
                         }
                         else
                         {
-                            logger.LogWarning("Directory {DirectoryDataset} does not match file {FileDataset}",
+                            logger.LogWarning("Dataset from directory {DirectoryDataset} does not match file {FileDataset}",
                                 datasetFromDirectory, movingModel.Dataset);
                         }
                     }
                     if (disEntityType != movingModel.MMDC)
                     {
-                        logger.LogWarning("Directory {DirectoryDISCode} does not match file {FileDISCode}",
+                        logger.LogWarning("DIS entity from directory {DirectoryDISCode} does not match file {FileDISCode}",
                             disEntityType, movingModel.MMDC);
                     }
 
-                    movingModelAction(movingModel, file);
+                    processMovingModelFile(movingModel, file);
                 }
 
                 // See 3.5.3. MModel Directory Structure 3: Signature
@@ -138,26 +140,26 @@ public class MovingModelVisitor : VisitorBase
 
                         if (datasetFromDirectory != movingModelLod.Dataset)
                         {
-                            logger.LogWarning("Directory {DirectoryDataset} does not match file {FileDataset}",
+                            logger.LogWarning("Dataset from directory {DirectoryDataset} does not match file {FileDataset}",
                                 datasetFromDirectory, movingModelLod.Dataset);
                         }
                         if (disEntityType != movingModelLod.MMDC)
                         {
-                            logger.LogWarning("Directory {DirectoryDISCode} does not match file {FileDISCode}",
+                            logger.LogWarning("DIS entity from directory {DirectoryDISCode} does not match file {FileDISCode}",
                                 disEntityType, movingModelLod.MMDC);
                         }
                         if (lod != movingModelLod.LevelOfDetail)
                         {
-                            logger.LogWarning("Directory {DirectoryLod} does not match file {FileLod}",
+                            logger.LogWarning("Level of detail from directory {DirectoryLod} does not match file {FileLod}",
                                 lod, movingModelLod.LevelOfDetail);
                         }
 
-                        movingModelLodAction(movingModelLod, file);
+                        processMovingModelLodFile(movingModelLod, file);
                     }
                 });
             });
             // See 3.5.2. MModel Directory Structure 2: Texture, Material, and CMT
-            textureDirectoryVisitor.WalkDirectories(datasetDir, (textureName, textureDir) =>
+            textureDirectoryWalker.WalkDirectories(datasetDir, (textureName, textureDir) =>
             {
                 foreach (FileInfo file in textureDir.EnumerateFiles("*", enumerationOptions))
                 {
@@ -176,17 +178,17 @@ public class MovingModelVisitor : VisitorBase
                             }
                             else
                             {
-                                logger.LogWarning("Directory {DirectoryDataset} does not match file {FileDataset}",
+                                logger.LogWarning("Dataset from directory {DirectoryDataset} does not match file {FileDataset}",
                                 datasetFromDirectory, textureLod.Dataset);
                             }
                         }
                         if (textureName != textureLod.Name)
                         {
-                            logger.LogWarning("Directory {DirectoryTexture} does not match file {FileTexture}",
+                            logger.LogWarning("Level of detail from directory {DirectoryTexture} does not match file {FileTexture}",
                                 textureName, textureLod.Name);
                         }
 
-                        textureLodAction(textureLod, file);
+                        processTextureLodFile(textureLod, file);
                     }
                     else
                     {
@@ -204,17 +206,17 @@ public class MovingModelVisitor : VisitorBase
                                 }
                                 else
                                 {
-                                    logger.LogWarning("Directory {DirectoryDataset} does not match file {FileDataset}",
+                                    logger.LogWarning("Dataset from directory {DirectoryDataset} does not match file {FileDataset}",
                                     datasetFromDirectory, texture.Dataset);
                                 }
                             }
                             if (textureName != texture.Name)
                             {
-                                logger.LogWarning("Directory {DirectoryTexture} does not match file {FileTexture}",
+                                logger.LogWarning("Texture name from directory {DirectoryTexture} does not match file {FileTexture}",
                                     textureName, texture.Name);
                             }
 
-                            textureAction(texture, file);
+                            processTextureFile(texture, file);
                         }
                         else
                         {

@@ -7,46 +7,24 @@ using System.Text.RegularExpressions;
 namespace Silnith.CDB.Visitor;
 
 /// <summary>
-/// Visits a directory hierarchy described in 3.3.8.4. Texture Name,
+/// Walks a directory hierarchy described in 3.3.8.4. Texture Name,
 /// and calls a delegate for every leaf directory that matches the expected
 /// structure.
 /// </summary>
-public class TextureDirectoryVisitor : VisitorBase
+public class TextureDirectoryWalker : VisitorBase
 {
-    /// <summary>
-    /// The pattern for the first two directories in the hierarchy.
-    /// </summary>
-    /// <remarks>
-    /// <list type="table">
-    /// <listheader><term>Capture Group</term><description>Meaning</description></listheader>
-    /// <item><term>prefix</term><description>A single alphanumeric character.</description></item>
-    /// </list>
-    /// </remarks>
-    private static Regex PrefixPattern
-    {
-        get;
-    } = new("^(?<prefix>[A-Z0-9])$",
-        RegexOptions.CultureInvariant | RegexOptions.IgnoreCase | RegexOptions.NonBacktracking);
-
-    private readonly ILogger<TextureDirectoryVisitor> logger;
+    private readonly ILogger<TextureDirectoryWalker> logger;
 
     /// <summary>
     /// A constructor for dependency injection.
     /// </summary>
     /// <param name="logger">A logger.</param>
-    public TextureDirectoryVisitor(ILogger<TextureDirectoryVisitor> logger)
+    public TextureDirectoryWalker(ILogger<TextureDirectoryWalker> logger)
     {
         ArgumentNullException.ThrowIfNull(logger);
 
         this.logger = logger;
     }
-
-    /// <summary>
-    /// Called for every leaf directory found in the directory hierarchy.
-    /// </summary>
-    /// <param name="textureName">The texture name from the directory hierarchy.</param>
-    /// <param name="directoryInfo">The leaf directory of the texture directory hierarchy.</param>
-    public delegate void ProcessTextureDirectory(string textureName, DirectoryInfo directoryInfo);
 
     /// <summary>
     /// Walks a directory tree matching that described in the CDB specification
@@ -58,8 +36,10 @@ public class TextureDirectoryVisitor : VisitorBase
     /// </para>
     /// </remarks>
     /// <param name="dir">The root directory containing child directories of the form <c>/H/O/house/</c>.</param>
-    /// <param name="processTextureDirectory">The action to take for every leaf directory in the directory hierarchy.</param>
-    public void WalkDirectories(DirectoryInfo dir, ProcessTextureDirectory processTextureDirectory)
+    /// <param name="processTextureDirectory">The action to take for every leaf directory in the directory hierarchy.
+    /// The first parameter is the texture name from the directory hierarchy.</param>
+    public void WalkDirectories(DirectoryInfo dir,
+        Action<string, DirectoryInfo> processTextureDirectory)
     {
         foreach (DirectoryInfo level1Dir in dir.EnumerateDirectories("*", enumerationOptions))
         {

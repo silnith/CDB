@@ -6,14 +6,10 @@ using System.Text.RegularExpressions;
 namespace Silnith.CDB.Visitor;
 
 /// <summary>
-/// Walks the global Navigation datasets.
+/// Visits all the files in the global Navigation dataset.
 /// </summary>
 public class NavigationVisitor : VisitorBase
 {
-    private static readonly Regex NavigationFilenamePattern = new(
-        @"^D(?<dataset>\d{3})_S(?<component_selector_1>\d{3})_T(?<component_selector_2>\d{3})\.(?<file_type>[^.]+)$",
-        RegexOptions.CultureInvariant | RegexOptions.IgnoreCase | RegexOptions.NonBacktracking);
-
     private readonly ILogger<NavigationVisitor> logger;
 
     /// <summary>
@@ -28,7 +24,7 @@ public class NavigationVisitor : VisitorBase
     }
 
     /// <summary>
-    /// Walks the Navigation datasets and visits all recognized files.
+    /// Walks the <c>Navigation</c> directory and visits all recognized files.
     /// </summary>
     /// <remarks>
     /// <para>
@@ -37,8 +33,9 @@ public class NavigationVisitor : VisitorBase
     /// </para>
     /// </remarks>
     /// <param name="cdbDir">The CDB root directory.</param>
-    /// <param name="visitFile">The action to invoke for every file found in the Navigation dataset.</param>
-    public void VisitNavigationDatasets(DirectoryInfo cdbDir, Action<Navigation, FileInfo> visitFile)
+    /// <param name="processNavigationFile">The action to take for every navigation file.</param>
+    public void VisitNavigationDatasets(DirectoryInfo cdbDir,
+        Action<Navigation, FileInfo> processNavigationFile)
     {
         DirectoryInfo navigationDir = new(Path.Combine(cdbDir.FullName, "Navigation"));
         if (!navigationDir.Exists)
@@ -62,7 +59,7 @@ public class NavigationVisitor : VisitorBase
             if (datasetFromDirectory.Value != 400
                 || datasetName != "NavData")
             {
-                logger.LogWarning("Directory {DatasetDirectory} is not 400_NavData", datasetDir);
+                logger.LogWarning("Dataset from directory {DatasetDirectory} is not 400", datasetDir);
             }
 
             foreach (FileInfo file in datasetDir.EnumerateFiles("*", enumerationOptions))
@@ -78,11 +75,11 @@ public class NavigationVisitor : VisitorBase
 
                 if (datasetFromDirectory != navigation.Dataset)
                 {
-                    logger.LogWarning("Directory {DirectoryDataset} does not match file {FileDataset}",
+                    logger.LogWarning("Dataset from directory {DirectoryDataset} does not match file {FileDataset}",
                         datasetFromDirectory, navigation.Dataset);
                 }
 
-                visitFile(navigation, file);
+                processNavigationFile(navigation, file);
             }
         }
     }

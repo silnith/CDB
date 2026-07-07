@@ -18,20 +18,13 @@ public class DISEntityDirectoryWalker : VisitorBase
     /// <summary>
     /// The constructor intended for dependency injection.
     /// </summary>
-    /// <param name="logger">A logger for pertinent information while walking directories.</param>
+    /// <param name="logger">A logger.</param>
     public DISEntityDirectoryWalker(ILogger<DISEntityDirectoryWalker> logger)
     {
         ArgumentNullException.ThrowIfNull(logger);
 
         this.logger = logger;
     }
-
-    /// <summary>
-    /// Called for every leaf directory found in the directory hierarchy.
-    /// </summary>
-    /// <param name="disEntityType">The DIS Entity Type represented by the directory hierarchy.</param>
-    /// <param name="directoryInfo">The leaf directory of the Moving Model hierarchy.</param>
-    public delegate void ProcessDISEntityDirectory(DISEntity disEntityType, DirectoryInfo directoryInfo);
 
     /// <summary>
     /// Walks a directory tree matching that described in the CDB specification
@@ -43,8 +36,9 @@ public class DISEntityDirectoryWalker : VisitorBase
     /// </para>
     /// </remarks>
     /// <param name="dir">The root directory containing child directories of the form <c>/1_Kind/2_Domain/3_Country/4_Category/1_2_3_4_5_6_7/</c>.</param>
-    /// <param name="processMovingModelDirectory">The action to take for every leaf directory in the directory hierarchy.</param>
-    public void WalkDirectories(DirectoryInfo dir, ProcessDISEntityDirectory processMovingModelDirectory)
+    /// <param name="processDISEntityDirectory">The action to take for every leaf directory in the directory hierarchy.</param>
+    public void WalkDirectories(DirectoryInfo dir,
+        Action<DISEntity, DirectoryInfo> processDISEntityDirectory)
     {
         foreach (DirectoryInfo kindDir in dir.EnumerateDirectories("*", enumerationOptions))
         {
@@ -108,28 +102,28 @@ public class DISEntityDirectoryWalker : VisitorBase
                             // We could define error behaviors such as continue, skip, throw.
                             if (kindFromDirectory != disEntity.Kind)
                             {
-                                logger.LogError("Directory level 1 {DirectoryKind} does not match directory level 5 {CodeKind}.",
+                                logger.LogError("DIS kind from directory level 1 {DirectoryKind} does not match directory level 5 {CodeKind}.",
                                     kindFromDirectory, disEntity.Kind);
                             }
                             if (domainFromDirectory != disEntity.Domain)
                             {
-                                logger.LogError("Directory level 2 {DirectoryDomain} does not match directory level 5 {CodeDomain}.",
+                                logger.LogError("DIS domain from directory level 2 {DirectoryDomain} does not match directory level 5 {CodeDomain}.",
                                     domainFromDirectory, disEntity.Domain);
                             }
                             if (countryFromDirectory != disEntity.Country)
                             {
-                                logger.LogError("Directory level 3 {DirectoryCountry} does not match directory level 5 {CodeCountry}.",
+                                logger.LogError("DIS country from directory level 3 {DirectoryCountry} does not match directory level 5 {CodeCountry}.",
                                     countryFromDirectory, disEntity.Country);
                             }
                             if (categoryFromDirectory != disEntity.Category)
                             {
-                                logger.LogError("Directory level 4 {DirectoryCategory} does not match directory level 5 {CodeCategory}.",
+                                logger.LogError("DIS category from directory level 4 {DirectoryCategory} does not match directory level 5 {CodeCategory}.",
                                     categoryFromDirectory, disEntity.Category);
                             }
 
-                            logger.LogTrace("Visiting directory for {DISEntity}", disEntity);
+                            logger.LogTrace("Visiting directory {DISDirectory} for {DISEntity}", disDirectory, disEntity);
 
-                            processMovingModelDirectory(disEntity, disDirectory);
+                            processDISEntityDirectory(disEntity, disDirectory);
                         }
                     }
                 }

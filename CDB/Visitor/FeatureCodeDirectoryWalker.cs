@@ -6,7 +6,7 @@ using System.Text.RegularExpressions;
 namespace Silnith.CDB.Visitor;
 
 /// <summary>
-/// Visits a directory hierarchy described in 3.3.8.1. Feature Classification,
+/// Walks a directory hierarchy described in 3.3.8.1. Feature Classification,
 /// and calls a delegate for every leaf directory that matches the expected
 /// structure.
 /// </summary>
@@ -26,13 +26,6 @@ public class FeatureCodeDirectoryWalker : VisitorBase
     }
 
     /// <summary>
-    /// Called for every leaf directory found in the directory hierarchy.
-    /// </summary>
-    /// <param name="featureCode">The feature code represented by the directory hierarchy.</param>
-    /// <param name="directory">The leaf directory of the hierarchy corresponding to the feature code.</param>
-    public delegate void VisitFeatureCodeDirectory(FeatureCode featureCode, DirectoryInfo directory);
-
-    /// <summary>
     /// Walks a directory tree matching that described in the CDB specification
     /// volume 1, Section 3.3.8.1. Feature Classification.
     /// </summary>
@@ -42,8 +35,9 @@ public class FeatureCodeDirectoryWalker : VisitorBase
     /// </para>
     /// </remarks>
     /// <param name="dir">The directory containing child directories of the form <c>/A_Category/B_Subcategory/999_Type/</c>.</param>
-    /// <param name="visitFeatureCodeDirectory">The action to take for every leaf directory in the directory hierarchy.</param>
-    public void WalkDirectories(DirectoryInfo dir, VisitFeatureCodeDirectory visitFeatureCodeDirectory)
+    /// <param name="processFeatureCodeDirectory">The action to take for every leaf directory in the directory hierarchy.</param>
+    public void WalkDirectories(DirectoryInfo dir,
+        Action<FeatureCode, DirectoryInfo> processFeatureCodeDirectory)
     {
         foreach (DirectoryInfo categoryDirectory in dir.EnumerateDirectories("*", enumerationOptions))
         {
@@ -80,12 +74,13 @@ public class FeatureCodeDirectoryWalker : VisitorBase
                         subcategoryDirectoryMatch,
                         typeDirectoryMatch);
 
-                    logger.LogTrace("Visiting directory for feature {Category} {Subcategory} {Type}",
+                    logger.LogTrace("Visiting directory {FeatureCodeDirectory} for feature {Category} {Subcategory} {Type}",
+                        typeDirectory,
                         categoryDirectoryMatch.Groups["name"].Value,
                         subcategoryDirectoryMatch.Groups["name"].Value,
                         typeDirectoryMatch.Groups["name"].Value);
 
-                    visitFeatureCodeDirectory(featureCode, typeDirectory);
+                    processFeatureCodeDirectory(featureCode, typeDirectory);
                 }
             }
         }

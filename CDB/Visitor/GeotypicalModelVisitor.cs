@@ -44,7 +44,7 @@ public class GeotypicalModelVisitor : VisitorBase
 
     private readonly LevelOfDetailDirectoryWalker levelOfDetailDirectoryWalker;
 
-    private readonly TextureDirectoryVisitor textureDirectoryVisitor;
+    private readonly TextureDirectoryWalker textureDirectoryWalker;
 
     /// <summary>
     /// A constructor intended for dependency injection.
@@ -52,37 +52,36 @@ public class GeotypicalModelVisitor : VisitorBase
     /// <param name="logger">A logger.</param>
     /// <param name="featureCodeDirectoryWalker">A feature code directory walker.</param>
     /// <param name="levelOfDetailDirectoryWalker">A level of detail directory walker.</param>
-    /// <param name="textureDirectoryVisitor">A texture directory walker.</param>
+    /// <param name="textureDirectoryWalker">A texture directory walker.</param>
     public GeotypicalModelVisitor(ILogger<GeotypicalModelVisitor> logger,
         FeatureCodeDirectoryWalker featureCodeDirectoryWalker,
         LevelOfDetailDirectoryWalker levelOfDetailDirectoryWalker,
-        TextureDirectoryVisitor textureDirectoryVisitor)
+        TextureDirectoryWalker textureDirectoryWalker)
     {
         ArgumentNullException.ThrowIfNull(logger);
         ArgumentNullException.ThrowIfNull(featureCodeDirectoryWalker);
         ArgumentNullException.ThrowIfNull(levelOfDetailDirectoryWalker);
-        ArgumentNullException.ThrowIfNull(textureDirectoryVisitor);
+        ArgumentNullException.ThrowIfNull(textureDirectoryWalker);
 
         this.logger = logger;
         this.featureCodeDirectoryWalker = featureCodeDirectoryWalker;
         this.levelOfDetailDirectoryWalker = levelOfDetailDirectoryWalker;
-        this.textureDirectoryVisitor = textureDirectoryVisitor;
+        this.textureDirectoryWalker = textureDirectoryWalker;
     }
 
-    public delegate void VisitGeotypicalModel(GeotypicalModel geotypicalModel, FileInfo file);
-    public delegate void VisitGeotypicalModelLod(GeotypicalModelLod geotypicalModelLod, FileInfo file);
-    public delegate void VisitTexture(Texture texture, FileInfo file);
-    public delegate void VisitTextureLod(TextureLod textureLod, FileInfo file);
-
     /// <summary>
-    ///  Walks the GTModel directory and visits all recognized files.
+    ///  Walks the <c>GTModel</c> directory and visits all recognized files.
     /// </summary>
     /// <param name="cdbDir">The CDB root directory.</param>
+    /// <param name="processGeotypicalModelFile">The action to take for every geotypical model file .</param>
+    /// <param name="processGeotypicalModelLodFile">The action to take for every geotypical model level of detail file.</param>
+    /// <param name="processTextureFile">The action to take for every texture file.</param>
+    /// <param name="procesTextureLodFile">The action to take for every texture level of detail file.</param>
     public void VisitGeotypicalModels(DirectoryInfo cdbDir,
-        VisitGeotypicalModel geotypicalModelAction,
-        VisitGeotypicalModelLod geotypicalModelLodAction,
-        VisitTexture textureAction,
-        VisitTextureLod textureLodAction)
+        Action<GeotypicalModel, FileInfo> processGeotypicalModelFile,
+        Action<GeotypicalModelLod, FileInfo> processGeotypicalModelLodFile,
+        Action<Texture, FileInfo> processTextureFile,
+        Action<TextureLod, FileInfo> procesTextureLodFile)
     {
         DirectoryInfo gtModelDir = new(Path.Combine(cdbDir.FullName, "GTModel"));
         if (!gtModelDir.Exists)
@@ -132,17 +131,17 @@ public class GeotypicalModelVisitor : VisitorBase
                         }
                         else
                         {
-                            logger.LogWarning("Directory {DirectoryDataset} does not match file {FileDataset}",
+                            logger.LogWarning("Dataset from directory {DirectoryDataset} does not match file {FileDataset}",
                             datasetFromDirectory, geotypicalModel.Dataset);
                         }
                     }
                     if (featureCode != geotypicalModel.FeatureCode)
                     {
-                        logger.LogWarning("Directory {DirectoryFeatureCode} does not match file {FileFeatureCode}",
+                        logger.LogWarning("Feature code from directory {DirectoryFeatureCode} does not match file {FileFeatureCode}",
                             featureCode, geotypicalModel.FeatureCode);
                     }
 
-                    geotypicalModelAction(geotypicalModel, file);
+                    processGeotypicalModelFile(geotypicalModel, file);
                 }
 
                 levelOfDetailDirectoryWalker.WalkModelGeometryDirectories(featureDir, (lod, lodDir) =>
@@ -171,28 +170,28 @@ public class GeotypicalModelVisitor : VisitorBase
                             }
                             else
                             {
-                                logger.LogWarning("Directory {DirectoryDataset} does not match file {FileDataset}",
+                                logger.LogWarning("Dataset from directory {DirectoryDataset} does not match file {FileDataset}",
                                 datasetFromDirectory, geotypicalModelLod.Dataset);
                             }
                         }
                         if (featureCode != geotypicalModelLod.FeatureCode)
                         {
-                            logger.LogWarning("Directory {DirectoryFeatureCode} does not match file {FileFeatureCode}",
+                            logger.LogWarning("Feature code from directory {DirectoryFeatureCode} does not match file {FileFeatureCode}",
                                 featureCode, geotypicalModelLod.FeatureCode);
                         }
                         if (lod != geotypicalModelLod.LevelOfDetail)
                         {
-                            logger.LogWarning("Directory {DirectoryLod} does not match file {FileLod}",
+                            logger.LogWarning("Level of detail from directory {DirectoryLod} does not match file {FileLod}",
                                 lod, geotypicalModelLod.LevelOfDetail);
                         }
 
-                        geotypicalModelLodAction(geotypicalModelLod, file);
+                        processGeotypicalModelLodFile(geotypicalModelLod, file);
                     }
                 });
             });
             // See 3.4.2. GTModel Directory Structure 2: Texture, Material, and CMT
             // See 3.4.4. GTModel Directory Structure 4: Interior Texture, Material, and CMT
-            textureDirectoryVisitor.WalkDirectories(datasetDir, (textureName, textureDir) =>
+            textureDirectoryWalker.WalkDirectories(datasetDir, (textureName, textureDir) =>
             {
                 foreach (FileInfo file in textureDir.EnumerateFiles("*", enumerationOptions))
                 {
@@ -218,7 +217,7 @@ public class GeotypicalModelVisitor : VisitorBase
                             }
                             else
                             {
-                                logger.LogWarning("Directory {DirectoryDataset} does not match file {FileDataset}",
+                                logger.LogWarning("Dataset from directory {DirectoryDataset} does not match file {FileDataset}",
                                 datasetFromDirectory, textureLod.Dataset);
                             }
                         }
@@ -228,7 +227,7 @@ public class GeotypicalModelVisitor : VisitorBase
                                 textureName, textureLod.Name);
                         }
 
-                        textureLodAction(textureLod, file);
+                        procesTextureLodFile(textureLod, file);
                     }
                     else
                     {
@@ -257,7 +256,7 @@ public class GeotypicalModelVisitor : VisitorBase
                                 }
                                 else
                                 {
-                                    logger.LogWarning("Directory {DirectoryDataset} does not match file {FileDataset}",
+                                    logger.LogWarning("Dataset from directory {DirectoryDataset} does not match file {FileDataset}",
                                     datasetFromDirectory, texture.Dataset);
                                 }
                             }
@@ -267,7 +266,7 @@ public class GeotypicalModelVisitor : VisitorBase
                                     textureName, texture.Name);
                             }
 
-                            textureAction(texture, file);
+                            processTextureFile(texture, file);
                         }
                         else
                         {
