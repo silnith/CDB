@@ -64,7 +64,8 @@ public class FileSystemCDB : ICDB
                 Mode = FileMode.Open,
                 Access = FileAccess.Read,
                 Share = FileShare.Read,
-                Options = FileOptions.SequentialScan,
+                Options = FileOptions.SequentialScan | FileOptions.Asynchronous,
+                BufferSize = 0,
             };
             using DoubleBufferedStream doubleBufferedStream = new(new FileStream(file.FullName, options));
             fileFoundAction(doubleBufferedStream);
@@ -92,6 +93,7 @@ public class FileSystemCDB : ICDB
                 Access = FileAccess.Read,
                 Share = FileShare.Read,
                 Options = FileOptions.SequentialScan | FileOptions.Asynchronous,
+                BufferSize = 0,
             };
             await using DoubleBufferedStream doubleBufferedStream = new(new FileStream(file.FullName, options));
             await fileFoundAsyncAction(doubleBufferedStream, cancellationToken);
