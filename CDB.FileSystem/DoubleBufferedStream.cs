@@ -704,7 +704,9 @@ public class DoubleBufferedStream : Stream
     /// <inheritdoc/>
     public override void Flush()
     {
-        throw new NotImplementedException();
+        /*
+         * We do not support writing, so there will never be anything to flush.
+         */
     }
 
     /// <inheritdoc/>
