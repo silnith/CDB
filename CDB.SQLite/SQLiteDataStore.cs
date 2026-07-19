@@ -73,7 +73,7 @@ public class SQLiteDataStore : SQLDataStore
 
     #region Column Names
 
-    private const string cdbColumnName = "cdb";
+    private const string cdbNameColumnName = "cdb";
     private const string metadataNameColumnName = "metadata_name";
     private const string datasetColumnName = "dataset";
     private const string cs1ColumnName = "component_selector_1";
@@ -136,20 +136,20 @@ public class SQLiteDataStore : SQLDataStore
 
     private const string createTableCDB = $"""
         create table "{cdbTableName}" (
-            "{cdbColumnName}" {varcharColumnType} primary key
+            "{cdbNameColumnName}" {varcharColumnType} primary key
         )
         """;
 
     private const string insertIntoCDB = $"""
         insert into "{cdbTableName}" (
-            "{cdbColumnName}"
+            "{cdbNameColumnName}"
         ) values (
             {cdbParamName}
         )
         """;
 
     private const string selectFromCDB = $"""
-        select "{cdbColumnName}"
+        select "{cdbNameColumnName}"
         from "{cdbTableName}"
         """;
 
@@ -159,12 +159,12 @@ public class SQLiteDataStore : SQLDataStore
 
     private const string createTableMetadata = $"""
         create table "{metadataTableName}" (
-            "{cdbColumnName}" {varcharColumnType} not null references "{cdbTableName}"("{cdbColumnName}") on delete cascade on update cascade,
+            "{cdbNameColumnName}" {varcharColumnType} not null references "{cdbTableName}"("{cdbNameColumnName}") on delete cascade on update cascade,
             "{metadataNameColumnName}" {varcharColumnType} not null,
             "{fileTypeColumnName}" {varcharColumnType} not null,
             "{contentColumnName}" {blobColumnType} not null,
             primary key(
-                "{cdbColumnName}",
+                "{cdbNameColumnName}",
                 "{metadataNameColumnName}",
                 "{fileTypeColumnName}"
             )
@@ -173,7 +173,7 @@ public class SQLiteDataStore : SQLDataStore
 
     private const string insertIntoMetadata = $"""
         insert into "{metadataTableName}" (
-            "{cdbColumnName}",
+            "{cdbNameColumnName}",
             "{metadataNameColumnName}",
             "{fileTypeColumnName}",
             "{contentColumnName}"
@@ -190,7 +190,7 @@ public class SQLiteDataStore : SQLDataStore
             "{contentColumnName}",
             {rowidColumnName}
         from "{metadataTableName}"
-        where "{cdbColumnName}" = {cdbParamName}
+        where "{cdbNameColumnName}" = {cdbParamName}
             and "{metadataNameColumnName}" = {metadataNameParamName}
             and "{fileTypeColumnName}" = {fileTypeParamName}
         """;
@@ -201,7 +201,7 @@ public class SQLiteDataStore : SQLDataStore
 
     private const string createTableTexture = $"""
         create table "{textureTableName}" (
-            "{cdbColumnName}" {varcharColumnType} not null references "{cdbTableName}"("{cdbColumnName}") on delete cascade on update cascade,
+            "{cdbNameColumnName}" {varcharColumnType} not null references "{cdbTableName}"("{cdbNameColumnName}") on delete cascade on update cascade,
             "{datasetColumnName}" {numeric3ColumnType} not null,
             "{cs1ColumnName}" {numeric3ColumnType} not null,
             "{cs2ColumnName}" {numeric3ColumnType} not null,
@@ -209,7 +209,7 @@ public class SQLiteDataStore : SQLDataStore
             "{fileTypeColumnName}" {varcharColumnType} not null,
             "{contentColumnName}" {blobColumnType} not null,
             primary key(
-                "{cdbColumnName}",
+                "{cdbNameColumnName}",
                 "{datasetColumnName}",
                 "{cs1ColumnName}",
                 "{cs2ColumnName}",
@@ -221,7 +221,7 @@ public class SQLiteDataStore : SQLDataStore
 
     private const string insertIntoTexture = $"""
         insert into "{textureTableName}" (
-            "{cdbColumnName}",
+            "{cdbNameColumnName}",
             "{datasetColumnName}",
             "{cs1ColumnName}",
             "{cs2ColumnName}",
@@ -244,7 +244,7 @@ public class SQLiteDataStore : SQLDataStore
             "{contentColumnName}",
             {rowidColumnName}
         from "{textureTableName}"
-        where "{cdbColumnName}" = {cdbParamName}
+        where "{cdbNameColumnName}" = {cdbParamName}
             and "{datasetColumnName}" = {datasetParamName}
             and "{cs1ColumnName}" = {cs1ParamName}
             and "{cs2ColumnName}" = {cs2ParamName}
@@ -258,7 +258,7 @@ public class SQLiteDataStore : SQLDataStore
 
     private const string createTableTextureLod = $"""
         create table "{textureLodTableName}" (
-            "{cdbColumnName}" {varcharColumnType} not null references "{cdbTableName}"("{cdbColumnName}") on delete cascade on update cascade,
+            "{cdbNameColumnName}" {varcharColumnType} not null references "{cdbTableName}"("{cdbNameColumnName}") on delete cascade on update cascade,
             "{datasetColumnName}" {numeric3ColumnType} not null,
             "{cs1ColumnName}" {numeric3ColumnType} not null,
             "{cs2ColumnName}" {numeric3ColumnType} not null,
@@ -267,7 +267,7 @@ public class SQLiteDataStore : SQLDataStore
             "{fileTypeColumnName}" {varcharColumnType} not null,
             "{contentColumnName}" {blobColumnType} not null,
             primary key(
-                "{cdbColumnName}",
+                "{cdbNameColumnName}",
                 "{datasetColumnName}",
                 "{cs1ColumnName}",
                 "{cs2ColumnName}",
@@ -280,7 +280,7 @@ public class SQLiteDataStore : SQLDataStore
 
     private const string insertIntoTextureLod = $"""
         insert into "{textureLodTableName}" (
-            "{cdbColumnName}",
+            "{cdbNameColumnName}",
             "{datasetColumnName}",
             "{cs1ColumnName}",
             "{cs2ColumnName}",
@@ -305,7 +305,7 @@ public class SQLiteDataStore : SQLDataStore
             "{contentColumnName}",
             {rowidColumnName}
         from "{textureLodTableName}"
-        where "{cdbColumnName}" = {cdbParamName}
+        where "{cdbNameColumnName}" = {cdbParamName}
             and "{datasetColumnName}" = {datasetParamName}
             and "{cs1ColumnName}" = {cs1ParamName}
             and "{cs2ColumnName}" = {cs2ParamName}
@@ -320,7 +320,7 @@ public class SQLiteDataStore : SQLDataStore
 
     private const string createTableGeotypicalModel = $"""
         create table "{geotypicalModelTableName}" (
-            "{cdbColumnName}" {varcharColumnType} not null references "{cdbTableName}"("{cdbColumnName}") on delete cascade on update cascade,
+            "{cdbNameColumnName}" {varcharColumnType} not null references "{cdbTableName}"("{cdbNameColumnName}") on delete cascade on update cascade,
             "{datasetColumnName}" {numeric3ColumnType} not null,
             "{cs1ColumnName}" {numeric3ColumnType} not null,
             "{cs2ColumnName}" {numeric3ColumnType} not null,
@@ -332,7 +332,7 @@ public class SQLiteDataStore : SQLDataStore
             "{fileTypeColumnName}" {varcharColumnType} not null,
             "{contentColumnName}" {blobColumnType} not null,
             primary key(
-                "{cdbColumnName}",
+                "{cdbNameColumnName}",
                 "{datasetColumnName}",
                 "{cs1ColumnName}",
                 "{cs2ColumnName}",
@@ -348,7 +348,7 @@ public class SQLiteDataStore : SQLDataStore
 
     private const string insertIntoGeotypicalModel = $"""
         insert into "{geotypicalModelTableName}" (
-            "{cdbColumnName}",
+            "{cdbNameColumnName}",
             "{datasetColumnName}",
             "{cs1ColumnName}",
             "{cs2ColumnName}",
@@ -379,7 +379,7 @@ public class SQLiteDataStore : SQLDataStore
             "{contentColumnName}",
             {rowidColumnName}
         from "{geotypicalModelTableName}"
-        where "{cdbColumnName}" = {cdbParamName}
+        where "{cdbNameColumnName}" = {cdbParamName}
             and "{datasetColumnName}" = {datasetParamName}
             and "{cs1ColumnName}" = {cs1ParamName}
             and "{cs2ColumnName}" = {cs2ParamName}
@@ -397,7 +397,7 @@ public class SQLiteDataStore : SQLDataStore
 
     private const string createTableGeotypicalModelLod = $"""
         create table "{geotypicalModelLodTableName}" (
-            "{cdbColumnName}" {varcharColumnType} not null references "{cdbTableName}"("{cdbColumnName}") on delete cascade on update cascade,
+            "{cdbNameColumnName}" {varcharColumnType} not null references "{cdbTableName}"("{cdbNameColumnName}") on delete cascade on update cascade,
             "{datasetColumnName}" {numeric3ColumnType} not null,
             "{cs1ColumnName}" {numeric3ColumnType} not null,
             "{cs2ColumnName}" {numeric3ColumnType} not null,
@@ -410,7 +410,7 @@ public class SQLiteDataStore : SQLDataStore
             "{fileTypeColumnName}" {varcharColumnType} not null,
             "{contentColumnName}" {blobColumnType} not null,
             primary key(
-                "{cdbColumnName}",
+                "{cdbNameColumnName}",
                 "{datasetColumnName}",
                 "{cs1ColumnName}",
                 "{cs2ColumnName}",
@@ -427,7 +427,7 @@ public class SQLiteDataStore : SQLDataStore
 
     private const string insertIntoGeotypicalModelLod = $"""
         insert into "{geotypicalModelLodTableName}" (
-            "{cdbColumnName}",
+            "{cdbNameColumnName}",
             "{datasetColumnName}",
             "{cs1ColumnName}",
             "{cs2ColumnName}",
@@ -460,7 +460,7 @@ public class SQLiteDataStore : SQLDataStore
             "{contentColumnName}",
             {rowidColumnName}
         from "{geotypicalModelLodTableName}"
-        where "{cdbColumnName}" = {cdbParamName}
+        where "{cdbNameColumnName}" = {cdbParamName}
             and "{datasetColumnName}" = {datasetParamName}
             and "{cs1ColumnName}" = {cs1ParamName}
             and "{cs2ColumnName}" = {cs2ParamName}
@@ -479,7 +479,7 @@ public class SQLiteDataStore : SQLDataStore
 
     private const string createTableMovingModel = $"""
         create table "{movingModelTableName}" (
-            "{cdbColumnName}" {varcharColumnType} not null references "{cdbTableName}"("{cdbColumnName}") on delete cascade on update cascade,
+            "{cdbNameColumnName}" {varcharColumnType} not null references "{cdbTableName}"("{cdbNameColumnName}") on delete cascade on update cascade,
             "{datasetColumnName}" {numeric3ColumnType} not null,
             "{cs1ColumnName}" {numeric3ColumnType} not null,
             "{cs2ColumnName}" {numeric3ColumnType} not null,
@@ -493,7 +493,7 @@ public class SQLiteDataStore : SQLDataStore
             "{fileTypeColumnName}" {varcharColumnType} not null,
             "{contentColumnName}" {blobColumnType} not null,
             primary key(
-                "{cdbColumnName}",
+                "{cdbNameColumnName}",
                 "{datasetColumnName}",
                 "{cs1ColumnName}",
                 "{cs2ColumnName}",
@@ -511,7 +511,7 @@ public class SQLiteDataStore : SQLDataStore
 
     private const string insertIntoMovingModel = $"""
         insert into "{movingModelTableName}" (
-            "{cdbColumnName}",
+            "{cdbNameColumnName}",
             "{datasetColumnName}",
             "{cs1ColumnName}",
             "{cs2ColumnName}",
@@ -546,7 +546,7 @@ public class SQLiteDataStore : SQLDataStore
             "{contentColumnName}",
             {rowidColumnName}
         from "{movingModelTableName}"
-        where "{cdbColumnName}" = {cdbParamName}
+        where "{cdbNameColumnName}" = {cdbParamName}
             and "{datasetColumnName}" = {datasetParamName}
             and "{cs1ColumnName}" = {cs1ParamName}
             and "{cs2ColumnName}" = {cs2ParamName}
@@ -566,7 +566,7 @@ public class SQLiteDataStore : SQLDataStore
 
     private const string createTableMovingModelLod = $"""
         create table "{movingModelLodTableName}" (
-            "{cdbColumnName}" {varcharColumnType} not null references "{cdbTableName}"("{cdbColumnName}") on delete cascade on update cascade,
+            "{cdbNameColumnName}" {varcharColumnType} not null references "{cdbTableName}"("{cdbNameColumnName}") on delete cascade on update cascade,
             "{datasetColumnName}" {numeric3ColumnType} not null,
             "{cs1ColumnName}" {numeric3ColumnType} not null,
             "{cs2ColumnName}" {numeric3ColumnType} not null,
@@ -581,7 +581,7 @@ public class SQLiteDataStore : SQLDataStore
             "{fileTypeColumnName}" {varcharColumnType} not null,
             "{contentColumnName}" {blobColumnType} not null,
             primary key(
-                "{cdbColumnName}",
+                "{cdbNameColumnName}",
                 "{datasetColumnName}",
                 "{cs1ColumnName}",
                 "{cs2ColumnName}",
@@ -600,7 +600,7 @@ public class SQLiteDataStore : SQLDataStore
 
     private const string insertIntoMovingModelLod = $"""
         insert into "{movingModelLodTableName}" (
-            "{cdbColumnName}",
+            "{cdbNameColumnName}",
             "{datasetColumnName}",
             "{cs1ColumnName}",
             "{cs2ColumnName}",
@@ -637,7 +637,7 @@ public class SQLiteDataStore : SQLDataStore
             "{contentColumnName}",
             {rowidColumnName}
         from "{movingModelLodTableName}"
-        where "{cdbColumnName}" = {cdbParamName}
+        where "{cdbNameColumnName}" = {cdbParamName}
             and "{datasetColumnName}" = {datasetParamName}
             and "{cs1ColumnName}" = {cs1ParamName}
             and "{cs2ColumnName}" = {cs2ParamName}
@@ -658,7 +658,7 @@ public class SQLiteDataStore : SQLDataStore
 
     private const string createTableTile = $"""
         create table "{tileTableName}" (
-            "{cdbColumnName}" {varcharColumnType} not null references "{cdbTableName}"("{cdbColumnName}") on delete cascade on update cascade,
+            "{cdbNameColumnName}" {varcharColumnType} not null references "{cdbTableName}"("{cdbNameColumnName}") on delete cascade on update cascade,
             "{latitudeColumnName}" {numeric2ColumnType} not null,
             "{longitudeColumnName}" {numeric3ColumnType} not null,
             "{datasetColumnName}" {numeric3ColumnType} not null,
@@ -670,7 +670,7 @@ public class SQLiteDataStore : SQLDataStore
             "{fileTypeColumnName}" {varcharColumnType} not null,
             "{contentColumnName}" {blobColumnType} not null,
             primary key(
-                "{cdbColumnName}",
+                "{cdbNameColumnName}",
                 "{latitudeColumnName}",
                 "{longitudeColumnName}",
                 "{datasetColumnName}",
@@ -686,7 +686,7 @@ public class SQLiteDataStore : SQLDataStore
 
     private const string insertIntoTile = $"""
         insert into "{tileTableName}" (
-            "{cdbColumnName}",
+            "{cdbNameColumnName}",
             "{latitudeColumnName}",
             "{longitudeColumnName}",
             "{datasetColumnName}",
@@ -717,7 +717,7 @@ public class SQLiteDataStore : SQLDataStore
             "{contentColumnName}",
             {rowidColumnName}
         from "{tileTableName}"
-        where "{cdbColumnName}" = {cdbParamName}
+        where "{cdbNameColumnName}" = {cdbParamName}
             and "{latitudeColumnName}" = {latitudeParamName}
             and "{longitudeColumnName}" = {longitudeParamName}
             and "{datasetColumnName}" = {datasetParamName}
@@ -735,7 +735,7 @@ public class SQLiteDataStore : SQLDataStore
 
     private const string createTableTileArchivedFeature = $"""
         create table "{tileArchivedFeatureTableName}" (
-            "{cdbColumnName}" {varcharColumnType} not null references "{cdbTableName}"("{cdbColumnName}") on delete cascade on update cascade,
+            "{cdbNameColumnName}" {varcharColumnType} not null references "{cdbTableName}"("{cdbNameColumnName}") on delete cascade on update cascade,
             "{latitudeColumnName}" {numeric2ColumnType} not null,
             "{longitudeColumnName}" {numeric3ColumnType} not null,
             "{datasetColumnName}" {numeric3ColumnType} not null,
@@ -752,7 +752,7 @@ public class SQLiteDataStore : SQLDataStore
             "{fileTypeColumnName}" {varcharColumnType} not null,
             "{contentColumnName}" {blobColumnType} not null,
             primary key(
-                "{cdbColumnName}",
+                "{cdbNameColumnName}",
                 "{latitudeColumnName}",
                 "{longitudeColumnName}",
                 "{datasetColumnName}",
@@ -773,7 +773,7 @@ public class SQLiteDataStore : SQLDataStore
 
     private const string insertIntoTileArchivedFeature = $"""
         insert into "{tileArchivedFeatureTableName}" (
-            "{cdbColumnName}",
+            "{cdbNameColumnName}",
             "{latitudeColumnName}",
             "{longitudeColumnName}",
             "{datasetColumnName}",
@@ -814,7 +814,7 @@ public class SQLiteDataStore : SQLDataStore
             "{contentColumnName}",
             {rowidColumnName}
         from "{tileArchivedFeatureTableName}"
-        where "{cdbColumnName}" = {cdbParamName}
+        where "{cdbNameColumnName}" = {cdbParamName}
             and "{latitudeColumnName}" = {latitudeParamName}
             and "{longitudeColumnName}" = {longitudeParamName}
             and "{datasetColumnName}" = {datasetParamName}
@@ -837,7 +837,7 @@ public class SQLiteDataStore : SQLDataStore
 
     private const string createTableTileArchivedTexture = $"""
         create table "{tileArchivedTextureTableName}" (
-            "{cdbColumnName}" {varcharColumnType} not null references "{cdbTableName}"("{cdbColumnName}") on delete cascade on update cascade,
+            "{cdbNameColumnName}" {varcharColumnType} not null references "{cdbTableName}"("{cdbNameColumnName}") on delete cascade on update cascade,
             "{latitudeColumnName}" {numeric2ColumnType} not null,
             "{longitudeColumnName}" {numeric3ColumnType} not null,
             "{datasetColumnName}" {numeric3ColumnType} not null,
@@ -850,7 +850,7 @@ public class SQLiteDataStore : SQLDataStore
             "{fileTypeColumnName}" {varcharColumnType} not null,
             "{contentColumnName}" {blobColumnType} not null,
             primary key(
-                "{cdbColumnName}",
+                "{cdbNameColumnName}",
                 "{latitudeColumnName}",
                 "{longitudeColumnName}",
                 "{datasetColumnName}",
@@ -867,7 +867,7 @@ public class SQLiteDataStore : SQLDataStore
 
     private const string insertIntoTileArchivedTexture = $"""
         insert into "{tileArchivedTextureTableName}" (
-            "{cdbColumnName}",
+            "{cdbNameColumnName}",
             "{latitudeColumnName}",
             "{longitudeColumnName}",
             "{datasetColumnName}",
@@ -900,7 +900,7 @@ public class SQLiteDataStore : SQLDataStore
             "{contentColumnName}",
             {rowidColumnName}
         from "{tileArchivedTextureTableName}"
-        where "{cdbColumnName}" = {cdbParamName}
+        where "{cdbNameColumnName}" = {cdbParamName}
             and "{latitudeColumnName}" = {latitudeParamName}
             and "{longitudeColumnName}" = {longitudeParamName}
             and "{datasetColumnName}" = {datasetParamName}
@@ -919,14 +919,14 @@ public class SQLiteDataStore : SQLDataStore
 
     private const string createTableNavigation = $"""
         create table "{navigationTableName}" (
-            "{cdbColumnName}" {varcharColumnType} not null references "{cdbTableName}"("{cdbColumnName}") on delete cascade on update cascade,
+            "{cdbNameColumnName}" {varcharColumnType} not null references "{cdbTableName}"("{cdbNameColumnName}") on delete cascade on update cascade,
             "{datasetColumnName}" {numeric3ColumnType} not null,
             "{cs1ColumnName}" {numeric3ColumnType} not null,
             "{cs2ColumnName}" {numeric3ColumnType} not null,
             "{fileTypeColumnName}" {varcharColumnType} not null,
             "{contentColumnName}" {blobColumnType} not null,
             primary key(
-                "{cdbColumnName}",
+                "{cdbNameColumnName}",
                 "{datasetColumnName}",
                 "{cs1ColumnName}",
                 "{cs2ColumnName}",
@@ -937,7 +937,7 @@ public class SQLiteDataStore : SQLDataStore
 
     private const string insertIntoNavigation = $"""
         insert into "{navigationTableName}" (
-            "{cdbColumnName}",
+            "{cdbNameColumnName}",
             "{datasetColumnName}",
             "{cs1ColumnName}",
             "{cs2ColumnName}",
@@ -958,7 +958,7 @@ public class SQLiteDataStore : SQLDataStore
             "{contentColumnName}",
             {rowidColumnName}
         from "{navigationTableName}"
-        where "{cdbColumnName}" = {cdbParamName}
+        where "{cdbNameColumnName}" = {cdbParamName}
             and "{datasetColumnName}" = {datasetParamName}
             and "{cs1ColumnName}" = {cs1ParamName}
             and "{cs2ColumnName}" = {cs2ParamName}
@@ -980,7 +980,7 @@ public class SQLiteDataStore : SQLDataStore
     #region Inherited Properties
 
     /// <inheritdoc/>
-    protected override string CDBNameColumnName => cdbColumnName;
+    protected override string CDBNameColumnName => cdbNameColumnName;
 
     /// <inheritdoc/>
     protected override string ContentColumnName => contentColumnName;
@@ -1349,5 +1349,9 @@ public class SQLiteDataStore : SQLDataStore
     }
 
     #endregion
+
+    /*
+     * No additional resources to dispose, so no need to override the dispose virtual methods.
+     */
 
 }
