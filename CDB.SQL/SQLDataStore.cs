@@ -25,7 +25,7 @@ namespace Silnith.CDB.SQL;
 /// projects.
 /// </para>
 /// </remarks>
-public abstract class SQLDataStore : IDisposable
+public abstract class SQLDataStore : IDisposable, IAsyncDisposable
 {
     /// <summary>
     /// Creates a parameter for a database command, sets the name and type of
@@ -4075,6 +4075,10 @@ public abstract class SQLDataStore : IDisposable
             {
                 selectFromNavigationCommand.Dispose();
                 insertIntoNavigationCommand.Dispose();
+                selectFromTileArchivedTextureCommand.Dispose();
+                insertIntoTileArchivedTextureCommand.Dispose();
+                selectFromTileArchivedFeatureCommand.Dispose();
+                insertIntoTileArchivedFeatureCommand.Dispose();
                 selectFromTileCommand.Dispose();
                 insertIntoTileCommand.Dispose();
                 selectFromMovingModelLodCommand.Dispose();
@@ -4103,6 +4107,57 @@ public abstract class SQLDataStore : IDisposable
     public void Dispose()
     {
         Dispose(disposing: true);
+        GC.SuppressFinalize(this);
+    }
+
+    #endregion
+
+    #region Async Dispose Pattern
+
+    /// <summary>
+    /// Performs application-defined tasks associated with freeing, releasing, or resetting
+    /// unmanaged resources.
+    /// </summary>
+    /// <seealso href="https://learn.microsoft.com/en-us/dotnet/standard/garbage-collection/implementing-disposeasync"/>
+    protected virtual async ValueTask DisposeAsyncCore()
+    {
+        await Task.WhenAll(
+            selectFromNavigationCommand.DisposeAsync().AsTask(),
+            insertIntoNavigationCommand.DisposeAsync().AsTask(),
+            selectFromTileArchivedTextureCommand.DisposeAsync().AsTask(),
+            insertIntoTileArchivedTextureCommand.DisposeAsync().AsTask(),
+            selectFromTileArchivedFeatureCommand.DisposeAsync().AsTask(),
+            insertIntoTileArchivedFeatureCommand.DisposeAsync().AsTask(),
+            selectFromTileCommand.DisposeAsync().AsTask(),
+            insertIntoTileCommand.DisposeAsync().AsTask(),
+            selectFromMovingModelLodCommand.DisposeAsync().AsTask(),
+            insertIntoMovingModelLodCommand.DisposeAsync().AsTask(),
+            selectFromMovingModelCommand.DisposeAsync().AsTask(),
+            insertIntoMovingModelCommand.DisposeAsync().AsTask(),
+            selectFromGeotypicalModelLodCommand.DisposeAsync().AsTask(),
+            insertIntoGeotypicalModelLodCommand.DisposeAsync().AsTask(),
+            selectFromGeotypicalModelCommand.DisposeAsync().AsTask(),
+            insertIntoGeotypicalModelCommand.DisposeAsync().AsTask(),
+            selectFromTextureLodCommand.DisposeAsync().AsTask(),
+            insertIntoTextureLodCommand.DisposeAsync().AsTask(),
+            selectFromTextureCommand.DisposeAsync().AsTask(),
+            insertIntoTextureCommand.DisposeAsync().AsTask(),
+            selectFromMetadataCommand.DisposeAsync().AsTask(),
+            insertIntoMetadataCommand.DisposeAsync().AsTask(),
+            selectFromCDBCommand.DisposeAsync().AsTask(),
+            insertIntoCDBCommand.DisposeAsync().AsTask());
+    }
+
+    /// <inheritdoc/>
+    public async ValueTask DisposeAsync()
+    {
+        // Perform async cleanup.
+        await DisposeAsyncCore();
+
+        // Dispose of unmanaged resources.
+        Dispose(false);
+
+        // Suppress finalization.
         GC.SuppressFinalize(this);
     }
 
