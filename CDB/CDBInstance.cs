@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -108,6 +107,9 @@ public class CDBInstance : ICDB
                 {
                     return;
                 }
+                /*
+                 * The user-supplied action will only ever see the user-supplied cancellation token.
+                 */
                 await fileFoundAsyncAction(stream, cancellationToken);
             }
 
@@ -124,8 +126,8 @@ public class CDBInstance : ICDB
             }
 
             Task<bool> task = Task.Run(callTryReadFileAsync, leftoverTasksCancellationToken);
-            (Task<bool>, TaskCompletionSource) item = (task, barrierSource);
-            queue.Enqueue(item);
+            (Task<bool>, TaskCompletionSource) tuple = (task, barrierSource);
+            queue.Enqueue(tuple);
         }
         /*
          * Next, walk the file read operations in order and allow them access to
