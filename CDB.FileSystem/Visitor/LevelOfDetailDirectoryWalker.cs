@@ -3,7 +3,7 @@ using System;
 using System.IO;
 using System.Text.RegularExpressions;
 
-namespace Silnith.CDB.Visitor;
+namespace Silnith.CDB.FileSystem.Visitor;
 
 /// <summary>
 /// Walks a directory hierarchy for a tiled dataset described in 3.6.2.4. LOD Directory,

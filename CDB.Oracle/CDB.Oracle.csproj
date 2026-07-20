@@ -2,8 +2,8 @@
 
     <PropertyGroup>
         <TargetFramework>net7.0</TargetFramework>
-        <AssemblyName>Silnith.CDB.Oracle</AssemblyName>
-        <RootNamespace>Silnith.CDB.Oracle</RootNamespace>
+        <AssemblyName>Silnith.CDB.SQL.Oracle</AssemblyName>
+        <RootNamespace>Silnith.CDB.SQL.Oracle</RootNamespace>
         <ImplicitUsings>disable</ImplicitUsings>
         <Nullable>enable</Nullable>
     </PropertyGroup>

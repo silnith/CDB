@@ -1,6 +1,6 @@
 ﻿using System.IO;
 
-namespace Silnith.CDB.Visitor;
+namespace Silnith.CDB.FileSystem.Visitor;
 
 /// <summary>
 /// A base class to provide a single location for configuring directory traversal

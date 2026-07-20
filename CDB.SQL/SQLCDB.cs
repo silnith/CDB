@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Extensions.Options;
+using System;
 using System.IO;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -16,26 +17,23 @@ public class SQLCDB : ICDB
     /// <summary>
     /// Creates a new CDB data store that reads from the specified SQL database.
     /// </summary>
-    /// <param name="cdbName">The name of the CDB.  This must be the value of
-    /// the "name" column in one of the rows of the "CDB" table.</param>
-    /// <param name="directory">A directory that this data store pretends to
-    /// serve files from.  This directory is not actually used.</param>
     /// <param name="sqlDataStore">An SQL data store implementation for a specific database.</param>
-    public SQLCDB(string cdbName, DirectoryInfo directory, SQLDataStore sqlDataStore)
+    /// <param name="options">Configurable settings.</param>
+    public SQLCDB(SQLDataStore sqlDataStore, IOptions<SQLCDBSettings> options)
     {
         this.sqlDataStore = sqlDataStore;
-        Name = cdbName;
-        CdbRoot = directory;
+        Name = options.Value.Name;
     }
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// A simple identifier for the CDB data store.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This must match one of the values stored in the <c>CDB</c> table.
+    /// </para>
+    /// </remarks>
     public string Name
-    {
-        get;
-    }
-
-    /// <inheritdoc/>
-    public DirectoryInfo CdbRoot
     {
         get;
     }

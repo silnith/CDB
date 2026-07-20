@@ -5,7 +5,7 @@ using System.Globalization;
 using System.IO;
 using System.Text.RegularExpressions;
 
-namespace Silnith.CDB.Visitor;
+namespace Silnith.CDB.FileSystem.Visitor;
 
 /// <summary>
 /// Visits all the files in the Geotypical Models Datasets.

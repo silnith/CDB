@@ -1,7 +1,7 @@
-﻿using MySql.Data.MySqlClient;
-using Silnith.CDB.SQL;
+﻿using Microsoft.Extensions.Options;
+using System.Data.Common;
 
-namespace Silnith.CDB.MySql;
+namespace Silnith.CDB.SQL.MySql;
 
 /// <summary>
 /// A client for a MySql database that uses a schema designed for storing
@@ -924,12 +924,12 @@ public class MySqlDataStore : SQLDataStore
     #endregion
 
     /// <summary>
-    /// Creates a new SQL data store using the provided MySql connection.
+    /// Creates a new SQL data store using the provided MySql data source.
     /// </summary>
-    /// <param name="mysqlConnection">The database connection.</param>
-    /// <param name="createSchema"><see langword="true"/> to run the DDL to create the schema.</param>
-    public MySqlDataStore(MySqlConnection mysqlConnection, bool createSchema = false)
-        : base(mysqlConnection, createSchema)
+    /// <param name="dbDataSource">The data source.</param>
+    /// <param name="options">Configurable settings.</param>
+    public MySqlDataStore(DbDataSource dbDataSource, IOptions<MySqlDataStoreSettings> options)
+        : base(dbDataSource, options)
     {
     }
 

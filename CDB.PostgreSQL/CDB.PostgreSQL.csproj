@@ -2,16 +2,14 @@
 
     <PropertyGroup>
         <TargetFramework>net7.0</TargetFramework>
-        <AssemblyName>Silnith.CDB.PostgreSQL</AssemblyName>
-        <RootNamespace>Silnith.CDB.PostgreSQL</RootNamespace>
+        <AssemblyName>Silnith.CDB.SQL.PostgreSQL</AssemblyName>
+        <RootNamespace>Silnith.CDB.SQL.PostgreSQL</RootNamespace>
         <ImplicitUsings>disable</ImplicitUsings>
         <Nullable>enable</Nullable>
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="Npgsql" Version="9.0.5" />
-      <PackageReference Include="Npgsql.DependencyInjection" Version="9.0.5" />
-      <PackageReference Include="Npgsql.OpenTelemetry" Version="9.0.5" />
+      <PackageReference Include="Npgsql" Version="7.0.10" />
     </ItemGroup>
 
     <ItemGroup>

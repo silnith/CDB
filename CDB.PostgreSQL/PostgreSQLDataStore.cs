@@ -1,7 +1,7 @@
-﻿using Npgsql;
-using Silnith.CDB.SQL;
+﻿using Microsoft.Extensions.Options;
+using System.Data.Common;
 
-namespace Silnith.CDB.PostgreSQL;
+namespace Silnith.CDB.SQL.PostgreSQL;
 
 /// <summary>
 /// A client for a PostgreSQL database that uses a schema designed for storing
@@ -924,12 +924,12 @@ public class PostgreSQLDataStore : SQLDataStore
     #endregion
 
     /// <summary>
-    /// Creates a new SQL data store using the provided PostgreSQL connection.
+    /// Creates a new SQL data store using the provided PostgreSQL data source.
     /// </summary>
-    /// <param name="npgsqlConnection">The database connection.</param>
-    /// <param name="createSchema"><see langword="true"/> to run the DDL to create the schema.</param>
-    public PostgreSQLDataStore(NpgsqlConnection npgsqlConnection, bool createSchema = false)
-        : base(npgsqlConnection, createSchema)
+    /// <param name="dbDataSource">The data source.</param>
+    /// <param name="options">Configurable settings.</param>
+    public PostgreSQLDataStore(DbDataSource dbDataSource, IOptions<PostgreSQLDataStoreSettings> options)
+        : base(dbDataSource, options)
     {
     }
 

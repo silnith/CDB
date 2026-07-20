@@ -1,10 +1,10 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Data.Sqlite;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Silnith.CDB.FileSystem;
 using Silnith.CDB.SQL;
-using Silnith.CDB.SQLite;
-using System.IO;
+using Silnith.CDB.SQL.SQLite;
+using System.Data.Common;
 using System.Threading.Tasks;
 
 namespace Silnith.CDB.Service;
@@ -21,10 +21,14 @@ public class Program
         // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
-        //builder.Services.AddSingleton<IDataStore, FileSystemDataStore>(provider => null);
+        //builder.Services.AddSingleton<ICDB, FileSystemCDB>();
+        //builder.Services.AddOptions<FileSystemCDBSettings>()
+        //    .Configure(settings =>
+        //    {
+        //        settings.Root = new("CDB");
+        //    });
         builder.Services.AddSingleton(provider =>
         {
-            IConfiguration configuration = provider.GetRequiredService<IConfiguration>();
             SqliteConnectionStringBuilder sqliteConnectionStringBuilder = new()
             {
                 Cache = SqliteCacheMode.Default,
@@ -38,16 +42,19 @@ public class Program
             sqliteConnection.Open();
             return sqliteConnection;
         });
-        builder.Services.AddSingleton<SQLDataStore, SQLiteDataStore>(provider =>
-        {
-            SqliteConnection sqliteConnection = provider.GetRequiredService<SqliteConnection>();
-            return new(sqliteConnection, false);
-        });
-        builder.Services.AddSingleton<ICDB, SQLCDB>(provider =>
-        {
-            SQLDataStore sqlCDB = provider.GetRequiredService<SQLDataStore>();
-            return new("CDB", new DirectoryInfo("."), sqlCDB);
-        });
+        builder.Services.AddSingleton<DbDataSource, SQLiteDataSource>();
+        builder.Services.AddSingleton<SQLDataStore, SQLiteDataStore>();
+        builder.Services.AddOptions<SQLiteDataStoreSettings>()
+            .Configure(settings =>
+            {
+                settings.CreateSchema = false;
+            });
+        builder.Services.AddSingleton<ICDB, SQLCDB>();
+        builder.Services.AddOptions<SQLCDBSettings>()
+            .Configure(settings =>
+            {
+                settings.Name = "CDB";
+            });
 
         var app = builder.Build();
 

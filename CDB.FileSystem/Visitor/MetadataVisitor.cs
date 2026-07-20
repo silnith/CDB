@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 
-namespace Silnith.CDB.Visitor;
+namespace Silnith.CDB.FileSystem.Visitor;
 
 /// <summary>
 /// Visits all the files in the CDB <c>Metadata</c> directory.

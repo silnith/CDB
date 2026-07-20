@@ -1,7 +1,7 @@
-﻿using Oracle.ManagedDataAccess.Client;
-using Silnith.CDB.SQL;
+﻿using Microsoft.Extensions.Options;
+using System.Data.Common;
 
-namespace Silnith.CDB.Oracle;
+namespace Silnith.CDB.SQL.Oracle;
 
 /// <summary>
 /// A client for an Oracle database that uses a schema designed for storing
@@ -924,12 +924,12 @@ public class OracleDataStore : SQLDataStore
     #endregion
 
     /// <summary>
-    /// Creates a new SQL data store using the provided Oracle connection.
+    /// Creates a new SQL data store using the provided Oracle data source.
     /// </summary>
-    /// <param name="oracleConnection">The database connection.</param>
-    /// <param name="createSchema"><see langword="true"/> to run the DDL to create the schema.</param>
-    public OracleDataStore(OracleConnection oracleConnection, bool createSchema = false)
-        : base(oracleConnection, createSchema)
+    /// <param name="dbDataSource">The data source.</param>
+    /// <param name="options">Configurable settings.</param>
+    public OracleDataStore(DbDataSource dbDataSource, IOptions<OracleDataStoreSettings> options)
+        : base(dbDataSource, options)
     {
     }
 

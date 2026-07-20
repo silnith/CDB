@@ -2,7 +2,7 @@
 using System;
 using System.IO;
 
-namespace Silnith.CDB.Visitor;
+namespace Silnith.CDB.FileSystem.Visitor;
 
 /// <summary>
 /// Visits all the files in a CDB data store.

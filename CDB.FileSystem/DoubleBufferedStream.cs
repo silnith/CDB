@@ -3,7 +3,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace CDB.FileSystem;
+namespace Silnith.CDB.FileSystem;
 
 /// <summary>
 /// A stream that preloads data from another stream.
@@ -700,7 +700,7 @@ public class DoubleBufferedStream : Stream
     {
         throw new NotSupportedException();
     }
-    
+
     /// <inheritdoc/>
     public override void Flush()
     {

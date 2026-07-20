@@ -2,8 +2,8 @@
 
     <PropertyGroup>
         <TargetFramework>net7.0</TargetFramework>
-        <AssemblyName>Silnith.CDB.MySql</AssemblyName>
-        <RootNamespace>Silnith.CDB.MySql</RootNamespace>
+        <AssemblyName>Silnith.CDB.SQL.MySql</AssemblyName>
+        <RootNamespace>Silnith.CDB.SQL.MySql</RootNamespace>
         <ImplicitUsings>disable</ImplicitUsings>
         <Nullable>enable</Nullable>
     </PropertyGroup>

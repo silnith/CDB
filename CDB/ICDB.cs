@@ -25,36 +25,6 @@ public interface ICDB : IDisposable
 {
 
     /// <summary>
-    /// A simple identifier for the CDB data store.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// Some implementations of the interface may use this value programatically,
-    /// so it should remain stable and consistent for a data store once set.
-    /// Each distinct data store should have a unique value.
-    /// </para>
-    /// </remarks>
-    public string Name
-    {
-        get;
-    }
-
-    /// <summary>
-    /// The root directory of the CDB data store.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// Consumers of the data store cannot assume that the files in the CDB
-    /// are directly accessible inside of this directory.  Clients must use
-    /// the public API to access files.
-    /// </para>
-    /// </remarks>
-    public DirectoryInfo CdbRoot
-    {
-        get;
-    }
-
-    /// <summary>
     /// Tries to read a file out of the CDB.
     /// If the file was found, runs <paramref name="fileFoundAction"/> on its contents.
     /// </summary>

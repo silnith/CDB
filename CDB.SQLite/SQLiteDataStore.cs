@@ -1,10 +1,10 @@
-﻿using Microsoft.Data.Sqlite;
-using Silnith.CDB.SQL;
+﻿using Microsoft.Extensions.Options;
+using System.Data.Common;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Silnith.CDB.SQLite;
+namespace Silnith.CDB.SQL.SQLite;
 
 /// <summary>
 /// An encapsulated SQLite database that uses a schema designed for storing
@@ -19,7 +19,7 @@ namespace Silnith.CDB.SQLite;
 /// <para>
 /// If a select statement for a column of type blob also includes the implicit
 /// <c>rowid</c> column, then the SQLite driver will return the blob column as
-/// type <see cref="SqliteBlob"/>, which supports streaming the blob contents.
+/// type <see cref="Microsoft.Data.Sqlite.SqliteBlob"/>, which supports streaming the blob contents.
 /// </para>
 /// <para>
 /// If not, the driver will return the entire blob as a
@@ -968,12 +968,17 @@ public class SQLiteDataStore : SQLDataStore
     #endregion
 
     /// <summary>
-    /// Creates a new SQL data store using the provided SQLite connection.
+    /// Creates a new SQL data store using the provided SQLite data source.
     /// </summary>
-    /// <param name="sqliteConnection">The database connection.</param>
-    /// <param name="createSchema"><see langword="true"/> to run the DDL to create the schema.</param>
-    public SQLiteDataStore(SqliteConnection sqliteConnection, bool createSchema = false)
-        : base(sqliteConnection, createSchema)
+    /// <remarks>
+    /// <para>
+    /// SQLite does not provide a data source.  So we will need to write one.
+    /// </para>
+    /// </remarks>
+    /// <param name="dbDataSource">The data source.</param>
+    /// <param name="options">Configurable settings.</param>
+    public SQLiteDataStore(DbDataSource dbDataSource, IOptions<SQLiteDataStoreSettings> options)
+        : base(dbDataSource, options)
     {
     }
 

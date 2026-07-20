@@ -11,23 +11,9 @@ public class CDBInstance : ICDB
 {
     private readonly List<ICDB> cdbs;
 
-    public CDBInstance(string name, DirectoryInfo root, IEnumerable<ICDB> cdbs)
+    public CDBInstance(IEnumerable<ICDB> cdbs)
     {
-        Name = name;
-        CdbRoot = root;
         this.cdbs = cdbs.ToList();
-    }
-
-    /// <inheritdoc/>
-    public string Name
-    {
-        get;
-    }
-
-    /// <inheritdoc/>
-    public DirectoryInfo CdbRoot
-    {
-        get;
     }
 
     /// <inheritdoc/>

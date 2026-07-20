@@ -25,7 +25,7 @@ public class CDBInstanceTest
         cdb3.Setup(cdb => cdb.TryReadFile(It.IsAny<string>(), It.IsAny<Action<Stream>>()))
             .Returns(true);
 
-        CDBInstance cdbInstance = new("Foo", new("."), new List<ICDB>()
+        CDBInstance cdbInstance = new(new List<ICDB>()
         {
             cdb1.Object,
             cdb2.Object,
@@ -88,7 +88,7 @@ public class CDBInstanceTest
                 })
             .Returns(true);
 
-        CDBInstance cdbInstance = new("Foo", new("."), new List<ICDB>()
+        CDBInstance cdbInstance = new(new List<ICDB>()
         {
             cdb1.Object,
             cdb2.Object,

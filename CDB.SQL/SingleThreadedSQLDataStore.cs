@@ -20,7 +20,7 @@ namespace Silnith.CDB.SQL;
 /// projects.
 /// </para>
 /// </remarks>
-public abstract class SQLDataStore : IDisposable, IAsyncDisposable
+public abstract class SingleThreadedSQLDataStore : IDisposable, IAsyncDisposable
 {
     /// <summary>
     /// Creates a parameter for a database command, sets the name and type of
@@ -39,31 +39,588 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         dbParameter.ParameterName = dbParameterName;
     }
 
-    private readonly DbDataSource dbDataSource;
+    private readonly DbConnection dbConnection;
+
+    #region Prepared Statement Data Members
+
+    /// <summary>
+    /// The SQL prepared statement that inserts a new name into the CDB table.
+    /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    /// </list>
+    /// </remarks>
+    /// <seealso cref="InsertIntoCDBStatement"/>
+    private readonly DbCommand insertIntoCDBCommand;
+
+    /// <summary>
+    /// The SQL prepared statement that selects the CDB name from the CDB table.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This has no parameters.
+    /// </para>
+    /// <list type="bullet">
+    ///   <listheader><description>Selected Columns</description></listheader>
+    ///   <item><description><see cref="CDBNameColumnName"/></description></item>
+    /// </list>
+    /// </remarks>
+    /// <seealso cref="SelectFromCDBStatement"/>
+    private readonly DbCommand selectFromCDBCommand;
+
+    /// <summary>
+    /// The SQL prepared statement to insert a row into the Metadata table.
+    /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="MetadataNameParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    ///   <item><description><see cref="ContentParamName"/></description></item>
+    /// </list>
+    /// </remarks>
+    /// <seealso cref="InsertIntoMetadataStatement"/>
+    private readonly DbCommand insertIntoMetadataCommand;
+
+    /// <summary>
+    /// The SQL prepared statement to select a row from the Metadata table.
+    /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="MetadataNameParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    /// </list>
+    /// <list type="bullet">
+    ///   <listheader><description>Selected Columns</description></listheader>
+    ///   <item><description><see cref="ContentColumnName"/></description></item>
+    /// </list>
+    /// </remarks>
+    /// <seealso cref="SelectFromMetadataStatement"/>
+    private readonly DbCommand selectFromMetadataCommand;
+
+    /// <summary>
+    /// The SQL prepared statement to insert a row into the Texture table.
+    /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="TextureNameParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    ///   <item><description><see cref="ContentParamName"/></description></item>
+    /// </list>
+    /// </remarks>
+    /// <seealso cref="InsertIntoTextureStatement"/>
+    private readonly DbCommand insertIntoTextureCommand;
+
+    /// <summary>
+    /// The SQL prepared statement to select a row from the Texture table.
+    /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="TextureNameParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    /// </list>
+    /// <list type="bullet">
+    ///   <listheader><description>Selected Columns</description></listheader>
+    ///   <item><description><see cref="ContentColumnName"/></description></item>
+    /// </list>
+    /// </remarks>
+    /// <seealso cref="SelectFromTextureStatement"/>
+    private readonly DbCommand selectFromTextureCommand;
+
+    /// <summary>
+    /// The SQL prepared statement to insert a row into the Texture Level of Detail table.
+    /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="LevelOfDetailParamName"/></description></item>
+    ///   <item><description><see cref="TextureNameParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    ///   <item><description><see cref="ContentParamName"/></description></item>
+    /// </list>
+    /// </remarks>
+    /// <seealso cref="InsertIntoTextureLodStatement"/>
+    private readonly DbCommand insertIntoTextureLodCommand;
+
+    /// <summary>
+    /// The SQL prepared statement to select a row from the Texture Level of Detail table.
+    /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="LevelOfDetailParamName"/></description></item>
+    ///   <item><description><see cref="TextureNameParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    /// </list>
+    /// <list type="bullet">
+    ///   <listheader><description>Selected Columns</description></listheader>
+    ///   <item><description><see cref="ContentColumnName"/></description></item>
+    /// </list>
+    /// </remarks>
+    /// <seealso cref="SelectFromTextureLodStatement"/>
+    private readonly DbCommand selectFromTextureLodCommand;
+
+    /// <summary>
+    /// The SQL prepared statement to insert a row into the Geotypical Model table.
+    /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="FeatureCategoryParamName"/></description></item>
+    ///   <item><description><see cref="FeatureSubcategoryParamName"/></description></item>
+    ///   <item><description><see cref="FeatureTypeParamName"/></description></item>
+    ///   <item><description><see cref="FeatureSubcodeParamName"/></description></item>
+    ///   <item><description><see cref="ModelNameParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    ///   <item><description><see cref="ContentParamName"/></description></item>
+    /// </list>
+    /// </remarks>
+    /// <seealso cref="InsertIntoGeotypicalModelStatement"/>
+    private readonly DbCommand insertIntoGeotypicalModelCommand;
+
+    /// <summary>
+    /// The SQL prepared statement to select a row from the Geotypical Model table.
+    /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="FeatureCategoryParamName"/></description></item>
+    ///   <item><description><see cref="FeatureSubcategoryParamName"/></description></item>
+    ///   <item><description><see cref="FeatureTypeParamName"/></description></item>
+    ///   <item><description><see cref="FeatureSubcodeParamName"/></description></item>
+    ///   <item><description><see cref="ModelNameParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    /// </list>
+    /// <list type="bullet">
+    ///   <listheader><description>Selected Columns</description></listheader>
+    ///   <item><description><see cref="ContentColumnName"/></description></item>
+    /// </list>
+    /// </remarks>
+    /// <seealso cref="SelectFromGeotypicalModelStatement"/>
+    private readonly DbCommand selectFromGeotypicalModelCommand;
+
+    /// <summary>
+    /// The SQL prepared statement to insert a row into the Geotypical Model Level of Detail table.
+    /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="LevelOfDetailParamName"/></description></item>
+    ///   <item><description><see cref="FeatureCategoryParamName"/></description></item>
+    ///   <item><description><see cref="FeatureSubcategoryParamName"/></description></item>
+    ///   <item><description><see cref="FeatureTypeParamName"/></description></item>
+    ///   <item><description><see cref="FeatureSubcodeParamName"/></description></item>
+    ///   <item><description><see cref="ModelNameParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    ///   <item><description><see cref="ContentParamName"/></description></item>
+    /// </list>
+    /// </remarks>
+    /// <seealso cref="InsertIntoGeotypicalModelLodStatement"/>
+    private readonly DbCommand insertIntoGeotypicalModelLodCommand;
+
+    /// <summary>
+    /// The SQL prepared statement to select a row from the Geotypical Model Level of Detail table.
+    /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="LevelOfDetailParamName"/></description></item>
+    ///   <item><description><see cref="FeatureCategoryParamName"/></description></item>
+    ///   <item><description><see cref="FeatureSubcategoryParamName"/></description></item>
+    ///   <item><description><see cref="FeatureTypeParamName"/></description></item>
+    ///   <item><description><see cref="FeatureSubcodeParamName"/></description></item>
+    ///   <item><description><see cref="ModelNameParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    /// </list>
+    /// <list type="bullet">
+    ///   <listheader><description>Selected Columns</description></listheader>
+    ///   <item><description><see cref="ContentColumnName"/></description></item>
+    /// </list>
+    /// </remarks>
+    /// <seealso cref="SelectFromGeotypicalModelLodStatement"/>
+    private readonly DbCommand selectFromGeotypicalModelLodCommand;
+
+    /// <summary>
+    /// The SQL prepared statement to insert a row into the Moving Model table.
+    /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="DISKindParamName"/></description></item>
+    ///   <item><description><see cref="DISDomainParamName"/></description></item>
+    ///   <item><description><see cref="DISCountryParamName"/></description></item>
+    ///   <item><description><see cref="DISCategoryParamName"/></description></item>
+    ///   <item><description><see cref="DISSubcategoryParamName"/></description></item>
+    ///   <item><description><see cref="DISSpecificParamName"/></description></item>
+    ///   <item><description><see cref="DISExtraParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    ///   <item><description><see cref="ContentParamName"/></description></item>
+    /// </list>
+    /// </remarks>
+    /// <seealso cref="InsertIntoMovingModelStatement"/>
+    private readonly DbCommand insertIntoMovingModelCommand;
+
+    /// <summary>
+    /// The SQL prepared statement to select a row from the Moving Model table.
+    /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="DISKindParamName"/></description></item>
+    ///   <item><description><see cref="DISDomainParamName"/></description></item>
+    ///   <item><description><see cref="DISCountryParamName"/></description></item>
+    ///   <item><description><see cref="DISCategoryParamName"/></description></item>
+    ///   <item><description><see cref="DISSubcategoryParamName"/></description></item>
+    ///   <item><description><see cref="DISSpecificParamName"/></description></item>
+    ///   <item><description><see cref="DISExtraParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    /// </list>
+    /// <list type="bullet">
+    ///   <listheader><description>Selected Columns</description></listheader>
+    ///   <item><description><see cref="ContentColumnName"/></description></item>
+    /// </list>
+    /// </remarks>
+    /// <seealso cref="SelectFromMovingModelStatement"/>
+    private readonly DbCommand selectFromMovingModelCommand;
+
+    /// <summary>
+    /// The SQL prepared statement to insert a row into the Moving Model Level of Detail table.
+    /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="LevelOfDetailParamName"/></description></item>
+    ///   <item><description><see cref="DISKindParamName"/></description></item>
+    ///   <item><description><see cref="DISDomainParamName"/></description></item>
+    ///   <item><description><see cref="DISCountryParamName"/></description></item>
+    ///   <item><description><see cref="DISCategoryParamName"/></description></item>
+    ///   <item><description><see cref="DISSubcategoryParamName"/></description></item>
+    ///   <item><description><see cref="DISSpecificParamName"/></description></item>
+    ///   <item><description><see cref="DISExtraParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    ///   <item><description><see cref="ContentParamName"/></description></item>
+    /// </list>
+    /// </remarks>
+    /// <seealso cref="InsertIntoMovingModelLodStatement"/>
+    private readonly DbCommand insertIntoMovingModelLodCommand;
+
+    /// <summary>
+    /// The SQL prepared statement to select a row from the Moving Model Level of Detail table.
+    /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="LevelOfDetailParamName"/></description></item>
+    ///   <item><description><see cref="DISKindParamName"/></description></item>
+    ///   <item><description><see cref="DISDomainParamName"/></description></item>
+    ///   <item><description><see cref="DISCountryParamName"/></description></item>
+    ///   <item><description><see cref="DISCategoryParamName"/></description></item>
+    ///   <item><description><see cref="DISSubcategoryParamName"/></description></item>
+    ///   <item><description><see cref="DISSpecificParamName"/></description></item>
+    ///   <item><description><see cref="DISExtraParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    /// </list>
+    /// <list type="bullet">
+    ///   <listheader><description>Selected Columns</description></listheader>
+    ///   <item><description><see cref="ContentColumnName"/></description></item>
+    /// </list>
+    /// </remarks>
+    /// <seealso cref="SelectFromMovingModelLodStatement"/>
+    private readonly DbCommand selectFromMovingModelLodCommand;
+
+    /// <summary>
+    /// The SQL prepared statement to insert a row into the Tile table.
+    /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="LatitudeParamName"/></description></item>
+    ///   <item><description><see cref="LongitudeParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="LevelOfDetailParamName"/></description></item>
+    ///   <item><description><see cref="UpParamName"/></description></item>
+    ///   <item><description><see cref="RightParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    ///   <item><description><see cref="ContentParamName"/></description></item>
+    /// </list>
+    /// </remarks>
+    /// <seealso cref="InsertIntoTileStatement"/>
+    private readonly DbCommand insertIntoTileCommand;
+
+    /// <summary>
+    /// The SQL prepared statement to select a row from the Tile table.
+    /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="LatitudeParamName"/></description></item>
+    ///   <item><description><see cref="LongitudeParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="LevelOfDetailParamName"/></description></item>
+    ///   <item><description><see cref="UpParamName"/></description></item>
+    ///   <item><description><see cref="RightParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    /// </list>
+    /// <list type="bullet">
+    ///   <listheader><description>Selected Columns</description></listheader>
+    ///   <item><description><see cref="ContentColumnName"/></description></item>
+    /// </list>
+    /// </remarks>
+    /// <seealso cref="SelectFromTileStatement"/>
+    private readonly DbCommand selectFromTileCommand;
+
+    /// <summary>
+    /// The SQL prepared statement to insert a row into the TileArchivedFeature table.
+    /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="LatitudeParamName"/></description></item>
+    ///   <item><description><see cref="LongitudeParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="LevelOfDetailParamName"/></description></item>
+    ///   <item><description><see cref="UpParamName"/></description></item>
+    ///   <item><description><see cref="RightParamName"/></description></item>
+    ///   <item><description><see cref="FeatureCategoryParamName"/></description></item>
+    ///   <item><description><see cref="FeatureSubcategoryParamName"/></description></item>
+    ///   <item><description><see cref="FeatureTypeParamName"/></description></item>
+    ///   <item><description><see cref="FeatureSubcodeParamName"/></description></item>
+    ///   <item><description><see cref="ModelNameParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    ///   <item><description><see cref="ContentParamName"/></description></item>
+    /// </list>
+    /// </remarks>
+    /// <seealso cref="InsertIntoTileArchivedFeatureStatement"/>
+    private readonly DbCommand insertIntoTileArchivedFeatureCommand;
+
+    /// <summary>
+    /// The SQL prepared statement to select a row from the TileArchivedFeature table.
+    /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="LatitudeParamName"/></description></item>
+    ///   <item><description><see cref="LongitudeParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="LevelOfDetailParamName"/></description></item>
+    ///   <item><description><see cref="UpParamName"/></description></item>
+    ///   <item><description><see cref="RightParamName"/></description></item>
+    ///   <item><description><see cref="FeatureCategoryParamName"/></description></item>
+    ///   <item><description><see cref="FeatureSubcategoryParamName"/></description></item>
+    ///   <item><description><see cref="FeatureTypeParamName"/></description></item>
+    ///   <item><description><see cref="FeatureSubcodeParamName"/></description></item>
+    ///   <item><description><see cref="ModelNameParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    /// </list>
+    /// <list type="bullet">
+    ///   <listheader><description>Selected Columns</description></listheader>
+    ///   <item><description><see cref="ContentColumnName"/></description></item>
+    /// </list>
+    /// </remarks>
+    /// <seealso cref="SelectFromTileArchivedFeatureStatement"/>
+    private readonly DbCommand selectFromTileArchivedFeatureCommand;
+
+    /// <summary>
+    /// The SQL prepared statement to insert a row into the TileArchivedTexture table.
+    /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="LatitudeParamName"/></description></item>
+    ///   <item><description><see cref="LongitudeParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="LevelOfDetailParamName"/></description></item>
+    ///   <item><description><see cref="UpParamName"/></description></item>
+    ///   <item><description><see cref="RightParamName"/></description></item>
+    ///   <item><description><see cref="TextureNameParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    ///   <item><description><see cref="ContentParamName"/></description></item>
+    /// </list>
+    /// </remarks>
+    /// <seealso cref="InsertIntoTileArchivedTextureStatement"/>
+    private readonly DbCommand insertIntoTileArchivedTextureCommand;
+
+    /// <summary>
+    /// The SQL prepared statement to select a row from the TileArchivedTexture table.
+    /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="LatitudeParamName"/></description></item>
+    ///   <item><description><see cref="LongitudeParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="LevelOfDetailParamName"/></description></item>
+    ///   <item><description><see cref="UpParamName"/></description></item>
+    ///   <item><description><see cref="RightParamName"/></description></item>
+    ///   <item><description><see cref="TextureNameParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    /// </list>
+    /// <list type="bullet">
+    ///   <listheader><description>Selected Columns</description></listheader>
+    ///   <item><description><see cref="ContentColumnName"/></description></item>
+    /// </list>
+    /// </remarks>
+    /// <seealso cref="SelectFromTileArchivedTextureStatement"/>
+    private readonly DbCommand selectFromTileArchivedTextureCommand;
+
+    /// <summary>
+    /// The SQL prepared statement to insert a row into the Navigation table.
+    /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    ///   <item><description><see cref="ContentParamName"/></description></item>
+    /// </list>
+    /// </remarks>
+    /// <seealso cref="InsertIntoNavigationStatement"/>
+    private readonly DbCommand insertIntoNavigationCommand;
+
+    /// <summary>
+    /// The SQL prepared statement to select a row from the Navigation table.
+    /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    /// </list>
+    /// <list type="bullet">
+    ///   <listheader><description>Selected Columns</description></listheader>
+    ///   <item><description><see cref="ContentColumnName"/></description></item>
+    /// </list>
+    /// </remarks>
+    /// <seealso cref="SelectFromNavigationStatement"/>
+    private readonly DbCommand selectFromNavigationCommand;
+
+    #endregion
 
     /// <summary>
     /// Creates a new CDB storage backend using the provided SQL connection
     /// string.
     /// </summary>
-    /// <param name="dbDataSource">The data source.</param>
+    /// <param name="dbConnection">The connection.</param>
     /// <param name="options">Configurable settings.</param>
-    protected SQLDataStore(DbDataSource dbDataSource, IOptions<SQLDataStoreSettings> options)
+    protected SingleThreadedSQLDataStore(DbConnection dbConnection, IOptions<SQLDataStoreSettings> options)
     {
-        ArgumentNullException.ThrowIfNull(dbDataSource);
+        ArgumentNullException.ThrowIfNull(dbConnection);
         ArgumentNullException.ThrowIfNull(options);
 
-        this.dbDataSource = dbDataSource;
+        this.dbConnection = dbConnection;
 
         if (options.Value.CreateSchema)
         {
-            CreateSchema();
+            CreateSchema(dbConnection);
         }
+
+        insertIntoCDBCommand = CreateInsertIntoCDBCommand(dbConnection);
+        selectFromCDBCommand = CreateSelectFromCDBCommand(dbConnection);
+        insertIntoMetadataCommand = CreateInsertIntoMetadataCommand(dbConnection);
+        selectFromMetadataCommand = CreateSelectFromMetadataCommand(dbConnection);
+        insertIntoTextureCommand = CreateInsertIntoTextureCommand(dbConnection);
+        selectFromTextureCommand = CreateSelectFromTextureCommand(dbConnection);
+        insertIntoTextureLodCommand = CreateInsertIntoTextureLodCommand(dbConnection);
+        selectFromTextureLodCommand = CreateSelectFromTextureLodCommand(dbConnection);
+        insertIntoGeotypicalModelCommand = CreateInsertIntoGeotypicalModelCommand(dbConnection);
+        selectFromGeotypicalModelCommand = CreateSelectFromGeotypicalModelCommand(dbConnection);
+        insertIntoGeotypicalModelLodCommand = CreateInsertIntoGeotypicalModelLodCommand(dbConnection);
+        selectFromGeotypicalModelLodCommand = CreateSelectFromGeotypicalModelLodCommand(dbConnection);
+        insertIntoMovingModelCommand = CreateInsertIntoMovingModelCommand(dbConnection);
+        selectFromMovingModelCommand = CreateSelectFromMovingModelCommand(dbConnection);
+        insertIntoMovingModelLodCommand = CreateInsertIntoMovingModelLodCommand(dbConnection);
+        selectFromMovingModelLodCommand = CreateSelectFromMovingModelLodCommand(dbConnection);
+        insertIntoTileCommand = CreateInsertIntoTileCommand(dbConnection);
+        selectFromTileCommand = CreateSelectFromTileCommand(dbConnection);
+        insertIntoTileArchivedFeatureCommand = CreateInsertIntoTileArchivedFeatureCommand(dbConnection);
+        selectFromTileArchivedFeatureCommand = CreateSelectFromTileArchivedFeatureCommand(dbConnection);
+        insertIntoTileArchivedTextureCommand = CreateInsertIntoTileArchivedTextureCommand(dbConnection);
+        selectFromTileArchivedTextureCommand = CreateSelectFromTileArchivedTextureCommand(dbConnection);
+        insertIntoNavigationCommand = CreateInsertIntoNavigationCommand(dbConnection);
+        selectFromNavigationCommand = CreateSelectFromNavigationCommand(dbConnection);
     }
 
-    private void CreateSchema()
+    private void CreateSchema(DbConnection dbConnection)
     {
-        using DbConnection dbConnection = dbDataSource.OpenConnection();
-
         using DbTransaction dbTransaction = dbConnection.BeginTransaction(IsolationLevel.Serializable);
 
         using DbCommand dbCommand = dbConnection.CreateCommand();
@@ -120,13 +677,31 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         dbTransaction.Commit();
     }
 
-    #region Shared SQL Parameters
+    #region SQL Parameters
 
     /// <summary>
     /// The name of the SQL parameter for the CDB name.
     /// The value must be of type <see cref="DbType.String"/>.
     /// </summary>
     protected abstract string CdbParamName
+    {
+        get;
+    }
+
+    /// <summary>
+    /// The name of the SQL parameter for a Tile latitude.
+    /// The value must be of type <see cref="DbType.Int32"/>.
+    /// </summary>
+    protected abstract string LatitudeParamName
+    {
+        get;
+    }
+
+    /// <summary>
+    /// The name of the SQL parameter for a Tile longitude.
+    /// The value must be of type <see cref="DbType.Int32"/>.
+    /// </summary>
+    protected abstract string LongitudeParamName
     {
         get;
     }
@@ -168,217 +743,19 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
     }
 
     /// <summary>
-    /// The name of the SQL parameter for the file type.
-    /// The value must be of type <see cref="DbType.String"/>.
+    /// The name of the SQL parameter for a Tile UREF.
+    /// The value must be of type <see cref="DbType.Int32"/>.
     /// </summary>
-    protected abstract string FileTypeParamName
+    protected abstract string UpParamName
     {
         get;
     }
 
     /// <summary>
-    /// The name of the SQL parameter for the file content.
-    /// The value must be of type <see cref="DbType.Binary"/>.
+    /// The name of the SQL parameter for a Tile RREF.
+    /// The value must be of type <see cref="DbType.Int32"/>.
     /// </summary>
-    protected abstract string ContentParamName
-    {
-        get;
-    }
-
-    /// <summary>
-    /// The name of the column (in most tables) that contains the file contents.
-    /// The type is <see cref="DbType.Binary"/>.
-    /// </summary>
-    protected abstract string ContentColumnName
-    {
-        get;
-    }
-
-    #endregion
-
-    #region CDB
-
-    /// <summary>
-    /// The name of the column in the CDB table that contains the CDB name.
-    /// The type is <see cref="DbType.String"/>.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// Got that?
-    /// </para>
-    /// </remarks>
-    protected abstract string CDBNameColumnName
-    {
-        get;
-    }
-
-    /// <summary>
-    /// The SQL DDL statement that creates the CDB table with one column for
-    /// the name of the CDB instance.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// The name of the column is <see cref="CDBNameColumnName"/>.
-    /// </para>
-    /// </remarks>
-    protected abstract string CreateTableCDBStatement
-    {
-        get;
-    }
-
-    #region Insert
-
-    /// <summary>
-    /// The SQL statement that inserts a new name into the CDB table.
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    ///   <listheader><description>Parameters</description></listheader>
-    ///   <item><description><see cref="CdbParamName"/></description></item>
-    /// </list>
-    /// </remarks>
-    protected abstract string InsertIntoCDBStatement
-    {
-        get;
-    }
-
-    private void InitializeInsertIntoCDBCommand(DbCommand dbCommand)
-    {
-        dbCommand.CommandText = InsertIntoCDBStatement;
-        CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
-    }
-
-    /// <summary>
-    /// Inserts a name into the table identifying all the unique data stores
-    /// contained in the database.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// An <see cref="SQLDataStore"/> is capable of holding multiple CDB data stores.
-    /// Each distinct data store is identified by a name.
-    /// </para>
-    /// </remarks>
-    /// <param name="cdbName">The name of a new CDB data store.</param>
-    /// <returns>The number of database rows affected.</returns>
-    public virtual int InsertIntoCDB(string cdbName)
-    {
-        using DbConnection dbConnection = dbDataSource.OpenConnection();
-        using DbCommand insertIntoCDBCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoCDBCommand(insertIntoCDBCommand);
-        insertIntoCDBCommand.Prepare();
-
-        insertIntoCDBCommand.Parameters[CdbParamName].Value = cdbName;
-
-        return insertIntoCDBCommand.ExecuteNonQuery();
-    }
-
-    /// <summary>
-    /// Inserts a name into the table identifying all the unique data stores
-    /// contained in the database.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// An <see cref="SQLDataStore"/> is capable of holding multiple CDB data stores.
-    /// Each distinct data store is identified by a name.
-    /// </para>
-    /// </remarks>
-    /// <param name="cdbName">The name of a new CDB data store.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The number of database rows affected.</returns>
-    public virtual async Task<int> InsertIntoCDBAsync(string cdbName, CancellationToken cancellationToken = default)
-    {
-        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        await using DbCommand insertIntoCDBCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoCDBCommand(insertIntoCDBCommand);
-        await insertIntoCDBCommand.PrepareAsync(cancellationToken);
-
-        insertIntoCDBCommand.Parameters[CdbParamName].Value = cdbName;
-
-        return await insertIntoCDBCommand.ExecuteNonQueryAsync(cancellationToken);
-    }
-
-    #endregion
-
-    #region Select
-
-    /// <summary>
-    /// The SQL statement that selects the CDB name from the CDB table.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// This has no parameters.
-    /// </para>
-    /// <list type="bullet">
-    ///   <listheader><description>Selected Columns</description></listheader>
-    ///   <item><description><see cref="CDBNameColumnName"/></description></item>
-    /// </list>
-    /// </remarks>
-    protected abstract string SelectFromCDBStatement
-    {
-        get;
-    }
-
-    private void InitializeSelectFromCDBCommand(DbCommand dbCommand)
-    {
-        dbCommand.CommandText = SelectFromCDBStatement;
-    }
-
-    /// <summary>
-    /// Returns all CDB data store names in the database.
-    /// </summary>
-    /// <returns>All the names of the distinct CDB data stores in the database.</returns>
-    public virtual IEnumerable<string> SelectFromCDB()
-    {
-        using DbConnection dbConnection = dbDataSource.OpenConnection();
-        using DbCommand selectFromCDBCommand = dbConnection.CreateCommand();
-        InitializeSelectFromCDBCommand(selectFromCDBCommand);
-        selectFromCDBCommand.Prepare();
-
-        using DbDataReader dbDataReader = selectFromCDBCommand.ExecuteReader(
-            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult);
-        do
-        {
-            while (dbDataReader.Read())
-            {
-                string name = dbDataReader.GetString(CDBNameColumnName);
-                yield return name;
-            }
-        } while (dbDataReader.NextResult());
-    }
-
-    /// <summary>
-    /// Returns all CDB data store names in the database.
-    /// </summary>
-    /// <returns>All the names of the distinct CDB data stores in the database.</returns>
-    public virtual async IAsyncEnumerable<string> SelectFromCDBAsync([EnumeratorCancellation] CancellationToken cancellationToken = default)
-    {
-        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        await using DbCommand selectFromCDBCommand = dbConnection.CreateCommand();
-        InitializeSelectFromCDBCommand(selectFromCDBCommand);
-        await selectFromCDBCommand.PrepareAsync(cancellationToken);
-
-        await using DbDataReader dbDataReader = await selectFromCDBCommand.ExecuteReaderAsync(
-            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult, cancellationToken);
-        do
-        {
-            while (await dbDataReader.ReadAsync(cancellationToken))
-            {
-                string name = dbDataReader.GetString(CDBNameColumnName);
-                yield return name;
-            }
-        } while (await dbDataReader.NextResultAsync(cancellationToken));
-    }
-
-    #endregion
-
-    #endregion
-
-    #region Metadata
-
-    /// <summary>
-    /// The SQL DDL statement to create the Metadata table.
-    /// </summary>
-    protected abstract string CreateTableMetadataStatement
+    protected abstract string RightParamName
     {
         get;
     }
@@ -392,297 +769,6 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         get;
     }
 
-    #region Insert
-
-    /// <summary>
-    /// The SQL statement to insert a row into the Metadata table.
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    ///   <listheader><description>Parameters</description></listheader>
-    ///   <item><description><see cref="CdbParamName"/></description></item>
-    ///   <item><description><see cref="MetadataNameParamName"/></description></item>
-    ///   <item><description><see cref="FileTypeParamName"/></description></item>
-    ///   <item><description><see cref="ContentParamName"/></description></item>
-    /// </list>
-    /// </remarks>
-    protected abstract string InsertIntoMetadataStatement
-    {
-        get;
-    }
-
-    private void CreateAndAttachMetadataParameters(DbCommand dbCommand)
-    {
-        CreateAndAttachParameter(dbCommand, MetadataNameParamName, DbType.String);
-        CreateAndAttachParameter(dbCommand, FileTypeParamName, DbType.String);
-    }
-
-    private void SetMetadataParameters(DbCommand dbCommand, Metadata metadata)
-    {
-        dbCommand.Parameters[MetadataNameParamName].Value = metadata.Name;
-        dbCommand.Parameters[FileTypeParamName].Value = metadata.FileType;
-    }
-
-    private void InitializeInsertIntoMetadataCommand(DbCommand dbCommand)
-    {
-        dbCommand.CommandText = InsertIntoMetadataStatement;
-        CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
-        CreateAndAttachMetadataParameters(dbCommand);
-        CreateAndAttachParameter(dbCommand, ContentParamName, DbType.Binary);
-    }
-
-    /// <summary>
-    /// Inserts a metadata file into the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
-    /// <param name="metadata">The metadata identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <returns>The number of rows affected.</returns>
-    public virtual int InsertIntoMetadata(string cdbName, Metadata metadata, byte[] content)
-    {
-        using DbConnection dbConnection = dbDataSource.OpenConnection();
-        using DbCommand insertIntoMetadataCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoMetadataCommand(insertIntoMetadataCommand);
-        insertIntoMetadataCommand.Prepare();
-
-        insertIntoMetadataCommand.Parameters[CdbParamName].Value = cdbName;
-        SetMetadataParameters(insertIntoMetadataCommand, metadata);
-        insertIntoMetadataCommand.Parameters[ContentParamName].Value = content;
-
-        return insertIntoMetadataCommand.ExecuteNonQuery();
-    }
-
-    /// <summary>
-    /// Inserts a metadata file into the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
-    /// <param name="metadata">The metadata identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <returns>The number of rows affected.</returns>
-    public virtual int InsertIntoMetadata(string cdbName, Metadata metadata, Stream content)
-    {
-        using DbConnection dbConnection = dbDataSource.OpenConnection();
-        using DbCommand insertIntoMetadataCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoMetadataCommand(insertIntoMetadataCommand);
-        insertIntoMetadataCommand.Prepare();
-
-        insertIntoMetadataCommand.Parameters[CdbParamName].Value = cdbName;
-        SetMetadataParameters(insertIntoMetadataCommand, metadata);
-        insertIntoMetadataCommand.Parameters[ContentParamName].Value = content;
-
-        return insertIntoMetadataCommand.ExecuteNonQuery();
-    }
-
-    /// <summary>
-    /// Inserts a metadata file into the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
-    /// <param name="metadata">The metadata identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The number of rows affected.</returns>
-    public virtual async Task<int> InsertIntoMetadataAsync(string cdbName, Metadata metadata, byte[] content, CancellationToken cancellationToken = default)
-    {
-        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        await using DbCommand insertIntoMetadataCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoMetadataCommand(insertIntoMetadataCommand);
-        await insertIntoMetadataCommand.PrepareAsync(cancellationToken);
-
-        insertIntoMetadataCommand.Parameters[CdbParamName].Value = cdbName;
-        SetMetadataParameters(insertIntoMetadataCommand, metadata);
-        insertIntoMetadataCommand.Parameters[ContentParamName].Value = content;
-
-        return await insertIntoMetadataCommand.ExecuteNonQueryAsync(cancellationToken);
-    }
-
-    /// <summary>
-    /// Inserts a metadata file into the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
-    /// <param name="metadata">The metadata identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The number of rows affected.</returns>
-    public virtual async Task<int> InsertIntoMetadataAsync(string cdbName, Metadata metadata, Stream content, CancellationToken cancellationToken = default)
-    {
-        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        await using DbCommand insertIntoMetadataCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoMetadataCommand(insertIntoMetadataCommand);
-        await insertIntoMetadataCommand.PrepareAsync(cancellationToken);
-
-        insertIntoMetadataCommand.Parameters[CdbParamName].Value = cdbName;
-        SetMetadataParameters(insertIntoMetadataCommand, metadata);
-        insertIntoMetadataCommand.Parameters[ContentParamName].Value = content;
-
-        return await insertIntoMetadataCommand.ExecuteNonQueryAsync(cancellationToken);
-    }
-
-    #endregion
-
-    #region Select
-
-    /// <summary>
-    /// The SQL statement to select a row from the Metadata table.
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    ///   <listheader><description>Parameters</description></listheader>
-    ///   <item><description><see cref="CdbParamName"/></description></item>
-    ///   <item><description><see cref="MetadataNameParamName"/></description></item>
-    ///   <item><description><see cref="FileTypeParamName"/></description></item>
-    /// </list>
-    /// <list type="bullet">
-    ///   <listheader><description>Selected Columns</description></listheader>
-    ///   <item><description><see cref="ContentColumnName"/></description></item>
-    /// </list>
-    /// </remarks>
-    protected abstract string SelectFromMetadataStatement
-    {
-        get;
-    }
-
-    private void InitializeSelectFromMetadataCommand(DbCommand dbCommand)
-    {
-        dbCommand.CommandText = SelectFromMetadataStatement;
-        CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
-        CreateAndAttachMetadataParameters(dbCommand);
-    }
-
-    /// <summary>
-    /// Tries to find a metadata file in the database.
-    /// If the file was found, runs <paramref name="fileFoundAction"/> on the file contents.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="metadata">The metadata identifier.</param>
-    /// <param name="fileFoundAction">The action to run if the file is found.
-    /// The stream will be automatically closed after the action returns or
-    /// throws an exception.</param>
-    /// <returns><see langword="true"/> if the file was found.</returns>
-    public virtual bool TrySelectFromMetadata(string cdbName, Metadata metadata, Action<Stream> fileFoundAction)
-    {
-        using DbConnection dbConnection = dbDataSource.OpenConnection();
-        using DbCommand selectFromMetadataCommand = dbConnection.CreateCommand();
-        InitializeSelectFromMetadataCommand(selectFromMetadataCommand);
-        selectFromMetadataCommand.Prepare();
-
-        selectFromMetadataCommand.Parameters[CdbParamName].Value = cdbName;
-        SetMetadataParameters(selectFromMetadataCommand, metadata);
-
-        using DbDataReader dbDataReader = selectFromMetadataCommand.ExecuteReader(
-            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow);
-        do
-        {
-            while (dbDataReader.Read())
-            {
-                using Stream stream = dbDataReader.GetStream(ContentColumnName);
-                fileFoundAction(stream);
-                return true;
-            }
-        } while (dbDataReader.NextResult());
-        return false;
-    }
-
-    /// <summary>
-    /// Tries to find a metadata file in the database.
-    /// If the file was found, runs <paramref name="fileFoundAsyncAction"/> on the file contents.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="metadata">The metadata identifier.</param>
-    /// <param name="fileFoundAsyncAction">The action to run if the file is found.
-    /// The stream will be automatically closed after the action returns or
-    /// throws an exception.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns><see langword="true"/> if the file was found.</returns>
-    public virtual async Task<bool> TrySelectFromMetadataAsync(string cdbName, Metadata metadata,
-        Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
-        CancellationToken cancellationToken)
-    {
-        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        await using DbCommand selectFromMetadataCommand = dbConnection.CreateCommand();
-        InitializeSelectFromMetadataCommand(selectFromMetadataCommand);
-        await selectFromMetadataCommand.PrepareAsync(cancellationToken);
-
-        selectFromMetadataCommand.Parameters[CdbParamName].Value = cdbName;
-        SetMetadataParameters(selectFromMetadataCommand, metadata);
-
-        await using DbDataReader dbDataReader = await selectFromMetadataCommand.ExecuteReaderAsync(
-            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow, cancellationToken);
-        do
-        {
-            while (await dbDataReader.ReadAsync(cancellationToken))
-            {
-                await using Stream stream = dbDataReader.GetStream(ContentColumnName);
-                await fileFoundAsyncAction(stream, cancellationToken);
-                return true;
-            }
-        } while (await dbDataReader.NextResultAsync(cancellationToken));
-        return false;
-    }
-
-    /// <summary>
-    /// Returns a metadata file from the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="metadata">The metadata identifier.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>A stream containing the file contents, or <see langword="null"/> if the file was not found.</returns>
-    public virtual async Task<Stream?> SelectFromMetadataAsync(string cdbName, Metadata metadata,
-        CancellationToken cancellationToken)
-    {
-        DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        try
-        {
-            DbCommand dbCommand = dbConnection.CreateCommand();
-            try
-            {
-                InitializeSelectFromMetadataCommand(dbCommand);
-                await dbCommand.PrepareAsync(cancellationToken);
-
-                dbCommand.Parameters[CdbParamName].Value = cdbName;
-                SetMetadataParameters(dbCommand, metadata);
-
-                DbDataReader dbDataReader = await dbCommand.ExecuteReaderAsync(
-                    CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow, cancellationToken);
-                try
-                {
-                    do
-                    {
-                        while (await dbDataReader.ReadAsync(cancellationToken))
-                        {
-                            Stream stream = dbDataReader.GetStream(ContentColumnName);
-                            return new WrappedStream(dbConnection, dbCommand, dbDataReader, stream);
-                        }
-                    } while (await dbDataReader.NextResultAsync(cancellationToken));
-                    await dbDataReader.DisposeAsync();
-                    await dbCommand.DisposeAsync();
-                    await dbConnection.DisposeAsync();
-                    return null;
-                }
-                catch (Exception)
-                {
-                    await dbDataReader.DisposeAsync();
-                    throw;
-                }
-            }
-            catch (Exception)
-            {
-                await dbCommand.DisposeAsync();
-                throw;
-            }
-        }
-        catch (Exception)
-        {
-            await dbConnection.DisposeAsync();
-            throw;
-        }
-    }
-
-    #endregion
-
-    #endregion
-
-    #region Texture
-
     /// <summary>
     /// The name of the SQL parameter for the texture name.
     /// The value must be of type <see cref="DbType.String"/>.
@@ -691,518 +777,6 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
     {
         get;
     }
-
-    /// <summary>
-    /// The SQL DDL statement to create the Texture table.
-    /// </summary>
-    protected abstract string CreateTableTextureStatement
-    {
-        get;
-    }
-
-    #region Insert
-
-    /// <summary>
-    /// The SQL statement to insert a row into the Texture table.
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    ///   <listheader><description>Parameters</description></listheader>
-    ///   <item><description><see cref="CdbParamName"/></description></item>
-    ///   <item><description><see cref="DatasetParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
-    ///   <item><description><see cref="TextureNameParamName"/></description></item>
-    ///   <item><description><see cref="FileTypeParamName"/></description></item>
-    ///   <item><description><see cref="ContentParamName"/></description></item>
-    /// </list>
-    /// </remarks>
-    protected abstract string InsertIntoTextureStatement
-    {
-        get;
-    }
-
-    private void InitializeInsertIntoTextureCommand(DbCommand dbCommand)
-    {
-        dbCommand.CommandText = InsertIntoTextureStatement;
-        CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
-        CreateAndAttachTextureParameters(dbCommand);
-        CreateAndAttachParameter(dbCommand, ContentParamName, DbType.Binary);
-    }
-
-    private void CreateAndAttachTextureParameters(DbCommand dbCommand)
-    {
-        CreateAndAttachParameter(dbCommand, DatasetParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, ComponentSelector1ParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, ComponentSelector2ParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, TextureNameParamName, DbType.String);
-        CreateAndAttachParameter(dbCommand, FileTypeParamName, DbType.String);
-    }
-
-    private void SetTextureParameters(DbCommand dbCommand, Texture texture)
-    {
-        dbCommand.Parameters[DatasetParamName].Value = texture.Dataset.Value;
-        dbCommand.Parameters[ComponentSelector1ParamName].Value = texture.ComponentSelector1;
-        dbCommand.Parameters[ComponentSelector2ParamName].Value = texture.ComponentSelector2;
-        dbCommand.Parameters[TextureNameParamName].Value = texture.Name;
-        dbCommand.Parameters[FileTypeParamName].Value = texture.FileType;
-    }
-
-    /// <summary>
-    /// Inserts a texture file into the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
-    /// <param name="texture">The texture identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <returns>The number of rows affected.</returns>
-    public virtual int InsertIntoTexture(string cdbName, Texture texture, byte[] content)
-    {
-        using DbConnection dbConnection = dbDataSource.OpenConnection();
-        using DbCommand insertIntoTextureCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoTextureCommand(insertIntoTextureCommand);
-        insertIntoTextureCommand.Prepare();
-
-        insertIntoTextureCommand.Parameters[CdbParamName].Value = cdbName;
-        SetTextureParameters(insertIntoTextureCommand, texture);
-        insertIntoTextureCommand.Parameters[ContentParamName].Value = content;
-
-        return insertIntoTextureCommand.ExecuteNonQuery();
-    }
-
-    /// <summary>
-    /// Inserts a texture file into the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
-    /// <param name="texture">The texture identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <returns>The number of rows affected.</returns>
-    public virtual int InsertIntoTexture(string cdbName, Texture texture, Stream content)
-    {
-        using DbConnection dbConnection = dbDataSource.OpenConnection();
-        using DbCommand insertIntoTextureCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoTextureCommand(insertIntoTextureCommand);
-        insertIntoTextureCommand.Prepare();
-
-        insertIntoTextureCommand.Parameters[CdbParamName].Value = cdbName;
-        SetTextureParameters(insertIntoTextureCommand, texture);
-        insertIntoTextureCommand.Parameters[ContentParamName].Value = content;
-
-        return insertIntoTextureCommand.ExecuteNonQuery();
-    }
-
-    /// <summary>
-    /// Inserts a texture file into the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
-    /// <param name="texture">The texture identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The number of rows affected.</returns>
-    public virtual async Task<int> InsertIntoTextureAsync(string cdbName, Texture texture, byte[] content, CancellationToken cancellationToken = default)
-    {
-        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        await using DbCommand insertIntoTextureCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoTextureCommand(insertIntoTextureCommand);
-        await insertIntoTextureCommand.PrepareAsync(cancellationToken);
-
-        insertIntoTextureCommand.Parameters[CdbParamName].Value = cdbName;
-        SetTextureParameters(insertIntoTextureCommand, texture);
-        insertIntoTextureCommand.Parameters[ContentParamName].Value = content;
-
-        return await insertIntoTextureCommand.ExecuteNonQueryAsync(cancellationToken);
-    }
-
-    /// <summary>
-    /// Inserts a texture file into the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
-    /// <param name="texture">The texture identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The number of rows affected.</returns>
-    public virtual async Task<int> InsertIntoTextureAsync(string cdbName, Texture texture, Stream content, CancellationToken cancellationToken = default)
-    {
-        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        await using DbCommand insertIntoTextureCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoTextureCommand(insertIntoTextureCommand);
-        await insertIntoTextureCommand.PrepareAsync(cancellationToken);
-
-        insertIntoTextureCommand.Parameters[CdbParamName].Value = cdbName;
-        SetTextureParameters(insertIntoTextureCommand, texture);
-        insertIntoTextureCommand.Parameters[ContentParamName].Value = content;
-
-        return await insertIntoTextureCommand.ExecuteNonQueryAsync(cancellationToken);
-    }
-
-    #endregion
-
-    #region Select
-
-    /// <summary>
-    /// The SQL statement to select a row from the Texture table.
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    ///   <listheader><description>Parameters</description></listheader>
-    ///   <item><description><see cref="CdbParamName"/></description></item>
-    ///   <item><description><see cref="DatasetParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
-    ///   <item><description><see cref="TextureNameParamName"/></description></item>
-    ///   <item><description><see cref="FileTypeParamName"/></description></item>
-    /// </list>
-    /// <list type="bullet">
-    ///   <listheader><description>Selected Columns</description></listheader>
-    ///   <item><description><see cref="ContentColumnName"/></description></item>
-    /// </list>
-    /// </remarks>
-    protected abstract string SelectFromTextureStatement
-    {
-        get;
-    }
-
-    private void InitializeSelectFromTextureCommand(DbCommand dbCommand)
-    {
-        dbCommand.CommandText = SelectFromTextureStatement;
-        CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
-        CreateAndAttachTextureParameters(dbCommand);
-    }
-
-    /// <summary>
-    /// Tries to find a texture file in the database.
-    /// If the file was found, runs <paramref name="fileFoundAction"/> on the file contents.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="texture">The texture identifier.</param>
-    /// <param name="fileFoundAction">The action to run if the file is found.
-    /// The stream will be automatically closed after the action returns or
-    /// throws an exception.</param>
-    /// <returns><see langword="true"/> if the file was found.</returns>
-    public virtual bool TrySelectFromTexture(string cdbName, Texture texture,
-        Action<Stream> fileFoundAction)
-    {
-        using DbConnection dbConnection = dbDataSource.OpenConnection();
-        using DbCommand selectFromTextureCommand = dbConnection.CreateCommand();
-        InitializeSelectFromTextureCommand(selectFromTextureCommand);
-        selectFromTextureCommand.Prepare();
-
-        selectFromTextureCommand.Parameters[CdbParamName].Value = cdbName;
-        SetTextureParameters(selectFromTextureCommand, texture);
-
-        using DbDataReader dbDataReader = selectFromTextureCommand.ExecuteReader(
-            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow);
-        do
-        {
-            while (dbDataReader.Read())
-            {
-                using Stream stream = dbDataReader.GetStream(ContentColumnName);
-                fileFoundAction(stream);
-                return true;
-            }
-        } while (dbDataReader.NextResult());
-        return false;
-    }
-
-    /// <summary>
-    /// Tries to find a texture file in the database.
-    /// If the file was found, runs <paramref name="fileFoundAsyncAction"/> on the file contents.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="texture">The texture identifier.</param>
-    /// <param name="fileFoundAsyncAction">The action to run if the file is found.
-    /// The stream will be automatically closed after the action returns or
-    /// throws an exception.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns><see langword="true"/> if the file was found.</returns>
-    public virtual async Task<bool> TrySelectFromTextureAsync(string cdbName, Texture texture,
-        Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
-        CancellationToken cancellationToken)
-    {
-        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        await using DbCommand selectFromTextureCommand = dbConnection.CreateCommand();
-        InitializeSelectFromTextureCommand(selectFromTextureCommand);
-        await selectFromTextureCommand.PrepareAsync(cancellationToken);
-
-        selectFromTextureCommand.Parameters[CdbParamName].Value = cdbName;
-        SetTextureParameters(selectFromTextureCommand, texture);
-
-        await using DbDataReader dbDataReader = await selectFromTextureCommand.ExecuteReaderAsync(
-            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow, cancellationToken);
-        do
-        {
-            while (await dbDataReader.ReadAsync(cancellationToken))
-            {
-                await using Stream stream = dbDataReader.GetStream(ContentColumnName);
-                await fileFoundAsyncAction(stream, cancellationToken);
-                return true;
-            }
-        } while (await dbDataReader.NextResultAsync(cancellationToken));
-        return false;
-    }
-
-    #endregion
-
-    #endregion
-
-    #region Texture LOD
-
-    /// <summary>
-    /// The SQL DDL statement to create the Texture Level of Detail table.
-    /// </summary>
-    protected abstract string CreateTableTextureLodStatement
-    {
-        get;
-    }
-
-    #region Insert
-
-    /// <summary>
-    /// The SQL statement to insert a row into the Texture Level of Detail table.
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    ///   <listheader><description>Parameters</description></listheader>
-    ///   <item><description><see cref="CdbParamName"/></description></item>
-    ///   <item><description><see cref="DatasetParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
-    ///   <item><description><see cref="LevelOfDetailParamName"/></description></item>
-    ///   <item><description><see cref="TextureNameParamName"/></description></item>
-    ///   <item><description><see cref="FileTypeParamName"/></description></item>
-    ///   <item><description><see cref="ContentParamName"/></description></item>
-    /// </list>
-    /// </remarks>
-    protected abstract string InsertIntoTextureLodStatement
-    {
-        get;
-    }
-
-    private void InitializeInsertIntoTextureLodCommand(DbCommand dbCommand)
-    {
-        dbCommand.CommandText = InsertIntoTextureLodStatement;
-        CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
-        CreateAndAttachTextureLodParameters(dbCommand);
-        CreateAndAttachParameter(dbCommand, ContentParamName, DbType.Binary);
-    }
-
-    private void CreateAndAttachTextureLodParameters(DbCommand dbCommand)
-    {
-        CreateAndAttachParameter(dbCommand, DatasetParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, ComponentSelector1ParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, ComponentSelector2ParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, LevelOfDetailParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, TextureNameParamName, DbType.String);
-        CreateAndAttachParameter(dbCommand, FileTypeParamName, DbType.String);
-    }
-
-    private void SetTextureLodParameters(DbCommand dbCommand, TextureLod textureLod)
-    {
-        dbCommand.Parameters[DatasetParamName].Value = textureLod.Dataset.Value;
-        dbCommand.Parameters[ComponentSelector1ParamName].Value = textureLod.ComponentSelector1;
-        dbCommand.Parameters[ComponentSelector2ParamName].Value = textureLod.ComponentSelector2;
-        dbCommand.Parameters[LevelOfDetailParamName].Value = textureLod.LevelOfDetail.Value;
-        dbCommand.Parameters[TextureNameParamName].Value = textureLod.Name;
-        dbCommand.Parameters[FileTypeParamName].Value = textureLod.FileType;
-    }
-
-    /// <summary>
-    /// Inserts a texture mipmap file into the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
-    /// <param name="textureLod">The texture mipmap identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <returns>The number of rows affected.</returns>
-    public virtual int InsertIntoTextureLod(string cdbName, TextureLod textureLod, byte[] content)
-    {
-        using DbConnection dbConnection = dbDataSource.OpenConnection();
-        using DbCommand insertIntoTextureLodCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoTextureLodCommand(insertIntoTextureLodCommand);
-        insertIntoTextureLodCommand.Prepare();
-
-        insertIntoTextureLodCommand.Parameters[CdbParamName].Value = cdbName;
-        SetTextureLodParameters(insertIntoTextureLodCommand, textureLod);
-        insertIntoTextureLodCommand.Parameters[ContentParamName].Value = content;
-
-        return insertIntoTextureLodCommand.ExecuteNonQuery();
-    }
-
-    /// <summary>
-    /// Inserts a texture mipmap file into the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
-    /// <param name="textureLod">The texture mipmap identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <returns>The number of rows affected.</returns>
-    public virtual int InsertIntoTextureLod(string cdbName, TextureLod textureLod, Stream content)
-    {
-        using DbConnection dbConnection = dbDataSource.OpenConnection();
-        using DbCommand insertIntoTextureLodCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoTextureLodCommand(insertIntoTextureLodCommand);
-        insertIntoTextureLodCommand.Prepare();
-
-        insertIntoTextureLodCommand.Parameters[CdbParamName].Value = cdbName;
-        SetTextureLodParameters(insertIntoTextureLodCommand, textureLod);
-        insertIntoTextureLodCommand.Parameters[ContentParamName].Value = content;
-
-        return insertIntoTextureLodCommand.ExecuteNonQuery();
-    }
-
-    /// <summary>
-    /// Inserts a texture mipmap file into the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
-    /// <param name="textureLod">The texture mipmap identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The number of rows affected.</returns>
-    public virtual async Task<int> InsertIntoTextureLodAsync(string cdbName, TextureLod textureLod, byte[] content, CancellationToken cancellationToken = default)
-    {
-        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        await using DbCommand insertIntoTextureLodCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoTextureLodCommand(insertIntoTextureLodCommand);
-        await insertIntoTextureLodCommand.PrepareAsync(cancellationToken);
-
-        insertIntoTextureLodCommand.Parameters[CdbParamName].Value = cdbName;
-        SetTextureLodParameters(insertIntoTextureLodCommand, textureLod);
-        insertIntoTextureLodCommand.Parameters[ContentParamName].Value = content;
-
-        return await insertIntoTextureLodCommand.ExecuteNonQueryAsync(cancellationToken);
-    }
-
-    /// <summary>
-    /// Inserts a texture mipmap file into the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
-    /// <param name="textureLod">The texture mipmap identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The number of rows affected.</returns>
-    public virtual async Task<int> InsertIntoTextureLodAsync(string cdbName, TextureLod textureLod, Stream content, CancellationToken cancellationToken = default)
-    {
-        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        await using DbCommand insertIntoTextureLodCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoTextureLodCommand(insertIntoTextureLodCommand);
-        await insertIntoTextureLodCommand.PrepareAsync(cancellationToken);
-
-        insertIntoTextureLodCommand.Parameters[CdbParamName].Value = cdbName;
-        SetTextureLodParameters(insertIntoTextureLodCommand, textureLod);
-        insertIntoTextureLodCommand.Parameters[ContentParamName].Value = content;
-
-        return await insertIntoTextureLodCommand.ExecuteNonQueryAsync(cancellationToken);
-    }
-
-    #endregion
-
-    #region Select
-
-    /// <summary>
-    /// The SQL statement to select a row from the Texture Level of Detail table.
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    ///   <listheader><description>Parameters</description></listheader>
-    ///   <item><description><see cref="CdbParamName"/></description></item>
-    ///   <item><description><see cref="DatasetParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
-    ///   <item><description><see cref="LevelOfDetailParamName"/></description></item>
-    ///   <item><description><see cref="TextureNameParamName"/></description></item>
-    ///   <item><description><see cref="FileTypeParamName"/></description></item>
-    /// </list>
-    /// <list type="bullet">
-    ///   <listheader><description>Selected Columns</description></listheader>
-    ///   <item><description><see cref="ContentColumnName"/></description></item>
-    /// </list>
-    /// </remarks>
-    protected abstract string SelectFromTextureLodStatement
-    {
-        get;
-    }
-
-    private void InitializeSelectFromTextureLodCommand(DbCommand dbCommand)
-    {
-        dbCommand.CommandText = SelectFromTextureLodStatement;
-        CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
-        CreateAndAttachTextureLodParameters(dbCommand);
-    }
-
-    /// <summary>
-    /// Tries to find a texture mipmap file in the database.
-    /// If the file was found, runs <paramref name="fileFoundAction"/> on the file contents.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="textureLod">The texture mipmap identifier.</param>
-    /// <param name="fileFoundAction">The action to run if the file is found.
-    /// The stream will be automatically closed after the action returns or
-    /// throws an exception.</param>
-    /// <returns><see langword="true"/> if the file was found.</returns>
-    public virtual bool TrySelectFromTextureLod(string cdbName, TextureLod textureLod,
-        Action<Stream> fileFoundAction)
-    {
-        using DbConnection dbConnection = dbDataSource.OpenConnection();
-        using DbCommand selectFromTextureLodCommand = dbConnection.CreateCommand();
-        InitializeSelectFromTextureLodCommand(selectFromTextureLodCommand);
-        selectFromTextureLodCommand.Prepare();
-
-        selectFromTextureLodCommand.Parameters[CdbParamName].Value = cdbName;
-        SetTextureLodParameters(selectFromTextureLodCommand, textureLod);
-
-        using DbDataReader dbDataReader = selectFromTextureLodCommand.ExecuteReader(
-            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow);
-        do
-        {
-            while (dbDataReader.Read())
-            {
-                using Stream stream = dbDataReader.GetStream(ContentColumnName);
-                fileFoundAction(stream);
-                return true;
-            }
-        } while (dbDataReader.NextResult());
-        return false;
-    }
-
-    /// <summary>
-    /// Tries to find a texture mipmap file in the database.
-    /// If the file was found, runs <paramref name="fileFoundAsyncAction"/> on the file contents.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="textureLod">The texture mipmap identifier.</param>
-    /// <param name="fileFoundAsyncAction">The action to run if the file is found.
-    /// The stream will be automatically closed after the action returns or
-    /// throws an exception.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns><see langword="true"/> if the file was found.</returns>
-    public virtual async Task<bool> TrySelectFromTextureLodAsync(string cdbName, TextureLod textureLod,
-        Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
-        CancellationToken cancellationToken)
-    {
-        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        await using DbCommand selectFromTextureLodCommand = dbConnection.CreateCommand();
-        InitializeSelectFromTextureLodCommand(selectFromTextureLodCommand);
-        await selectFromTextureLodCommand.PrepareAsync(cancellationToken);
-
-        selectFromTextureLodCommand.Parameters[CdbParamName].Value = cdbName;
-        SetTextureLodParameters(selectFromTextureLodCommand, textureLod);
-
-        await using DbDataReader dbDataReader = await selectFromTextureLodCommand.ExecuteReaderAsync(
-            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow, cancellationToken);
-        do
-        {
-            while (await dbDataReader.ReadAsync(cancellationToken))
-            {
-                await using Stream stream = dbDataReader.GetStream(ContentColumnName);
-                await fileFoundAsyncAction(stream, cancellationToken);
-                return true;
-            }
-        } while (await dbDataReader.NextResultAsync(cancellationToken));
-        return false;
-    }
-
-    #endregion
-
-    #endregion
-
-    #region Geotypical Model
 
     #region Feature Code Parameters
 
@@ -1252,550 +826,6 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
     {
         get;
     }
-
-    /// <summary>
-    /// The SQL DDL statement to create the Geotypical Model table.
-    /// </summary>
-    protected abstract string CreateTableGeotypicalModelStatement
-    {
-        get;
-    }
-
-    #region Insert
-
-    /// <summary>
-    /// The SQL statement to insert a row into the Geotypical Model table.
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    ///   <listheader><description>Parameters</description></listheader>
-    ///   <item><description><see cref="CdbParamName"/></description></item>
-    ///   <item><description><see cref="DatasetParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
-    ///   <item><description><see cref="FeatureCategoryParamName"/></description></item>
-    ///   <item><description><see cref="FeatureSubcategoryParamName"/></description></item>
-    ///   <item><description><see cref="FeatureTypeParamName"/></description></item>
-    ///   <item><description><see cref="FeatureSubcodeParamName"/></description></item>
-    ///   <item><description><see cref="ModelNameParamName"/></description></item>
-    ///   <item><description><see cref="FileTypeParamName"/></description></item>
-    ///   <item><description><see cref="ContentParamName"/></description></item>
-    /// </list>
-    /// </remarks>
-    protected abstract string InsertIntoGeotypicalModelStatement
-    {
-        get;
-    }
-
-    private void InitializeInsertIntoGeotypicalModelCommand(DbCommand dbCommand)
-    {
-        dbCommand.CommandText = InsertIntoGeotypicalModelStatement;
-        CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
-        CreateAndAttachGeotypicalModelParameters(dbCommand);
-        CreateAndAttachParameter(dbCommand, ContentParamName, DbType.Binary);
-    }
-
-    private void CreateAndAttachGeotypicalModelParameters(DbCommand dbCommand)
-    {
-        CreateAndAttachParameter(dbCommand, DatasetParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, ComponentSelector1ParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, ComponentSelector2ParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, FeatureCategoryParamName, DbType.String);
-        CreateAndAttachParameter(dbCommand, FeatureSubcategoryParamName, DbType.String);
-        CreateAndAttachParameter(dbCommand, FeatureTypeParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, FeatureSubcodeParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, ModelNameParamName, DbType.String);
-        CreateAndAttachParameter(dbCommand, FileTypeParamName, DbType.String);
-    }
-
-    private void SetGeotypicalModelParameters(DbCommand dbCommand, GeotypicalModel geotypicalModel)
-    {
-        dbCommand.Parameters[DatasetParamName].Value = geotypicalModel.Dataset.Value;
-        dbCommand.Parameters[ComponentSelector1ParamName].Value = geotypicalModel.ComponentSelector1;
-        dbCommand.Parameters[ComponentSelector2ParamName].Value = geotypicalModel.ComponentSelector2;
-        dbCommand.Parameters[FeatureCategoryParamName].Value = geotypicalModel.FeatureCode.Category;
-        dbCommand.Parameters[FeatureSubcategoryParamName].Value = geotypicalModel.FeatureCode.Subcategory;
-        dbCommand.Parameters[FeatureTypeParamName].Value = geotypicalModel.FeatureCode.Type;
-        dbCommand.Parameters[FeatureSubcodeParamName].Value = geotypicalModel.FeatureSubcode;
-        dbCommand.Parameters[ModelNameParamName].Value = geotypicalModel.Name;
-        dbCommand.Parameters[FileTypeParamName].Value = geotypicalModel.FileType;
-    }
-
-    /// <summary>
-    /// Inserts a geotypical model file into the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
-    /// <param name="geotypicalModel">The geotypical model identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <returns>The number of rows affected.</returns>
-    public virtual int InsertIntoGeotypicalModel(string cdbName, GeotypicalModel geotypicalModel, byte[] content)
-    {
-        using DbConnection dbConnection = dbDataSource.OpenConnection();
-        using DbCommand insertIntoGeotypicalModelCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoGeotypicalModelCommand(insertIntoGeotypicalModelCommand);
-        insertIntoGeotypicalModelCommand.Prepare();
-
-        insertIntoGeotypicalModelCommand.Parameters[CdbParamName].Value = cdbName;
-        SetGeotypicalModelParameters(insertIntoGeotypicalModelCommand, geotypicalModel);
-        insertIntoGeotypicalModelCommand.Parameters[ContentParamName].Value = content;
-
-        return insertIntoGeotypicalModelCommand.ExecuteNonQuery();
-    }
-
-    /// <summary>
-    /// Inserts a geotypical model file into the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
-    /// <param name="geotypicalModel">The geotypical model identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <returns>The number of rows affected.</returns>
-    public virtual int InsertIntoGeotypicalModel(string cdbName, GeotypicalModel geotypicalModel, Stream content)
-    {
-        using DbConnection dbConnection = dbDataSource.OpenConnection();
-        using DbCommand insertIntoGeotypicalModelCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoGeotypicalModelCommand(insertIntoGeotypicalModelCommand);
-        insertIntoGeotypicalModelCommand.Prepare();
-
-        insertIntoGeotypicalModelCommand.Parameters[CdbParamName].Value = cdbName;
-        SetGeotypicalModelParameters(insertIntoGeotypicalModelCommand, geotypicalModel);
-        insertIntoGeotypicalModelCommand.Parameters[ContentParamName].Value = content;
-
-        return insertIntoGeotypicalModelCommand.ExecuteNonQuery();
-    }
-
-    /// <summary>
-    /// Inserts a geotypical model file into the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
-    /// <param name="geotypicalModel">The geotypical model identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The number of rows affected.</returns>
-    public virtual async Task<int> InsertIntoGeotypicalModelAsync(string cdbName, GeotypicalModel geotypicalModel, byte[] content, CancellationToken cancellationToken = default)
-    {
-        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        await using DbCommand insertIntoGeotypicalModelCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoGeotypicalModelCommand(insertIntoGeotypicalModelCommand);
-        await insertIntoGeotypicalModelCommand.PrepareAsync(cancellationToken);
-
-        insertIntoGeotypicalModelCommand.Parameters[CdbParamName].Value = cdbName;
-        SetGeotypicalModelParameters(insertIntoGeotypicalModelCommand, geotypicalModel);
-        insertIntoGeotypicalModelCommand.Parameters[ContentParamName].Value = content;
-
-        return await insertIntoGeotypicalModelCommand.ExecuteNonQueryAsync(cancellationToken);
-    }
-
-    /// <summary>
-    /// Inserts a geotypical model file into the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
-    /// <param name="geotypicalModel">The geotypical model identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The number of rows affected.</returns>
-    public virtual async Task<int> InsertIntoGeotypicalModelAsync(string cdbName, GeotypicalModel geotypicalModel, Stream content, CancellationToken cancellationToken = default)
-    {
-        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        await using DbCommand insertIntoGeotypicalModelCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoGeotypicalModelCommand(insertIntoGeotypicalModelCommand);
-        await insertIntoGeotypicalModelCommand.PrepareAsync(cancellationToken);
-
-        insertIntoGeotypicalModelCommand.Parameters[CdbParamName].Value = cdbName;
-        SetGeotypicalModelParameters(insertIntoGeotypicalModelCommand, geotypicalModel);
-        insertIntoGeotypicalModelCommand.Parameters[ContentParamName].Value = content;
-
-        return await insertIntoGeotypicalModelCommand.ExecuteNonQueryAsync(cancellationToken);
-    }
-
-    #endregion
-
-    #region Select
-
-    /// <summary>
-    /// The SQL statement to select a row from the Geotypical Model table.
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    ///   <listheader><description>Parameters</description></listheader>
-    ///   <item><description><see cref="CdbParamName"/></description></item>
-    ///   <item><description><see cref="DatasetParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
-    ///   <item><description><see cref="FeatureCategoryParamName"/></description></item>
-    ///   <item><description><see cref="FeatureSubcategoryParamName"/></description></item>
-    ///   <item><description><see cref="FeatureTypeParamName"/></description></item>
-    ///   <item><description><see cref="FeatureSubcodeParamName"/></description></item>
-    ///   <item><description><see cref="ModelNameParamName"/></description></item>
-    ///   <item><description><see cref="FileTypeParamName"/></description></item>
-    /// </list>
-    /// <list type="bullet">
-    ///   <listheader><description>Selected Columns</description></listheader>
-    ///   <item><description><see cref="ContentColumnName"/></description></item>
-    /// </list>
-    /// </remarks>
-    protected abstract string SelectFromGeotypicalModelStatement
-    {
-        get;
-    }
-
-    private void InitializeSelectFromGeotypicalModelCommand(DbCommand dbCommand)
-    {
-        dbCommand.CommandText = SelectFromGeotypicalModelStatement;
-        CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
-        CreateAndAttachGeotypicalModelParameters(dbCommand);
-    }
-
-    /// <summary>
-    /// Tries to find a geotypical model file in the database.
-    /// If the file was found, runs <paramref name="fileFoundAction"/> on the file contents.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="geotypicalModel">The geotypical model identifier.</param>
-    /// <param name="fileFoundAction">The action to run if the file is found.
-    /// The stream will be automatically closed after the action returns or
-    /// throws an exception.</param>
-    /// <returns><see langword="true"/> if the file was found.</returns>
-    public virtual bool TrySelectFromGeotypicalModel(string cdbName, GeotypicalModel geotypicalModel,
-        Action<Stream> fileFoundAction)
-    {
-        using DbConnection dbConnection = dbDataSource.OpenConnection();
-        using DbCommand selectFromGeotypicalModelCommand = dbConnection.CreateCommand();
-        InitializeSelectFromGeotypicalModelCommand(selectFromGeotypicalModelCommand);
-        selectFromGeotypicalModelCommand.Prepare();
-
-        selectFromGeotypicalModelCommand.Parameters[CdbParamName].Value = cdbName;
-        SetGeotypicalModelParameters(selectFromGeotypicalModelCommand, geotypicalModel);
-
-        using DbDataReader dbDataReader = selectFromGeotypicalModelCommand.ExecuteReader(
-            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow);
-        do
-        {
-            while (dbDataReader.Read())
-            {
-                using Stream stream = dbDataReader.GetStream(ContentColumnName);
-                fileFoundAction(stream);
-                return true;
-            }
-        } while (dbDataReader.NextResult());
-        return false;
-    }
-
-    /// <summary>
-    /// Tries to find a geotypical model file in the database.
-    /// If the file was found, runs <paramref name="fileFoundAsyncAction"/> on the file contents.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="geotypicalModel">The geotypical model identifier.</param>
-    /// <param name="fileFoundAsyncAction">The action to run if the file is found.
-    /// The stream will be automatically closed after the action returns or
-    /// throws an exception.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns><see langword="true"/> if the file was found.</returns>
-    public virtual async Task<bool> TrySelectFromGeotypicalModelAsync(string cdbName, GeotypicalModel geotypicalModel,
-        Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
-        CancellationToken cancellationToken)
-    {
-        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        await using DbCommand selectFromGeotypicalModelCommand = dbConnection.CreateCommand();
-        InitializeSelectFromGeotypicalModelCommand(selectFromGeotypicalModelCommand);
-        await selectFromGeotypicalModelCommand.PrepareAsync(cancellationToken);
-
-        selectFromGeotypicalModelCommand.Parameters[CdbParamName].Value = cdbName;
-        SetGeotypicalModelParameters(selectFromGeotypicalModelCommand, geotypicalModel);
-
-        await using DbDataReader dbDataReader = await selectFromGeotypicalModelCommand.ExecuteReaderAsync(
-            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow, cancellationToken);
-        do
-        {
-            while (await dbDataReader.ReadAsync(cancellationToken))
-            {
-                await using Stream stream = dbDataReader.GetStream(ContentColumnName);
-                await fileFoundAsyncAction(stream, cancellationToken);
-                return true;
-            }
-        } while (await dbDataReader.NextResultAsync(cancellationToken));
-        return false;
-    }
-
-    #endregion
-
-    #endregion
-
-    #region Geotypical Model LOD
-
-    /// <summary>
-    /// The SQL DDL statement to create the Geotypical Model Level of Detail table.
-    /// </summary>
-    protected abstract string CreateTableGeotypicalModelLodStatement
-    {
-        get;
-    }
-
-    #region Insert
-
-    /// <summary>
-    /// The SQL statement to insert a row into the Geotypical Model Level of Detail table.
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    ///   <listheader><description>Parameters</description></listheader>
-    ///   <item><description><see cref="CdbParamName"/></description></item>
-    ///   <item><description><see cref="DatasetParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
-    ///   <item><description><see cref="LevelOfDetailParamName"/></description></item>
-    ///   <item><description><see cref="FeatureCategoryParamName"/></description></item>
-    ///   <item><description><see cref="FeatureSubcategoryParamName"/></description></item>
-    ///   <item><description><see cref="FeatureTypeParamName"/></description></item>
-    ///   <item><description><see cref="FeatureSubcodeParamName"/></description></item>
-    ///   <item><description><see cref="ModelNameParamName"/></description></item>
-    ///   <item><description><see cref="FileTypeParamName"/></description></item>
-    ///   <item><description><see cref="ContentParamName"/></description></item>
-    /// </list>
-    /// </remarks>
-    protected abstract string InsertIntoGeotypicalModelLodStatement
-    {
-        get;
-    }
-
-    private void InitializeInsertIntoGeotypicalModelLodCommand(DbCommand dbCommand)
-    {
-        dbCommand.CommandText = InsertIntoGeotypicalModelLodStatement;
-        CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
-        CreateAndAttachGeotypicalModelLodParameters(dbCommand);
-        CreateAndAttachParameter(dbCommand, ContentParamName, DbType.Binary);
-    }
-
-    private void CreateAndAttachGeotypicalModelLodParameters(DbCommand dbCommand)
-    {
-        CreateAndAttachParameter(dbCommand, DatasetParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, ComponentSelector1ParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, ComponentSelector2ParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, LevelOfDetailParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, FeatureCategoryParamName, DbType.String);
-        CreateAndAttachParameter(dbCommand, FeatureSubcategoryParamName, DbType.String);
-        CreateAndAttachParameter(dbCommand, FeatureTypeParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, FeatureSubcodeParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, ModelNameParamName, DbType.String);
-        CreateAndAttachParameter(dbCommand, FileTypeParamName, DbType.String);
-    }
-
-    private void SetGeotypicalModelLodParameters(DbCommand dbCommand, GeotypicalModelLod geotypicalModelLod)
-    {
-        dbCommand.Parameters[DatasetParamName].Value = geotypicalModelLod.Dataset.Value;
-        dbCommand.Parameters[ComponentSelector1ParamName].Value = geotypicalModelLod.ComponentSelector1;
-        dbCommand.Parameters[ComponentSelector2ParamName].Value = geotypicalModelLod.ComponentSelector2;
-        dbCommand.Parameters[LevelOfDetailParamName].Value = geotypicalModelLod.LevelOfDetail.Value;
-        dbCommand.Parameters[FeatureCategoryParamName].Value = geotypicalModelLod.FeatureCode.Category;
-        dbCommand.Parameters[FeatureSubcategoryParamName].Value = geotypicalModelLod.FeatureCode.Subcategory;
-        dbCommand.Parameters[FeatureTypeParamName].Value = geotypicalModelLod.FeatureCode.Type;
-        dbCommand.Parameters[FeatureSubcodeParamName].Value = geotypicalModelLod.FeatureSubcode;
-        dbCommand.Parameters[ModelNameParamName].Value = geotypicalModelLod.Name;
-        dbCommand.Parameters[FileTypeParamName].Value = geotypicalModelLod.FileType;
-    }
-
-    /// <summary>
-    /// Inserts a geotypical model level of detail file into the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
-    /// <param name="geotypicalModelLod">The geotypical model level of detail identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <returns>The number of rows affected.</returns>
-    public virtual int InsertIntoGeotypicalModelLod(string cdbName, GeotypicalModelLod geotypicalModelLod, byte[] content)
-    {
-        using DbConnection dbConnection = dbDataSource.OpenConnection();
-        using DbCommand insertIntoGeotypicalModelLodCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoGeotypicalModelLodCommand(insertIntoGeotypicalModelLodCommand);
-        insertIntoGeotypicalModelLodCommand.Prepare();
-
-        insertIntoGeotypicalModelLodCommand.Parameters[CdbParamName].Value = cdbName;
-        SetGeotypicalModelLodParameters(insertIntoGeotypicalModelLodCommand, geotypicalModelLod);
-        insertIntoGeotypicalModelLodCommand.Parameters[ContentParamName].Value = content;
-
-        return insertIntoGeotypicalModelLodCommand.ExecuteNonQuery();
-    }
-
-    /// <summary>
-    /// Inserts a geotypical model level of detail file into the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
-    /// <param name="geotypicalModelLod">The geotypical model level of detail identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <returns>The number of rows affected.</returns>
-    public virtual int InsertIntoGeotypicalModelLod(string cdbName, GeotypicalModelLod geotypicalModelLod, Stream content)
-    {
-        using DbConnection dbConnection = dbDataSource.OpenConnection();
-        using DbCommand insertIntoGeotypicalModelLodCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoGeotypicalModelLodCommand(insertIntoGeotypicalModelLodCommand);
-        insertIntoGeotypicalModelLodCommand.Prepare();
-
-        insertIntoGeotypicalModelLodCommand.Parameters[CdbParamName].Value = cdbName;
-        SetGeotypicalModelLodParameters(insertIntoGeotypicalModelLodCommand, geotypicalModelLod);
-        insertIntoGeotypicalModelLodCommand.Parameters[ContentParamName].Value = content;
-
-        return insertIntoGeotypicalModelLodCommand.ExecuteNonQuery();
-    }
-
-    /// <summary>
-    /// Inserts a geotypical model level of detail file into the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
-    /// <param name="geotypicalModelLod">The geotypical model level of detail identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The number of rows affected.</returns>
-    public virtual async Task<int> InsertIntoGeotypicalModelLodAsync(string cdbName, GeotypicalModelLod geotypicalModelLod, byte[] content, CancellationToken cancellationToken = default)
-    {
-        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        await using DbCommand insertIntoGeotypicalModelLodCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoGeotypicalModelLodCommand(insertIntoGeotypicalModelLodCommand);
-        await insertIntoGeotypicalModelLodCommand.PrepareAsync(cancellationToken);
-
-        insertIntoGeotypicalModelLodCommand.Parameters[CdbParamName].Value = cdbName;
-        SetGeotypicalModelLodParameters(insertIntoGeotypicalModelLodCommand, geotypicalModelLod);
-        insertIntoGeotypicalModelLodCommand.Parameters[ContentParamName].Value = content;
-
-        return await insertIntoGeotypicalModelLodCommand.ExecuteNonQueryAsync(cancellationToken);
-    }
-
-    /// <summary>
-    /// Inserts a geotypical model level of detail file into the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
-    /// <param name="geotypicalModelLod">The geotypical model level of detail identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The number of rows affected.</returns>
-    public virtual async Task<int> InsertIntoGeotypicalModelLodAsync(string cdbName, GeotypicalModelLod geotypicalModelLod, Stream content, CancellationToken cancellationToken = default)
-    {
-        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        await using DbCommand insertIntoGeotypicalModelLodCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoGeotypicalModelLodCommand(insertIntoGeotypicalModelLodCommand);
-        await insertIntoGeotypicalModelLodCommand.PrepareAsync(cancellationToken);
-
-        insertIntoGeotypicalModelLodCommand.Parameters[CdbParamName].Value = cdbName;
-        SetGeotypicalModelLodParameters(insertIntoGeotypicalModelLodCommand, geotypicalModelLod);
-        insertIntoGeotypicalModelLodCommand.Parameters[ContentParamName].Value = content;
-
-        return await insertIntoGeotypicalModelLodCommand.ExecuteNonQueryAsync(cancellationToken);
-    }
-
-    #endregion
-
-    #region Select
-
-    /// <summary>
-    /// The SQL statement to select a row from the Geotypical Model Level of Detail table.
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    ///   <listheader><description>Parameters</description></listheader>
-    ///   <item><description><see cref="CdbParamName"/></description></item>
-    ///   <item><description><see cref="DatasetParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
-    ///   <item><description><see cref="LevelOfDetailParamName"/></description></item>
-    ///   <item><description><see cref="FeatureCategoryParamName"/></description></item>
-    ///   <item><description><see cref="FeatureSubcategoryParamName"/></description></item>
-    ///   <item><description><see cref="FeatureTypeParamName"/></description></item>
-    ///   <item><description><see cref="FeatureSubcodeParamName"/></description></item>
-    ///   <item><description><see cref="ModelNameParamName"/></description></item>
-    ///   <item><description><see cref="FileTypeParamName"/></description></item>
-    /// </list>
-    /// <list type="bullet">
-    ///   <listheader><description>Selected Columns</description></listheader>
-    ///   <item><description><see cref="ContentColumnName"/></description></item>
-    /// </list>
-    /// </remarks>
-    protected abstract string SelectFromGeotypicalModelLodStatement
-    {
-        get;
-    }
-
-    private void InitializeSelectFromGeotypicalModelLodCommand(DbCommand dbCommand)
-    {
-        dbCommand.CommandText = SelectFromGeotypicalModelLodStatement;
-        CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
-        CreateAndAttachGeotypicalModelLodParameters(dbCommand);
-    }
-
-    /// <summary>
-    /// Tries to find a geotypical model level of detail file in the database.
-    /// If the file was found, runs <paramref name="fileFoundAction"/> on the file contents.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="geotypicalModelLod">The geotypical model level of detail identifier.</param>
-    /// <param name="fileFoundAction">The action to run if the file is found.
-    /// The stream will be automatically closed after the action returns or
-    /// throws an exception.</param>
-    /// <returns><see langword="true"/> if the file was found.</returns>
-    public virtual bool TrySelectFromGeotypicalModelLod(string cdbName, GeotypicalModelLod geotypicalModelLod,
-        Action<Stream> fileFoundAction)
-    {
-        using DbConnection dbConnection = dbDataSource.OpenConnection();
-        using DbCommand selectFromGeotypicalModelLodCommand = dbConnection.CreateCommand();
-        InitializeSelectFromGeotypicalModelLodCommand(selectFromGeotypicalModelLodCommand);
-        selectFromGeotypicalModelLodCommand.Prepare();
-
-        selectFromGeotypicalModelLodCommand.Parameters[CdbParamName].Value = cdbName;
-        SetGeotypicalModelLodParameters(selectFromGeotypicalModelLodCommand, geotypicalModelLod);
-
-        using DbDataReader dbDataReader = selectFromGeotypicalModelLodCommand.ExecuteReader(
-            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow);
-        do
-        {
-            while (dbDataReader.Read())
-            {
-                using Stream stream = dbDataReader.GetStream(ContentColumnName);
-                fileFoundAction(stream);
-                return true;
-            }
-        } while (dbDataReader.NextResult());
-        return false;
-    }
-
-    /// <summary>
-    /// Tries to find a geotypical model level of detail file in the database.
-    /// If the file was found, runs <paramref name="fileFoundAsyncAction"/> on the file contents.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="geotypicalModelLod">The geotypical model level of detail identifier.</param>
-    /// <param name="fileFoundAsyncAction">The action to run if the file is found.
-    /// The stream will be automatically closed after the action returns or
-    /// throws an exception.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns><see langword="true"/> if the file was found.</returns>
-    public virtual async Task<bool> TrySelectFromGeotypicalModelLodAsync(string cdbName, GeotypicalModelLod geotypicalModelLod,
-        Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
-        CancellationToken cancellationToken)
-    {
-        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        await using DbCommand selectFromGeotypicalModelLodCommand = dbConnection.CreateCommand();
-        InitializeSelectFromGeotypicalModelLodCommand(selectFromGeotypicalModelLodCommand);
-        await selectFromGeotypicalModelLodCommand.PrepareAsync(cancellationToken);
-
-        selectFromGeotypicalModelLodCommand.Parameters[CdbParamName].Value = cdbName;
-        SetGeotypicalModelLodParameters(selectFromGeotypicalModelLodCommand, geotypicalModelLod);
-
-        await using DbDataReader dbDataReader = await selectFromGeotypicalModelLodCommand.ExecuteReaderAsync(
-            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow, cancellationToken);
-        do
-        {
-            while (await dbDataReader.ReadAsync(cancellationToken))
-            {
-                await using Stream stream = dbDataReader.GetStream(ContentColumnName);
-                await fileFoundAsyncAction(stream, cancellationToken);
-                return true;
-            }
-        } while (await dbDataReader.NextResultAsync(cancellationToken));
-        return false;
-    }
-
-    #endregion
-
-    #endregion
-
-    #region Moving Model
 
     #region DIS Code Parameters
 
@@ -1865,6 +895,1473 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
     #endregion
 
     /// <summary>
+    /// The name of the SQL parameter for the file type.
+    /// The value must be of type <see cref="DbType.String"/>.
+    /// </summary>
+    protected abstract string FileTypeParamName
+    {
+        get;
+    }
+
+    /// <summary>
+    /// The name of the SQL parameter for the file content.
+    /// The value must be of type <see cref="DbType.Binary"/>.
+    /// </summary>
+    protected abstract string ContentParamName
+    {
+        get;
+    }
+
+    #endregion
+
+    /// <summary>
+    /// The name of the column in the CDB table that contains the CDB name.
+    /// The type is <see cref="DbType.String"/>.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Got that?
+    /// </para>
+    /// </remarks>
+    protected abstract string CDBNameColumnName
+    {
+        get;
+    }
+
+    /// <summary>
+    /// The name of the column (in most tables) that contains the file contents.
+    /// The type is <see cref="DbType.Binary"/>.
+    /// </summary>
+    protected abstract string ContentColumnName
+    {
+        get;
+    }
+
+    #region CDB
+
+    /// <summary>
+    /// The SQL DDL statement that creates the CDB table with one column for
+    /// the name of the CDB instance.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The name of the column is <see cref="CDBNameColumnName"/>.
+    /// </para>
+    /// </remarks>
+    protected abstract string CreateTableCDBStatement
+    {
+        get;
+    }
+
+    #region Insert
+
+    /// <summary>
+    /// The SQL statement that inserts a new name into the CDB table.
+    /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    /// </list>
+    /// </remarks>
+    protected abstract string InsertIntoCDBStatement
+    {
+        get;
+    }
+
+    private DbCommand CreateInsertIntoCDBCommand(DbConnection dbConnection)
+    {
+        DbCommand dbCommand = dbConnection.CreateCommand();
+        try
+        {
+            dbCommand.CommandText = InsertIntoCDBStatement;
+            CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
+            dbCommand.Prepare();
+            return dbCommand;
+        }
+        catch (Exception)
+        {
+            dbCommand.Dispose();
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Inserts a name into the table identifying all the unique data stores
+    /// contained in the database.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// An <see cref="SQLDataStore"/> is capable of holding multiple CDB data stores.
+    /// Each distinct data store is identified by a name.
+    /// </para>
+    /// </remarks>
+    /// <param name="cdbName">The name of a new CDB data store.</param>
+    /// <returns>The number of database rows affected.</returns>
+    public virtual int InsertIntoCDB(string cdbName)
+    {
+        insertIntoCDBCommand.Parameters[CdbParamName].Value = cdbName;
+
+        return insertIntoCDBCommand.ExecuteNonQuery();
+    }
+
+    /// <summary>
+    /// Inserts a name into the table identifying all the unique data stores
+    /// contained in the database.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// An <see cref="SQLDataStore"/> is capable of holding multiple CDB data stores.
+    /// Each distinct data store is identified by a name.
+    /// </para>
+    /// </remarks>
+    /// <param name="cdbName">The name of a new CDB data store.</param>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    /// <returns>The number of database rows affected.</returns>
+    public virtual Task<int> InsertIntoCDBAsync(string cdbName, CancellationToken cancellationToken = default)
+    {
+        insertIntoCDBCommand.Parameters[CdbParamName].Value = cdbName;
+
+        return insertIntoCDBCommand.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    #endregion
+
+    #region Select
+
+    /// <summary>
+    /// The SQL statement that selects the CDB name from the CDB table.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This has no parameters.
+    /// </para>
+    /// <list type="bullet">
+    ///   <listheader><description>Selected Columns</description></listheader>
+    ///   <item><description><see cref="CDBNameColumnName"/></description></item>
+    /// </list>
+    /// </remarks>
+    protected abstract string SelectFromCDBStatement
+    {
+        get;
+    }
+
+    private DbCommand CreateSelectFromCDBCommand(DbConnection dbConnection)
+    {
+        DbCommand dbCommand = dbConnection.CreateCommand();
+        try
+        {
+            dbCommand.CommandText = SelectFromCDBStatement;
+            dbCommand.Prepare();
+            return dbCommand;
+        }
+        catch (Exception)
+        {
+            dbCommand.Dispose();
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Returns all CDB data store names in the database.
+    /// </summary>
+    /// <returns>All the names of the distinct CDB data stores in the database.</returns>
+    public virtual IEnumerable<string> SelectFromCDB()
+    {
+        using DbDataReader dbDataReader = selectFromCDBCommand.ExecuteReader(
+            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult);
+        do
+        {
+            while (dbDataReader.Read())
+            {
+                string name = dbDataReader.GetString(CDBNameColumnName);
+                yield return name;
+            }
+        } while (dbDataReader.NextResult());
+    }
+
+    /// <summary>
+    /// Returns all CDB data store names in the database.
+    /// </summary>
+    /// <returns>All the names of the distinct CDB data stores in the database.</returns>
+    public virtual async IAsyncEnumerable<string> SelectFromCDBAsync([EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        await using DbDataReader dbDataReader = await selectFromCDBCommand.ExecuteReaderAsync(
+            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult, cancellationToken);
+        do
+        {
+            while (await dbDataReader.ReadAsync(cancellationToken))
+            {
+                string name = dbDataReader.GetString(CDBNameColumnName);
+                yield return name;
+            }
+        } while (await dbDataReader.NextResultAsync(cancellationToken));
+    }
+
+    #endregion
+
+    #endregion
+
+    #region Metadata
+
+    /// <summary>
+    /// The SQL DDL statement to create the Metadata table.
+    /// </summary>
+    protected abstract string CreateTableMetadataStatement
+    {
+        get;
+    }
+
+    #region Insert
+
+    /// <summary>
+    /// The SQL statement to insert a row into the Metadata table.
+    /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="MetadataNameParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    ///   <item><description><see cref="ContentParamName"/></description></item>
+    /// </list>
+    /// </remarks>
+    protected abstract string InsertIntoMetadataStatement
+    {
+        get;
+    }
+
+    private void CreateAndAttachMetadataParameters(DbCommand dbCommand)
+    {
+        CreateAndAttachParameter(dbCommand, MetadataNameParamName, DbType.String);
+        CreateAndAttachParameter(dbCommand, FileTypeParamName, DbType.String);
+    }
+
+    private void SetMetadataParameters(DbCommand dbCommand, Metadata metadata)
+    {
+        dbCommand.Parameters[MetadataNameParamName].Value = metadata.Name;
+        dbCommand.Parameters[FileTypeParamName].Value = metadata.FileType;
+    }
+
+    private DbCommand CreateInsertIntoMetadataCommand(DbConnection dbConnection)
+    {
+        DbCommand dbCommand = dbConnection.CreateCommand();
+        try
+        {
+            dbCommand.CommandText = InsertIntoMetadataStatement;
+            CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
+            CreateAndAttachMetadataParameters(dbCommand);
+            CreateAndAttachParameter(dbCommand, ContentParamName, DbType.Binary);
+            dbCommand.Prepare();
+            return dbCommand;
+        }
+        catch (Exception)
+        {
+            dbCommand.Dispose();
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Inserts a metadata file into the database.
+    /// </summary>
+    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
+    /// <param name="metadata">The metadata identifier.</param>
+    /// <param name="content">The file contents.</param>
+    /// <returns>The number of rows affected.</returns>
+    public virtual int InsertIntoMetadata(string cdbName, Metadata metadata, byte[] content)
+    {
+        insertIntoMetadataCommand.Parameters[CdbParamName].Value = cdbName;
+        SetMetadataParameters(insertIntoMetadataCommand, metadata);
+        insertIntoMetadataCommand.Parameters[ContentParamName].Value = content;
+
+        return insertIntoMetadataCommand.ExecuteNonQuery();
+    }
+
+    /// <summary>
+    /// Inserts a metadata file into the database.
+    /// </summary>
+    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
+    /// <param name="metadata">The metadata identifier.</param>
+    /// <param name="content">The file contents.</param>
+    /// <returns>The number of rows affected.</returns>
+    public virtual int InsertIntoMetadata(string cdbName, Metadata metadata, Stream content)
+    {
+        insertIntoMetadataCommand.Parameters[CdbParamName].Value = cdbName;
+        SetMetadataParameters(insertIntoMetadataCommand, metadata);
+        insertIntoMetadataCommand.Parameters[ContentParamName].Value = content;
+
+        return insertIntoMetadataCommand.ExecuteNonQuery();
+    }
+
+    /// <summary>
+    /// Inserts a metadata file into the database.
+    /// </summary>
+    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
+    /// <param name="metadata">The metadata identifier.</param>
+    /// <param name="content">The file contents.</param>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    /// <returns>The number of rows affected.</returns>
+    public virtual Task<int> InsertIntoMetadataAsync(string cdbName, Metadata metadata, byte[] content, CancellationToken cancellationToken = default)
+    {
+        insertIntoMetadataCommand.Parameters[CdbParamName].Value = cdbName;
+        SetMetadataParameters(insertIntoMetadataCommand, metadata);
+        insertIntoMetadataCommand.Parameters[ContentParamName].Value = content;
+
+        return insertIntoMetadataCommand.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Inserts a metadata file into the database.
+    /// </summary>
+    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
+    /// <param name="metadata">The metadata identifier.</param>
+    /// <param name="content">The file contents.</param>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    /// <returns>The number of rows affected.</returns>
+    public virtual Task<int> InsertIntoMetadataAsync(string cdbName, Metadata metadata, Stream content, CancellationToken cancellationToken = default)
+    {
+        insertIntoMetadataCommand.Parameters[CdbParamName].Value = cdbName;
+        SetMetadataParameters(insertIntoMetadataCommand, metadata);
+        insertIntoMetadataCommand.Parameters[ContentParamName].Value = content;
+
+        return insertIntoMetadataCommand.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    #endregion
+
+    #region Select
+
+    /// <summary>
+    /// The SQL statement to select a row from the Metadata table.
+    /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="MetadataNameParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    /// </list>
+    /// <list type="bullet">
+    ///   <listheader><description>Selected Columns</description></listheader>
+    ///   <item><description><see cref="ContentColumnName"/></description></item>
+    /// </list>
+    /// </remarks>
+    protected abstract string SelectFromMetadataStatement
+    {
+        get;
+    }
+
+    private DbCommand CreateSelectFromMetadataCommand(DbConnection dbConnection)
+    {
+        DbCommand dbCommand = dbConnection.CreateCommand();
+        try
+        {
+            dbCommand.CommandText = SelectFromMetadataStatement;
+            CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
+            CreateAndAttachMetadataParameters(dbCommand);
+            dbCommand.Prepare();
+            return dbCommand;
+        }
+        catch (Exception)
+        {
+            dbCommand.Dispose();
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Tries to find a metadata file in the database.
+    /// If the file was found, runs <paramref name="fileFoundAction"/> on the file contents.
+    /// </summary>
+    /// <param name="cdbName">The name of the CDB data store.</param>
+    /// <param name="metadata">The metadata identifier.</param>
+    /// <param name="fileFoundAction">The action to run if the file is found.
+    /// The stream will be automatically closed after the action returns or
+    /// throws an exception.</param>
+    /// <returns><see langword="true"/> if the file was found.</returns>
+    public virtual bool TrySelectFromMetadata(string cdbName, Metadata metadata, Action<Stream> fileFoundAction)
+    {
+        selectFromMetadataCommand.Parameters[CdbParamName].Value = cdbName;
+        SetMetadataParameters(selectFromMetadataCommand, metadata);
+
+        using DbDataReader dbDataReader = selectFromMetadataCommand.ExecuteReader(
+            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow);
+        do
+        {
+            while (dbDataReader.Read())
+            {
+                using Stream stream = dbDataReader.GetStream(ContentColumnName);
+                fileFoundAction(stream);
+                return true;
+            }
+        } while (dbDataReader.NextResult());
+        return false;
+    }
+
+    /// <summary>
+    /// Tries to find a metadata file in the database.
+    /// If the file was found, runs <paramref name="fileFoundAsyncAction"/> on the file contents.
+    /// </summary>
+    /// <param name="cdbName">The name of the CDB data store.</param>
+    /// <param name="metadata">The metadata identifier.</param>
+    /// <param name="fileFoundAsyncAction">The action to run if the file is found.
+    /// The stream will be automatically closed after the action returns or
+    /// throws an exception.</param>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    /// <returns><see langword="true"/> if the file was found.</returns>
+    public virtual async Task<bool> TrySelectFromMetadataAsync(string cdbName, Metadata metadata,
+        Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
+        CancellationToken cancellationToken)
+    {
+        selectFromMetadataCommand.Parameters[CdbParamName].Value = cdbName;
+        SetMetadataParameters(selectFromMetadataCommand, metadata);
+
+        await using DbDataReader dbDataReader = await selectFromMetadataCommand.ExecuteReaderAsync(
+            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow, cancellationToken);
+        do
+        {
+            while (await dbDataReader.ReadAsync(cancellationToken))
+            {
+                await using Stream stream = dbDataReader.GetStream(ContentColumnName);
+                await fileFoundAsyncAction(stream, cancellationToken);
+                return true;
+            }
+        } while (await dbDataReader.NextResultAsync(cancellationToken));
+        return false;
+    }
+
+    #endregion
+
+    #endregion
+
+    #region Texture
+
+    /// <summary>
+    /// The SQL DDL statement to create the Texture table.
+    /// </summary>
+    protected abstract string CreateTableTextureStatement
+    {
+        get;
+    }
+
+    #region Insert
+
+    /// <summary>
+    /// The SQL statement to insert a row into the Texture table.
+    /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="TextureNameParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    ///   <item><description><see cref="ContentParamName"/></description></item>
+    /// </list>
+    /// </remarks>
+    protected abstract string InsertIntoTextureStatement
+    {
+        get;
+    }
+
+    private DbCommand CreateInsertIntoTextureCommand(DbConnection dbConnection)
+    {
+        DbCommand dbCommand = dbConnection.CreateCommand();
+        try
+        {
+            dbCommand.CommandText = InsertIntoTextureStatement;
+            CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
+            CreateAndAttachTextureParameters(dbCommand);
+            CreateAndAttachParameter(dbCommand, ContentParamName, DbType.Binary);
+            dbCommand.Prepare();
+            return dbCommand;
+        }
+        catch (Exception)
+        {
+            dbCommand.Dispose();
+            throw;
+        }
+    }
+
+    private void CreateAndAttachTextureParameters(DbCommand dbCommand)
+    {
+        CreateAndAttachParameter(dbCommand, DatasetParamName, DbType.Int32);
+        CreateAndAttachParameter(dbCommand, ComponentSelector1ParamName, DbType.Int32);
+        CreateAndAttachParameter(dbCommand, ComponentSelector2ParamName, DbType.Int32);
+        CreateAndAttachParameter(dbCommand, TextureNameParamName, DbType.String);
+        CreateAndAttachParameter(dbCommand, FileTypeParamName, DbType.String);
+    }
+
+    private void SetTextureParameters(DbCommand dbCommand, Texture texture)
+    {
+        dbCommand.Parameters[DatasetParamName].Value = texture.Dataset.Value;
+        dbCommand.Parameters[ComponentSelector1ParamName].Value = texture.ComponentSelector1;
+        dbCommand.Parameters[ComponentSelector2ParamName].Value = texture.ComponentSelector2;
+        dbCommand.Parameters[TextureNameParamName].Value = texture.Name;
+        dbCommand.Parameters[FileTypeParamName].Value = texture.FileType;
+    }
+
+    /// <summary>
+    /// Inserts a texture file into the database.
+    /// </summary>
+    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
+    /// <param name="texture">The texture identifier.</param>
+    /// <param name="content">The file contents.</param>
+    /// <returns>The number of rows affected.</returns>
+    public virtual int InsertIntoTexture(string cdbName, Texture texture, byte[] content)
+    {
+        insertIntoTextureCommand.Parameters[CdbParamName].Value = cdbName;
+        SetTextureParameters(insertIntoTextureCommand, texture);
+        insertIntoTextureCommand.Parameters[ContentParamName].Value = content;
+
+        return insertIntoTextureCommand.ExecuteNonQuery();
+    }
+
+    /// <summary>
+    /// Inserts a texture file into the database.
+    /// </summary>
+    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
+    /// <param name="texture">The texture identifier.</param>
+    /// <param name="content">The file contents.</param>
+    /// <returns>The number of rows affected.</returns>
+    public virtual int InsertIntoTexture(string cdbName, Texture texture, Stream content)
+    {
+        insertIntoTextureCommand.Parameters[CdbParamName].Value = cdbName;
+        SetTextureParameters(insertIntoTextureCommand, texture);
+        insertIntoTextureCommand.Parameters[ContentParamName].Value = content;
+
+        return insertIntoTextureCommand.ExecuteNonQuery();
+    }
+
+    /// <summary>
+    /// Inserts a texture file into the database.
+    /// </summary>
+    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
+    /// <param name="texture">The texture identifier.</param>
+    /// <param name="content">The file contents.</param>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    /// <returns>The number of rows affected.</returns>
+    public virtual Task<int> InsertIntoTextureAsync(string cdbName, Texture texture, byte[] content, CancellationToken cancellationToken = default)
+    {
+        insertIntoTextureCommand.Parameters[CdbParamName].Value = cdbName;
+        SetTextureParameters(insertIntoTextureCommand, texture);
+        insertIntoTextureCommand.Parameters[ContentParamName].Value = content;
+
+        return insertIntoTextureCommand.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Inserts a texture file into the database.
+    /// </summary>
+    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
+    /// <param name="texture">The texture identifier.</param>
+    /// <param name="content">The file contents.</param>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    /// <returns>The number of rows affected.</returns>
+    public virtual Task<int> InsertIntoTextureAsync(string cdbName, Texture texture, Stream content, CancellationToken cancellationToken = default)
+    {
+        insertIntoTextureCommand.Parameters[CdbParamName].Value = cdbName;
+        SetTextureParameters(insertIntoTextureCommand, texture);
+        insertIntoTextureCommand.Parameters[ContentParamName].Value = content;
+
+        return insertIntoTextureCommand.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    #endregion
+
+    #region Select
+
+    /// <summary>
+    /// The SQL statement to select a row from the Texture table.
+    /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="TextureNameParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    /// </list>
+    /// <list type="bullet">
+    ///   <listheader><description>Selected Columns</description></listheader>
+    ///   <item><description><see cref="ContentColumnName"/></description></item>
+    /// </list>
+    /// </remarks>
+    protected abstract string SelectFromTextureStatement
+    {
+        get;
+    }
+
+    private DbCommand CreateSelectFromTextureCommand(DbConnection dbConnection)
+    {
+        DbCommand dbCommand = dbConnection.CreateCommand();
+        try
+        {
+            dbCommand.CommandText = SelectFromTextureStatement;
+            CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
+            CreateAndAttachTextureParameters(dbCommand);
+            dbCommand.Prepare();
+            return dbCommand;
+        }
+        catch (Exception)
+        {
+            dbCommand.Dispose();
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Tries to find a texture file in the database.
+    /// If the file was found, runs <paramref name="fileFoundAction"/> on the file contents.
+    /// </summary>
+    /// <param name="cdbName">The name of the CDB data store.</param>
+    /// <param name="texture">The texture identifier.</param>
+    /// <param name="fileFoundAction">The action to run if the file is found.
+    /// The stream will be automatically closed after the action returns or
+    /// throws an exception.</param>
+    /// <returns><see langword="true"/> if the file was found.</returns>
+    public virtual bool TrySelectFromTexture(string cdbName, Texture texture,
+        Action<Stream> fileFoundAction)
+    {
+        selectFromTextureCommand.Parameters[CdbParamName].Value = cdbName;
+        SetTextureParameters(selectFromTextureCommand, texture);
+
+        using DbDataReader dbDataReader = selectFromTextureCommand.ExecuteReader(
+            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow);
+        do
+        {
+            while (dbDataReader.Read())
+            {
+                using Stream stream = dbDataReader.GetStream(ContentColumnName);
+                fileFoundAction(stream);
+                return true;
+            }
+        } while (dbDataReader.NextResult());
+        return false;
+    }
+
+    /// <summary>
+    /// Tries to find a texture file in the database.
+    /// If the file was found, runs <paramref name="fileFoundAsyncAction"/> on the file contents.
+    /// </summary>
+    /// <param name="cdbName">The name of the CDB data store.</param>
+    /// <param name="texture">The texture identifier.</param>
+    /// <param name="fileFoundAsyncAction">The action to run if the file is found.
+    /// The stream will be automatically closed after the action returns or
+    /// throws an exception.</param>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    /// <returns><see langword="true"/> if the file was found.</returns>
+    public virtual async Task<bool> TrySelectFromTextureAsync(string cdbName, Texture texture,
+        Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
+        CancellationToken cancellationToken)
+    {
+        selectFromTextureCommand.Parameters[CdbParamName].Value = cdbName;
+        SetTextureParameters(selectFromTextureCommand, texture);
+
+        await using DbDataReader dbDataReader = await selectFromTextureCommand.ExecuteReaderAsync(
+            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow, cancellationToken);
+        do
+        {
+            while (await dbDataReader.ReadAsync(cancellationToken))
+            {
+                await using Stream stream = dbDataReader.GetStream(ContentColumnName);
+                await fileFoundAsyncAction(stream, cancellationToken);
+                return true;
+            }
+        } while (await dbDataReader.NextResultAsync(cancellationToken));
+        return false;
+    }
+
+    #endregion
+
+    #endregion
+
+    #region Texture LOD
+
+    /// <summary>
+    /// The SQL DDL statement to create the Texture Level of Detail table.
+    /// </summary>
+    protected abstract string CreateTableTextureLodStatement
+    {
+        get;
+    }
+
+    #region Insert
+
+    /// <summary>
+    /// The SQL statement to insert a row into the Texture Level of Detail table.
+    /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="LevelOfDetailParamName"/></description></item>
+    ///   <item><description><see cref="TextureNameParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    ///   <item><description><see cref="ContentParamName"/></description></item>
+    /// </list>
+    /// </remarks>
+    protected abstract string InsertIntoTextureLodStatement
+    {
+        get;
+    }
+
+    private DbCommand CreateInsertIntoTextureLodCommand(DbConnection dbConnection)
+    {
+        DbCommand dbCommand = dbConnection.CreateCommand();
+        try
+        {
+            dbCommand.CommandText = InsertIntoTextureLodStatement;
+            CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
+            CreateAndAttachTextureLodParameters(dbCommand);
+            CreateAndAttachParameter(dbCommand, ContentParamName, DbType.Binary);
+            dbCommand.Prepare();
+            return dbCommand;
+        }
+        catch (Exception)
+        {
+            dbCommand.Dispose();
+            throw;
+        }
+    }
+
+    private void CreateAndAttachTextureLodParameters(DbCommand dbCommand)
+    {
+        CreateAndAttachParameter(dbCommand, DatasetParamName, DbType.Int32);
+        CreateAndAttachParameter(dbCommand, ComponentSelector1ParamName, DbType.Int32);
+        CreateAndAttachParameter(dbCommand, ComponentSelector2ParamName, DbType.Int32);
+        CreateAndAttachParameter(dbCommand, LevelOfDetailParamName, DbType.Int32);
+        CreateAndAttachParameter(dbCommand, TextureNameParamName, DbType.String);
+        CreateAndAttachParameter(dbCommand, FileTypeParamName, DbType.String);
+    }
+
+    private void SetTextureLodParameters(DbCommand dbCommand, TextureLod textureLod)
+    {
+        dbCommand.Parameters[DatasetParamName].Value = textureLod.Dataset.Value;
+        dbCommand.Parameters[ComponentSelector1ParamName].Value = textureLod.ComponentSelector1;
+        dbCommand.Parameters[ComponentSelector2ParamName].Value = textureLod.ComponentSelector2;
+        dbCommand.Parameters[LevelOfDetailParamName].Value = textureLod.LevelOfDetail.Value;
+        dbCommand.Parameters[TextureNameParamName].Value = textureLod.Name;
+        dbCommand.Parameters[FileTypeParamName].Value = textureLod.FileType;
+    }
+
+    /// <summary>
+    /// Inserts a texture mipmap file into the database.
+    /// </summary>
+    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
+    /// <param name="textureLod">The texture mipmap identifier.</param>
+    /// <param name="content">The file contents.</param>
+    /// <returns>The number of rows affected.</returns>
+    public virtual int InsertIntoTextureLod(string cdbName, TextureLod textureLod, byte[] content)
+    {
+        insertIntoTextureLodCommand.Parameters[CdbParamName].Value = cdbName;
+        SetTextureLodParameters(insertIntoTextureLodCommand, textureLod);
+        insertIntoTextureLodCommand.Parameters[ContentParamName].Value = content;
+
+        return insertIntoTextureLodCommand.ExecuteNonQuery();
+    }
+
+    /// <summary>
+    /// Inserts a texture mipmap file into the database.
+    /// </summary>
+    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
+    /// <param name="textureLod">The texture mipmap identifier.</param>
+    /// <param name="content">The file contents.</param>
+    /// <returns>The number of rows affected.</returns>
+    public virtual int InsertIntoTextureLod(string cdbName, TextureLod textureLod, Stream content)
+    {
+        insertIntoTextureLodCommand.Parameters[CdbParamName].Value = cdbName;
+        SetTextureLodParameters(insertIntoTextureLodCommand, textureLod);
+        insertIntoTextureLodCommand.Parameters[ContentParamName].Value = content;
+
+        return insertIntoTextureLodCommand.ExecuteNonQuery();
+    }
+
+    /// <summary>
+    /// Inserts a texture mipmap file into the database.
+    /// </summary>
+    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
+    /// <param name="textureLod">The texture mipmap identifier.</param>
+    /// <param name="content">The file contents.</param>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    /// <returns>The number of rows affected.</returns>
+    public virtual Task<int> InsertIntoTextureLodAsync(string cdbName, TextureLod textureLod, byte[] content, CancellationToken cancellationToken = default)
+    {
+        insertIntoTextureLodCommand.Parameters[CdbParamName].Value = cdbName;
+        SetTextureLodParameters(insertIntoTextureLodCommand, textureLod);
+        insertIntoTextureLodCommand.Parameters[ContentParamName].Value = content;
+
+        return insertIntoTextureLodCommand.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Inserts a texture mipmap file into the database.
+    /// </summary>
+    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
+    /// <param name="textureLod">The texture mipmap identifier.</param>
+    /// <param name="content">The file contents.</param>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    /// <returns>The number of rows affected.</returns>
+    public virtual Task<int> InsertIntoTextureLodAsync(string cdbName, TextureLod textureLod, Stream content, CancellationToken cancellationToken = default)
+    {
+        insertIntoTextureLodCommand.Parameters[CdbParamName].Value = cdbName;
+        SetTextureLodParameters(insertIntoTextureLodCommand, textureLod);
+        insertIntoTextureLodCommand.Parameters[ContentParamName].Value = content;
+
+        return insertIntoTextureLodCommand.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    #endregion
+
+    #region Select
+
+    /// <summary>
+    /// The SQL statement to select a row from the Texture Level of Detail table.
+    /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="LevelOfDetailParamName"/></description></item>
+    ///   <item><description><see cref="TextureNameParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    /// </list>
+    /// <list type="bullet">
+    ///   <listheader><description>Selected Columns</description></listheader>
+    ///   <item><description><see cref="ContentColumnName"/></description></item>
+    /// </list>
+    /// </remarks>
+    protected abstract string SelectFromTextureLodStatement
+    {
+        get;
+    }
+
+    private DbCommand CreateSelectFromTextureLodCommand(DbConnection dbConnection)
+    {
+        DbCommand dbCommand = dbConnection.CreateCommand();
+        try
+        {
+            dbCommand.CommandText = SelectFromTextureLodStatement;
+            CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
+            CreateAndAttachTextureLodParameters(dbCommand);
+            dbCommand.Prepare();
+            return dbCommand;
+        }
+        catch (Exception)
+        {
+            dbCommand.Dispose();
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Tries to find a texture mipmap file in the database.
+    /// If the file was found, runs <paramref name="fileFoundAction"/> on the file contents.
+    /// </summary>
+    /// <param name="cdbName">The name of the CDB data store.</param>
+    /// <param name="textureLod">The texture mipmap identifier.</param>
+    /// <param name="fileFoundAction">The action to run if the file is found.
+    /// The stream will be automatically closed after the action returns or
+    /// throws an exception.</param>
+    /// <returns><see langword="true"/> if the file was found.</returns>
+    public virtual bool TrySelectFromTextureLod(string cdbName, TextureLod textureLod,
+        Action<Stream> fileFoundAction)
+    {
+        selectFromTextureLodCommand.Parameters[CdbParamName].Value = cdbName;
+        SetTextureLodParameters(selectFromTextureLodCommand, textureLod);
+
+        using DbDataReader dbDataReader = selectFromTextureLodCommand.ExecuteReader(
+            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow);
+        do
+        {
+            while (dbDataReader.Read())
+            {
+                using Stream stream = dbDataReader.GetStream(ContentColumnName);
+                fileFoundAction(stream);
+                return true;
+            }
+        } while (dbDataReader.NextResult());
+        return false;
+    }
+
+    /// <summary>
+    /// Tries to find a texture mipmap file in the database.
+    /// If the file was found, runs <paramref name="fileFoundAsyncAction"/> on the file contents.
+    /// </summary>
+    /// <param name="cdbName">The name of the CDB data store.</param>
+    /// <param name="textureLod">The texture mipmap identifier.</param>
+    /// <param name="fileFoundAsyncAction">The action to run if the file is found.
+    /// The stream will be automatically closed after the action returns or
+    /// throws an exception.</param>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    /// <returns><see langword="true"/> if the file was found.</returns>
+    public virtual async Task<bool> TrySelectFromTextureLodAsync(string cdbName, TextureLod textureLod,
+        Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
+        CancellationToken cancellationToken)
+    {
+        selectFromTextureLodCommand.Parameters[CdbParamName].Value = cdbName;
+        SetTextureLodParameters(selectFromTextureLodCommand, textureLod);
+
+        await using DbDataReader dbDataReader = await selectFromTextureLodCommand.ExecuteReaderAsync(
+            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow, cancellationToken);
+        do
+        {
+            while (await dbDataReader.ReadAsync(cancellationToken))
+            {
+                await using Stream stream = dbDataReader.GetStream(ContentColumnName);
+                await fileFoundAsyncAction(stream, cancellationToken);
+                return true;
+            }
+        } while (await dbDataReader.NextResultAsync(cancellationToken));
+        return false;
+    }
+
+    #endregion
+
+    #endregion
+
+    #region Geotypical Model
+
+    /// <summary>
+    /// The SQL DDL statement to create the Geotypical Model table.
+    /// </summary>
+    protected abstract string CreateTableGeotypicalModelStatement
+    {
+        get;
+    }
+
+    #region Insert
+
+    /// <summary>
+    /// The SQL statement to insert a row into the Geotypical Model table.
+    /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="FeatureCategoryParamName"/></description></item>
+    ///   <item><description><see cref="FeatureSubcategoryParamName"/></description></item>
+    ///   <item><description><see cref="FeatureTypeParamName"/></description></item>
+    ///   <item><description><see cref="FeatureSubcodeParamName"/></description></item>
+    ///   <item><description><see cref="ModelNameParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    ///   <item><description><see cref="ContentParamName"/></description></item>
+    /// </list>
+    /// </remarks>
+    protected abstract string InsertIntoGeotypicalModelStatement
+    {
+        get;
+    }
+
+    private DbCommand CreateInsertIntoGeotypicalModelCommand(DbConnection dbConnection)
+    {
+        DbCommand dbCommand = dbConnection.CreateCommand();
+        try
+        {
+            dbCommand.CommandText = InsertIntoGeotypicalModelStatement;
+            CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
+            CreateAndAttachGeotypicalModelParameters(dbCommand);
+            CreateAndAttachParameter(dbCommand, ContentParamName, DbType.Binary);
+            dbCommand.Prepare();
+            return dbCommand;
+        }
+        catch (Exception)
+        {
+            dbCommand.Dispose();
+            throw;
+        }
+    }
+
+    private void CreateAndAttachGeotypicalModelParameters(DbCommand dbCommand)
+    {
+        CreateAndAttachParameter(dbCommand, DatasetParamName, DbType.Int32);
+        CreateAndAttachParameter(dbCommand, ComponentSelector1ParamName, DbType.Int32);
+        CreateAndAttachParameter(dbCommand, ComponentSelector2ParamName, DbType.Int32);
+        CreateAndAttachParameter(dbCommand, FeatureCategoryParamName, DbType.String);
+        CreateAndAttachParameter(dbCommand, FeatureSubcategoryParamName, DbType.String);
+        CreateAndAttachParameter(dbCommand, FeatureTypeParamName, DbType.Int32);
+        CreateAndAttachParameter(dbCommand, FeatureSubcodeParamName, DbType.Int32);
+        CreateAndAttachParameter(dbCommand, ModelNameParamName, DbType.String);
+        CreateAndAttachParameter(dbCommand, FileTypeParamName, DbType.String);
+    }
+
+    private void SetGeotypicalModelParameters(DbCommand dbCommand, GeotypicalModel geotypicalModel)
+    {
+        dbCommand.Parameters[DatasetParamName].Value = geotypicalModel.Dataset.Value;
+        dbCommand.Parameters[ComponentSelector1ParamName].Value = geotypicalModel.ComponentSelector1;
+        dbCommand.Parameters[ComponentSelector2ParamName].Value = geotypicalModel.ComponentSelector2;
+        dbCommand.Parameters[FeatureCategoryParamName].Value = geotypicalModel.FeatureCode.Category;
+        dbCommand.Parameters[FeatureSubcategoryParamName].Value = geotypicalModel.FeatureCode.Subcategory;
+        dbCommand.Parameters[FeatureTypeParamName].Value = geotypicalModel.FeatureCode.Type;
+        dbCommand.Parameters[FeatureSubcodeParamName].Value = geotypicalModel.FeatureSubcode;
+        dbCommand.Parameters[ModelNameParamName].Value = geotypicalModel.Name;
+        dbCommand.Parameters[FileTypeParamName].Value = geotypicalModel.FileType;
+    }
+
+    /// <summary>
+    /// Inserts a geotypical model file into the database.
+    /// </summary>
+    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
+    /// <param name="geotypicalModel">The geotypical model identifier.</param>
+    /// <param name="content">The file contents.</param>
+    /// <returns>The number of rows affected.</returns>
+    public virtual int InsertIntoGeotypicalModel(string cdbName, GeotypicalModel geotypicalModel, byte[] content)
+    {
+        insertIntoGeotypicalModelCommand.Parameters[CdbParamName].Value = cdbName;
+        SetGeotypicalModelParameters(insertIntoGeotypicalModelCommand, geotypicalModel);
+        insertIntoGeotypicalModelCommand.Parameters[ContentParamName].Value = content;
+
+        return insertIntoGeotypicalModelCommand.ExecuteNonQuery();
+    }
+
+    /// <summary>
+    /// Inserts a geotypical model file into the database.
+    /// </summary>
+    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
+    /// <param name="geotypicalModel">The geotypical model identifier.</param>
+    /// <param name="content">The file contents.</param>
+    /// <returns>The number of rows affected.</returns>
+    public virtual int InsertIntoGeotypicalModel(string cdbName, GeotypicalModel geotypicalModel, Stream content)
+    {
+        insertIntoGeotypicalModelCommand.Parameters[CdbParamName].Value = cdbName;
+        SetGeotypicalModelParameters(insertIntoGeotypicalModelCommand, geotypicalModel);
+        insertIntoGeotypicalModelCommand.Parameters[ContentParamName].Value = content;
+
+        return insertIntoGeotypicalModelCommand.ExecuteNonQuery();
+    }
+
+    /// <summary>
+    /// Inserts a geotypical model file into the database.
+    /// </summary>
+    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
+    /// <param name="geotypicalModel">The geotypical model identifier.</param>
+    /// <param name="content">The file contents.</param>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    /// <returns>The number of rows affected.</returns>
+    public virtual Task<int> InsertIntoGeotypicalModelAsync(string cdbName, GeotypicalModel geotypicalModel, byte[] content, CancellationToken cancellationToken = default)
+    {
+        insertIntoGeotypicalModelCommand.Parameters[CdbParamName].Value = cdbName;
+        SetGeotypicalModelParameters(insertIntoGeotypicalModelCommand, geotypicalModel);
+        insertIntoGeotypicalModelCommand.Parameters[ContentParamName].Value = content;
+
+        return insertIntoGeotypicalModelCommand.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Inserts a geotypical model file into the database.
+    /// </summary>
+    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
+    /// <param name="geotypicalModel">The geotypical model identifier.</param>
+    /// <param name="content">The file contents.</param>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    /// <returns>The number of rows affected.</returns>
+    public virtual Task<int> InsertIntoGeotypicalModelAsync(string cdbName, GeotypicalModel geotypicalModel, Stream content, CancellationToken cancellationToken = default)
+    {
+        insertIntoGeotypicalModelCommand.Parameters[CdbParamName].Value = cdbName;
+        SetGeotypicalModelParameters(insertIntoGeotypicalModelCommand, geotypicalModel);
+        insertIntoGeotypicalModelCommand.Parameters[ContentParamName].Value = content;
+
+        return insertIntoGeotypicalModelCommand.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    #endregion
+
+    #region Select
+
+    /// <summary>
+    /// The SQL statement to select a row from the Geotypical Model table.
+    /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="FeatureCategoryParamName"/></description></item>
+    ///   <item><description><see cref="FeatureSubcategoryParamName"/></description></item>
+    ///   <item><description><see cref="FeatureTypeParamName"/></description></item>
+    ///   <item><description><see cref="FeatureSubcodeParamName"/></description></item>
+    ///   <item><description><see cref="ModelNameParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    /// </list>
+    /// <list type="bullet">
+    ///   <listheader><description>Selected Columns</description></listheader>
+    ///   <item><description><see cref="ContentColumnName"/></description></item>
+    /// </list>
+    /// </remarks>
+    protected abstract string SelectFromGeotypicalModelStatement
+    {
+        get;
+    }
+
+    private DbCommand CreateSelectFromGeotypicalModelCommand(DbConnection dbConnection)
+    {
+        DbCommand dbCommand = dbConnection.CreateCommand();
+        try
+        {
+            dbCommand.CommandText = SelectFromGeotypicalModelStatement;
+            CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
+            CreateAndAttachGeotypicalModelParameters(dbCommand);
+            dbCommand.Prepare();
+            return dbCommand;
+        }
+        catch (Exception)
+        {
+            dbCommand.Dispose();
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Tries to find a geotypical model file in the database.
+    /// If the file was found, runs <paramref name="fileFoundAction"/> on the file contents.
+    /// </summary>
+    /// <param name="cdbName">The name of the CDB data store.</param>
+    /// <param name="geotypicalModel">The geotypical model identifier.</param>
+    /// <param name="fileFoundAction">The action to run if the file is found.
+    /// The stream will be automatically closed after the action returns or
+    /// throws an exception.</param>
+    /// <returns><see langword="true"/> if the file was found.</returns>
+    public virtual bool TrySelectFromGeotypicalModel(string cdbName, GeotypicalModel geotypicalModel,
+        Action<Stream> fileFoundAction)
+    {
+        selectFromGeotypicalModelCommand.Parameters[CdbParamName].Value = cdbName;
+        SetGeotypicalModelParameters(selectFromGeotypicalModelCommand, geotypicalModel);
+
+        using DbDataReader dbDataReader = selectFromGeotypicalModelCommand.ExecuteReader(
+            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow);
+        do
+        {
+            while (dbDataReader.Read())
+            {
+                using Stream stream = dbDataReader.GetStream(ContentColumnName);
+                fileFoundAction(stream);
+                return true;
+            }
+        } while (dbDataReader.NextResult());
+        return false;
+    }
+
+    /// <summary>
+    /// Tries to find a geotypical model file in the database.
+    /// If the file was found, runs <paramref name="fileFoundAsyncAction"/> on the file contents.
+    /// </summary>
+    /// <param name="cdbName">The name of the CDB data store.</param>
+    /// <param name="geotypicalModel">The geotypical model identifier.</param>
+    /// <param name="fileFoundAsyncAction">The action to run if the file is found.
+    /// The stream will be automatically closed after the action returns or
+    /// throws an exception.</param>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    /// <returns><see langword="true"/> if the file was found.</returns>
+    public virtual async Task<bool> TrySelectFromGeotypicalModelAsync(string cdbName, GeotypicalModel geotypicalModel,
+        Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
+        CancellationToken cancellationToken)
+    {
+        selectFromGeotypicalModelCommand.Parameters[CdbParamName].Value = cdbName;
+        SetGeotypicalModelParameters(selectFromGeotypicalModelCommand, geotypicalModel);
+
+        await using DbDataReader dbDataReader = await selectFromGeotypicalModelCommand.ExecuteReaderAsync(
+            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow, cancellationToken);
+        do
+        {
+            while (await dbDataReader.ReadAsync(cancellationToken))
+            {
+                await using Stream stream = dbDataReader.GetStream(ContentColumnName);
+                await fileFoundAsyncAction(stream, cancellationToken);
+                return true;
+            }
+        } while (await dbDataReader.NextResultAsync(cancellationToken));
+        return false;
+    }
+
+    #endregion
+
+    #endregion
+
+    #region Geotypical Model LOD
+
+    /// <summary>
+    /// The SQL DDL statement to create the Geotypical Model Level of Detail table.
+    /// </summary>
+    protected abstract string CreateTableGeotypicalModelLodStatement
+    {
+        get;
+    }
+
+    #region Insert
+
+    /// <summary>
+    /// The SQL statement to insert a row into the Geotypical Model Level of Detail table.
+    /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="LevelOfDetailParamName"/></description></item>
+    ///   <item><description><see cref="FeatureCategoryParamName"/></description></item>
+    ///   <item><description><see cref="FeatureSubcategoryParamName"/></description></item>
+    ///   <item><description><see cref="FeatureTypeParamName"/></description></item>
+    ///   <item><description><see cref="FeatureSubcodeParamName"/></description></item>
+    ///   <item><description><see cref="ModelNameParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    ///   <item><description><see cref="ContentParamName"/></description></item>
+    /// </list>
+    /// </remarks>
+    protected abstract string InsertIntoGeotypicalModelLodStatement
+    {
+        get;
+    }
+
+    private DbCommand CreateInsertIntoGeotypicalModelLodCommand(DbConnection dbConnection)
+    {
+        DbCommand dbCommand = dbConnection.CreateCommand();
+        try
+        {
+            dbCommand.CommandText = InsertIntoGeotypicalModelLodStatement;
+            CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
+            CreateAndAttachGeotypicalModelLodParameters(dbCommand);
+            CreateAndAttachParameter(dbCommand, ContentParamName, DbType.Binary);
+            dbCommand.Prepare();
+            return dbCommand;
+        }
+        catch (Exception)
+        {
+            dbCommand.Dispose();
+            throw;
+        }
+    }
+
+    private void CreateAndAttachGeotypicalModelLodParameters(DbCommand dbCommand)
+    {
+        CreateAndAttachParameter(dbCommand, DatasetParamName, DbType.Int32);
+        CreateAndAttachParameter(dbCommand, ComponentSelector1ParamName, DbType.Int32);
+        CreateAndAttachParameter(dbCommand, ComponentSelector2ParamName, DbType.Int32);
+        CreateAndAttachParameter(dbCommand, LevelOfDetailParamName, DbType.Int32);
+        CreateAndAttachParameter(dbCommand, FeatureCategoryParamName, DbType.String);
+        CreateAndAttachParameter(dbCommand, FeatureSubcategoryParamName, DbType.String);
+        CreateAndAttachParameter(dbCommand, FeatureTypeParamName, DbType.Int32);
+        CreateAndAttachParameter(dbCommand, FeatureSubcodeParamName, DbType.Int32);
+        CreateAndAttachParameter(dbCommand, ModelNameParamName, DbType.String);
+        CreateAndAttachParameter(dbCommand, FileTypeParamName, DbType.String);
+    }
+
+    private void SetGeotypicalModelLodParameters(DbCommand dbCommand, GeotypicalModelLod geotypicalModelLod)
+    {
+        dbCommand.Parameters[DatasetParamName].Value = geotypicalModelLod.Dataset.Value;
+        dbCommand.Parameters[ComponentSelector1ParamName].Value = geotypicalModelLod.ComponentSelector1;
+        dbCommand.Parameters[ComponentSelector2ParamName].Value = geotypicalModelLod.ComponentSelector2;
+        dbCommand.Parameters[LevelOfDetailParamName].Value = geotypicalModelLod.LevelOfDetail.Value;
+        dbCommand.Parameters[FeatureCategoryParamName].Value = geotypicalModelLod.FeatureCode.Category;
+        dbCommand.Parameters[FeatureSubcategoryParamName].Value = geotypicalModelLod.FeatureCode.Subcategory;
+        dbCommand.Parameters[FeatureTypeParamName].Value = geotypicalModelLod.FeatureCode.Type;
+        dbCommand.Parameters[FeatureSubcodeParamName].Value = geotypicalModelLod.FeatureSubcode;
+        dbCommand.Parameters[ModelNameParamName].Value = geotypicalModelLod.Name;
+        dbCommand.Parameters[FileTypeParamName].Value = geotypicalModelLod.FileType;
+    }
+
+    /// <summary>
+    /// Inserts a geotypical model level of detail file into the database.
+    /// </summary>
+    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
+    /// <param name="geotypicalModelLod">The geotypical model level of detail identifier.</param>
+    /// <param name="content">The file contents.</param>
+    /// <returns>The number of rows affected.</returns>
+    public virtual int InsertIntoGeotypicalModelLod(string cdbName, GeotypicalModelLod geotypicalModelLod, byte[] content)
+    {
+        insertIntoGeotypicalModelLodCommand.Parameters[CdbParamName].Value = cdbName;
+        SetGeotypicalModelLodParameters(insertIntoGeotypicalModelLodCommand, geotypicalModelLod);
+        insertIntoGeotypicalModelLodCommand.Parameters[ContentParamName].Value = content;
+
+        return insertIntoGeotypicalModelLodCommand.ExecuteNonQuery();
+    }
+
+    /// <summary>
+    /// Inserts a geotypical model level of detail file into the database.
+    /// </summary>
+    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
+    /// <param name="geotypicalModelLod">The geotypical model level of detail identifier.</param>
+    /// <param name="content">The file contents.</param>
+    /// <returns>The number of rows affected.</returns>
+    public virtual int InsertIntoGeotypicalModelLod(string cdbName, GeotypicalModelLod geotypicalModelLod, Stream content)
+    {
+        insertIntoGeotypicalModelLodCommand.Parameters[CdbParamName].Value = cdbName;
+        SetGeotypicalModelLodParameters(insertIntoGeotypicalModelLodCommand, geotypicalModelLod);
+        insertIntoGeotypicalModelLodCommand.Parameters[ContentParamName].Value = content;
+
+        return insertIntoGeotypicalModelLodCommand.ExecuteNonQuery();
+    }
+
+    /// <summary>
+    /// Inserts a geotypical model level of detail file into the database.
+    /// </summary>
+    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
+    /// <param name="geotypicalModelLod">The geotypical model level of detail identifier.</param>
+    /// <param name="content">The file contents.</param>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    /// <returns>The number of rows affected.</returns>
+    public virtual Task<int> InsertIntoGeotypicalModelLodAsync(string cdbName, GeotypicalModelLod geotypicalModelLod, byte[] content, CancellationToken cancellationToken = default)
+    {
+        insertIntoGeotypicalModelLodCommand.Parameters[CdbParamName].Value = cdbName;
+        SetGeotypicalModelLodParameters(insertIntoGeotypicalModelLodCommand, geotypicalModelLod);
+        insertIntoGeotypicalModelLodCommand.Parameters[ContentParamName].Value = content;
+
+        return insertIntoGeotypicalModelLodCommand.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Inserts a geotypical model level of detail file into the database.
+    /// </summary>
+    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
+    /// <param name="geotypicalModelLod">The geotypical model level of detail identifier.</param>
+    /// <param name="content">The file contents.</param>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    /// <returns>The number of rows affected.</returns>
+    public virtual Task<int> InsertIntoGeotypicalModelLodAsync(string cdbName, GeotypicalModelLod geotypicalModelLod, Stream content, CancellationToken cancellationToken = default)
+    {
+        insertIntoGeotypicalModelLodCommand.Parameters[CdbParamName].Value = cdbName;
+        SetGeotypicalModelLodParameters(insertIntoGeotypicalModelLodCommand, geotypicalModelLod);
+        insertIntoGeotypicalModelLodCommand.Parameters[ContentParamName].Value = content;
+
+        return insertIntoGeotypicalModelLodCommand.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    #endregion
+
+    #region Select
+
+    /// <summary>
+    /// The SQL statement to select a row from the Geotypical Model Level of Detail table.
+    /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="LevelOfDetailParamName"/></description></item>
+    ///   <item><description><see cref="FeatureCategoryParamName"/></description></item>
+    ///   <item><description><see cref="FeatureSubcategoryParamName"/></description></item>
+    ///   <item><description><see cref="FeatureTypeParamName"/></description></item>
+    ///   <item><description><see cref="FeatureSubcodeParamName"/></description></item>
+    ///   <item><description><see cref="ModelNameParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    /// </list>
+    /// <list type="bullet">
+    ///   <listheader><description>Selected Columns</description></listheader>
+    ///   <item><description><see cref="ContentColumnName"/></description></item>
+    /// </list>
+    /// </remarks>
+    protected abstract string SelectFromGeotypicalModelLodStatement
+    {
+        get;
+    }
+
+    private DbCommand CreateSelectFromGeotypicalModelLodCommand(DbConnection dbConnection)
+    {
+        DbCommand dbCommand = dbConnection.CreateCommand();
+        try
+        {
+            dbCommand.CommandText = SelectFromGeotypicalModelLodStatement;
+            CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
+            CreateAndAttachGeotypicalModelLodParameters(dbCommand);
+            dbCommand.Prepare();
+            return dbCommand;
+        }
+        catch (Exception)
+        {
+            dbCommand.Dispose();
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Tries to find a geotypical model level of detail file in the database.
+    /// If the file was found, runs <paramref name="fileFoundAction"/> on the file contents.
+    /// </summary>
+    /// <param name="cdbName">The name of the CDB data store.</param>
+    /// <param name="geotypicalModelLod">The geotypical model level of detail identifier.</param>
+    /// <param name="fileFoundAction">The action to run if the file is found.
+    /// The stream will be automatically closed after the action returns or
+    /// throws an exception.</param>
+    /// <returns><see langword="true"/> if the file was found.</returns>
+    public virtual bool TrySelectFromGeotypicalModelLod(string cdbName, GeotypicalModelLod geotypicalModelLod,
+        Action<Stream> fileFoundAction)
+    {
+        selectFromGeotypicalModelLodCommand.Parameters[CdbParamName].Value = cdbName;
+        SetGeotypicalModelLodParameters(selectFromGeotypicalModelLodCommand, geotypicalModelLod);
+
+        using DbDataReader dbDataReader = selectFromGeotypicalModelLodCommand.ExecuteReader(
+            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow);
+        do
+        {
+            while (dbDataReader.Read())
+            {
+                using Stream stream = dbDataReader.GetStream(ContentColumnName);
+                fileFoundAction(stream);
+                return true;
+            }
+        } while (dbDataReader.NextResult());
+        return false;
+    }
+
+    /// <summary>
+    /// Tries to find a geotypical model level of detail file in the database.
+    /// If the file was found, runs <paramref name="fileFoundAsyncAction"/> on the file contents.
+    /// </summary>
+    /// <param name="cdbName">The name of the CDB data store.</param>
+    /// <param name="geotypicalModelLod">The geotypical model level of detail identifier.</param>
+    /// <param name="fileFoundAsyncAction">The action to run if the file is found.
+    /// The stream will be automatically closed after the action returns or
+    /// throws an exception.</param>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    /// <returns><see langword="true"/> if the file was found.</returns>
+    public virtual async Task<bool> TrySelectFromGeotypicalModelLodAsync(string cdbName, GeotypicalModelLod geotypicalModelLod,
+        Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
+        CancellationToken cancellationToken)
+    {
+        selectFromGeotypicalModelLodCommand.Parameters[CdbParamName].Value = cdbName;
+        SetGeotypicalModelLodParameters(selectFromGeotypicalModelLodCommand, geotypicalModelLod);
+
+        await using DbDataReader dbDataReader = await selectFromGeotypicalModelLodCommand.ExecuteReaderAsync(
+            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow, cancellationToken);
+        do
+        {
+            while (await dbDataReader.ReadAsync(cancellationToken))
+            {
+                await using Stream stream = dbDataReader.GetStream(ContentColumnName);
+                await fileFoundAsyncAction(stream, cancellationToken);
+                return true;
+            }
+        } while (await dbDataReader.NextResultAsync(cancellationToken));
+        return false;
+    }
+
+    #endregion
+
+    #endregion
+
+    #region Moving Model
+
+    /// <summary>
     /// The SQL DDL statement to create the Moving Model table.
     /// </summary>
     protected abstract string CreateTableMovingModelStatement
@@ -1900,12 +2397,23 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         get;
     }
 
-    private void InitializeInsertIntoMovingModelCommand(DbCommand dbCommand)
+    private DbCommand CreateInsertIntoMovingModelCommand(DbConnection dbConnection)
     {
-        dbCommand.CommandText = InsertIntoMovingModelStatement;
-        CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
-        CreateAndAttachMovingModelParameters(dbCommand);
-        CreateAndAttachParameter(dbCommand, ContentParamName, DbType.String);
+        DbCommand dbCommand = dbConnection.CreateCommand();
+        try
+        {
+            dbCommand.CommandText = InsertIntoMovingModelStatement;
+            CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
+            CreateAndAttachMovingModelParameters(dbCommand);
+            CreateAndAttachParameter(dbCommand, ContentParamName, DbType.String);
+            dbCommand.Prepare();
+            return dbCommand;
+        }
+        catch (Exception)
+        {
+            dbCommand.Dispose();
+            throw;
+        }
     }
 
     private void CreateAndAttachMovingModelParameters(DbCommand dbCommand)
@@ -1947,11 +2455,6 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
     /// <returns>The number of rows affected.</returns>
     public virtual int InsertIntoMovingModel(string cdbName, MovingModel movingModel, byte[] content)
     {
-        using DbConnection dbConnection = dbDataSource.OpenConnection();
-        using DbCommand insertIntoMovingModelCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoMovingModelCommand(insertIntoMovingModelCommand);
-        insertIntoMovingModelCommand.Prepare();
-
         insertIntoMovingModelCommand.Parameters[CdbParamName].Value = cdbName;
         SetMovingModelParameters(insertIntoMovingModelCommand, movingModel);
         insertIntoMovingModelCommand.Parameters[ContentParamName].Value = content;
@@ -1968,11 +2471,6 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
     /// <returns>The number of rows affected.</returns>
     public virtual int InsertIntoMovingModel(string cdbName, MovingModel movingModel, Stream content)
     {
-        using DbConnection dbConnection = dbDataSource.OpenConnection();
-        using DbCommand insertIntoMovingModelCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoMovingModelCommand(insertIntoMovingModelCommand);
-        insertIntoMovingModelCommand.Prepare();
-
         insertIntoMovingModelCommand.Parameters[CdbParamName].Value = cdbName;
         SetMovingModelParameters(insertIntoMovingModelCommand, movingModel);
         insertIntoMovingModelCommand.Parameters[ContentParamName].Value = content;
@@ -1988,18 +2486,13 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
     /// <param name="content">The file contents.</param>
     /// <param name="cancellationToken">A cancellation token.</param>
     /// <returns>The number of rows affected.</returns>
-    public virtual async Task<int> InsertIntoMovingModelAsync(string cdbName, MovingModel movingModel, byte[] content, CancellationToken cancellationToken = default)
+    public virtual Task<int> InsertIntoMovingModelAsync(string cdbName, MovingModel movingModel, byte[] content, CancellationToken cancellationToken = default)
     {
-        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        await using DbCommand insertIntoMovingModelCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoMovingModelCommand(insertIntoMovingModelCommand);
-        await insertIntoMovingModelCommand.PrepareAsync(cancellationToken);
-
         insertIntoMovingModelCommand.Parameters[CdbParamName].Value = cdbName;
         SetMovingModelParameters(insertIntoMovingModelCommand, movingModel);
         insertIntoMovingModelCommand.Parameters[ContentParamName].Value = content;
 
-        return await insertIntoMovingModelCommand.ExecuteNonQueryAsync(cancellationToken);
+        return insertIntoMovingModelCommand.ExecuteNonQueryAsync(cancellationToken);
     }
 
     /// <summary>
@@ -2010,18 +2503,13 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
     /// <param name="content">The file contents.</param>
     /// <param name="cancellationToken">A cancellation token.</param>
     /// <returns>The number of rows affected.</returns>
-    public virtual async Task<int> InsertIntoMovingModelAsync(string cdbName, MovingModel movingModel, Stream content, CancellationToken cancellationToken = default)
+    public virtual Task<int> InsertIntoMovingModelAsync(string cdbName, MovingModel movingModel, Stream content, CancellationToken cancellationToken = default)
     {
-        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        await using DbCommand insertIntoMovingModelCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoMovingModelCommand(insertIntoMovingModelCommand);
-        await insertIntoMovingModelCommand.PrepareAsync(cancellationToken);
-
         insertIntoMovingModelCommand.Parameters[CdbParamName].Value = cdbName;
         SetMovingModelParameters(insertIntoMovingModelCommand, movingModel);
         insertIntoMovingModelCommand.Parameters[ContentParamName].Value = content;
 
-        return await insertIntoMovingModelCommand.ExecuteNonQueryAsync(cancellationToken);
+        return insertIntoMovingModelCommand.ExecuteNonQueryAsync(cancellationToken);
     }
 
     #endregion
@@ -2057,11 +2545,22 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         get;
     }
 
-    private void InitializeSelectFromMovingModelCommand(DbCommand dbCommand)
+    private DbCommand CreateSelectFromMovingModelCommand(DbConnection dbConnection)
     {
-        dbCommand.CommandText = SelectFromMovingModelStatement;
-        CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
-        CreateAndAttachMovingModelParameters(dbCommand);
+        DbCommand dbCommand = dbConnection.CreateCommand();
+        try
+        {
+            dbCommand.CommandText = SelectFromMovingModelStatement;
+            CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
+            CreateAndAttachMovingModelParameters(dbCommand);
+            dbCommand.Prepare();
+            return dbCommand;
+        }
+        catch (Exception)
+        {
+            dbCommand.Dispose();
+            throw;
+        }
     }
 
     /// <summary>
@@ -2077,11 +2576,6 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
     public virtual bool TrySelectFromMovingModel(string cdbName, MovingModel movingModel,
         Action<Stream> fileFoundAction)
     {
-        using DbConnection dbConnection = dbDataSource.OpenConnection();
-        using DbCommand selectFromMovingModelCommand = dbConnection.CreateCommand();
-        InitializeSelectFromMovingModelCommand(selectFromMovingModelCommand);
-        selectFromMovingModelCommand.Prepare();
-
         selectFromMovingModelCommand.Parameters[CdbParamName].Value = cdbName;
         SetMovingModelParameters(selectFromMovingModelCommand, movingModel);
 
@@ -2114,11 +2608,6 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
         CancellationToken cancellationToken)
     {
-        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        await using DbCommand selectFromMovingModelCommand = dbConnection.CreateCommand();
-        InitializeSelectFromMovingModelCommand(selectFromMovingModelCommand);
-        await selectFromMovingModelCommand.PrepareAsync(cancellationToken);
-
         selectFromMovingModelCommand.Parameters[CdbParamName].Value = cdbName;
         SetMovingModelParameters(selectFromMovingModelCommand, movingModel);
 
@@ -2179,12 +2668,23 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         get;
     }
 
-    private void InitializeInsertIntoMovingModelLodCommand(DbCommand dbCommand)
+    private DbCommand CreateInsertIntoMovingModelLodCommand(DbConnection dbConnection)
     {
-        dbCommand.CommandText = InsertIntoMovingModelLodStatement;
-        CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
-        CreateAndAttachMovingModelLodParameters(dbCommand);
-        CreateAndAttachParameter(dbCommand, ContentParamName, DbType.String);
+        DbCommand dbCommand = dbConnection.CreateCommand();
+        try
+        {
+            dbCommand.CommandText = InsertIntoMovingModelLodStatement;
+            CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
+            CreateAndAttachMovingModelLodParameters(dbCommand);
+            CreateAndAttachParameter(dbCommand, ContentParamName, DbType.String);
+            dbCommand.Prepare();
+            return dbCommand;
+        }
+        catch (Exception)
+        {
+            dbCommand.Dispose();
+            throw;
+        }
     }
 
     private void CreateAndAttachMovingModelLodParameters(DbCommand dbCommand)
@@ -2228,11 +2728,6 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
     /// <returns>The number of rows affected.</returns>
     public virtual int InsertIntoMovingModelLod(string cdbName, MovingModelLod movingModelLod, byte[] content)
     {
-        using DbConnection dbConnection = dbDataSource.OpenConnection();
-        using DbCommand insertIntoMovingModelLodCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoMovingModelLodCommand(insertIntoMovingModelLodCommand);
-        insertIntoMovingModelLodCommand.Prepare();
-
         insertIntoMovingModelLodCommand.Parameters[CdbParamName].Value = cdbName;
         SetMovingModelLodParameters(insertIntoMovingModelLodCommand, movingModelLod);
         insertIntoMovingModelLodCommand.Parameters[ContentParamName].Value = content;
@@ -2249,11 +2744,6 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
     /// <returns>The number of rows affected.</returns>
     public virtual int InsertIntoMovingModelLod(string cdbName, MovingModelLod movingModelLod, Stream content)
     {
-        using DbConnection dbConnection = dbDataSource.OpenConnection();
-        using DbCommand insertIntoMovingModelLodCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoMovingModelLodCommand(insertIntoMovingModelLodCommand);
-        insertIntoMovingModelLodCommand.Prepare();
-
         insertIntoMovingModelLodCommand.Parameters[CdbParamName].Value = cdbName;
         SetMovingModelLodParameters(insertIntoMovingModelLodCommand, movingModelLod);
         insertIntoMovingModelLodCommand.Parameters[ContentParamName].Value = content;
@@ -2269,18 +2759,13 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
     /// <param name="content">The file contents.</param>
     /// <param name="cancellationToken">A cancellation token.</param>
     /// <returns>The number of rows affected.</returns>
-    public virtual async Task<int> InsertIntoMovingModelLodAsync(string cdbName, MovingModelLod movingModelLod, byte[] content, CancellationToken cancellationToken = default)
+    public virtual Task<int> InsertIntoMovingModelLodAsync(string cdbName, MovingModelLod movingModelLod, byte[] content, CancellationToken cancellationToken = default)
     {
-        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        await using DbCommand insertIntoMovingModelLodCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoMovingModelLodCommand(insertIntoMovingModelLodCommand);
-        await insertIntoMovingModelLodCommand.PrepareAsync(cancellationToken);
-
         insertIntoMovingModelLodCommand.Parameters[CdbParamName].Value = cdbName;
         SetMovingModelLodParameters(insertIntoMovingModelLodCommand, movingModelLod);
         insertIntoMovingModelLodCommand.Parameters[ContentParamName].Value = content;
 
-        return await insertIntoMovingModelLodCommand.ExecuteNonQueryAsync(cancellationToken);
+        return insertIntoMovingModelLodCommand.ExecuteNonQueryAsync(cancellationToken);
     }
 
     /// <summary>
@@ -2291,18 +2776,13 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
     /// <param name="content">The file contents.</param>
     /// <param name="cancellationToken">A cancellation token.</param>
     /// <returns>The number of rows affected.</returns>
-    public virtual async Task<int> InsertIntoMovingModelLodAsync(string cdbName, MovingModelLod movingModelLod, Stream content, CancellationToken cancellationToken = default)
+    public virtual Task<int> InsertIntoMovingModelLodAsync(string cdbName, MovingModelLod movingModelLod, Stream content, CancellationToken cancellationToken = default)
     {
-        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        await using DbCommand insertIntoMovingModelLodCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoMovingModelLodCommand(insertIntoMovingModelLodCommand);
-        await insertIntoMovingModelLodCommand.PrepareAsync(cancellationToken);
-
         insertIntoMovingModelLodCommand.Parameters[CdbParamName].Value = cdbName;
         SetMovingModelLodParameters(insertIntoMovingModelLodCommand, movingModelLod);
         insertIntoMovingModelLodCommand.Parameters[ContentParamName].Value = content;
 
-        return await insertIntoMovingModelLodCommand.ExecuteNonQueryAsync(cancellationToken);
+        return insertIntoMovingModelLodCommand.ExecuteNonQueryAsync(cancellationToken);
     }
 
     #endregion
@@ -2339,11 +2819,22 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         get;
     }
 
-    private void InitializeSelectFromMovingModelLodCommand(DbCommand dbCommand)
+    private DbCommand CreateSelectFromMovingModelLodCommand(DbConnection dbConnection)
     {
-        dbCommand.CommandText = SelectFromMovingModelLodStatement;
-        CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
-        CreateAndAttachMovingModelLodParameters(dbCommand);
+        DbCommand dbCommand = dbConnection.CreateCommand();
+        try
+        {
+            dbCommand.CommandText = SelectFromMovingModelLodStatement;
+            CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
+            CreateAndAttachMovingModelLodParameters(dbCommand);
+            dbCommand.Prepare();
+            return dbCommand;
+        }
+        catch (Exception)
+        {
+            dbCommand.Dispose();
+            throw;
+        }
     }
 
     /// <summary>
@@ -2359,11 +2850,6 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
     public virtual bool TrySelectFromMovingModelLod(string cdbName, MovingModelLod movingModelLod,
         Action<Stream> fileFoundAction)
     {
-        using DbConnection dbConnection = dbDataSource.OpenConnection();
-        using DbCommand selectFromMovingModelLodCommand = dbConnection.CreateCommand();
-        InitializeSelectFromMovingModelLodCommand(selectFromMovingModelLodCommand);
-        selectFromMovingModelLodCommand.Prepare();
-
         selectFromMovingModelLodCommand.Parameters[CdbParamName].Value = cdbName;
         SetMovingModelLodParameters(selectFromMovingModelLodCommand, movingModelLod);
 
@@ -2396,11 +2882,6 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
         CancellationToken cancellationToken)
     {
-        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        await using DbCommand selectFromMovingModelLodCommand = dbConnection.CreateCommand();
-        InitializeSelectFromMovingModelLodCommand(selectFromMovingModelLodCommand);
-        await selectFromMovingModelLodCommand.PrepareAsync(cancellationToken);
-
         selectFromMovingModelLodCommand.Parameters[CdbParamName].Value = cdbName;
         SetMovingModelLodParameters(selectFromMovingModelLodCommand, movingModelLod);
 
@@ -2435,42 +2916,6 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
     #region Insert
 
     /// <summary>
-    /// The name of the SQL parameter for a Tile latitude.
-    /// The value must be of type <see cref="DbType.Int32"/>.
-    /// </summary>
-    protected abstract string LatitudeParamName
-    {
-        get;
-    }
-
-    /// <summary>
-    /// The name of the SQL parameter for a Tile longitude.
-    /// The value must be of type <see cref="DbType.Int32"/>.
-    /// </summary>
-    protected abstract string LongitudeParamName
-    {
-        get;
-    }
-
-    /// <summary>
-    /// The name of the SQL parameter for a Tile UREF.
-    /// The value must be of type <see cref="DbType.Int32"/>.
-    /// </summary>
-    protected abstract string UpParamName
-    {
-        get;
-    }
-
-    /// <summary>
-    /// The name of the SQL parameter for a Tile RREF.
-    /// The value must be of type <see cref="DbType.Int32"/>.
-    /// </summary>
-    protected abstract string RightParamName
-    {
-        get;
-    }
-
-    /// <summary>
     /// The SQL statement to insert a row into the Tile table.
     /// </summary>
     /// <remarks>
@@ -2494,12 +2939,23 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         get;
     }
 
-    private void InitializeInsertIntoTileCommand(DbCommand dbCommand)
+    private DbCommand CreateInsertIntoTileCommand(DbConnection dbConnection)
     {
-        dbCommand.CommandText = InsertIntoTileStatement;
-        CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
-        CreateAndAttachTileParameters(dbCommand);
-        CreateAndAttachParameter(dbCommand, ContentParamName, DbType.Binary);
+        DbCommand dbCommand = dbConnection.CreateCommand();
+        try
+        {
+            dbCommand.CommandText = InsertIntoTileStatement;
+            CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
+            CreateAndAttachTileParameters(dbCommand);
+            CreateAndAttachParameter(dbCommand, ContentParamName, DbType.Binary);
+            dbCommand.Prepare();
+            return dbCommand;
+        }
+        catch (Exception)
+        {
+            dbCommand.Dispose();
+            throw;
+        }
     }
 
     private void CreateAndAttachTileParameters(DbCommand dbCommand)
@@ -2537,11 +2993,6 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
     /// <returns>The number of rows affected.</returns>
     public virtual int InsertIntoTile(string cdbName, Tile tile, byte[] content)
     {
-        using DbConnection dbConnection = dbDataSource.OpenConnection();
-        using DbCommand insertIntoTileCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoTileCommand(insertIntoTileCommand);
-        insertIntoTileCommand.Prepare();
-
         insertIntoTileCommand.Parameters[CdbParamName].Value = cdbName;
         SetTileParameters(insertIntoTileCommand, tile);
         insertIntoTileCommand.Parameters[ContentParamName].Value = content;
@@ -2558,11 +3009,6 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
     /// <returns>The number of rows affected.</returns>
     public virtual int InsertIntoTile(string cdbName, Tile tile, Stream content)
     {
-        using DbConnection dbConnection = dbDataSource.OpenConnection();
-        using DbCommand insertIntoTileCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoTileCommand(insertIntoTileCommand);
-        insertIntoTileCommand.Prepare();
-
         insertIntoTileCommand.Parameters[CdbParamName].Value = cdbName;
         SetTileParameters(insertIntoTileCommand, tile);
         insertIntoTileCommand.Parameters[ContentParamName].Value = content;
@@ -2578,18 +3024,13 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
     /// <param name="content">The file contents.</param>
     /// <param name="cancellationToken">A cancellation token.</param>
     /// <returns>The number of rows affected.</returns>
-    public virtual async Task<int> InsertIntoTileAsync(string cdbName, Tile tile, byte[] content, CancellationToken cancellationToken = default)
+    public virtual Task<int> InsertIntoTileAsync(string cdbName, Tile tile, byte[] content, CancellationToken cancellationToken = default)
     {
-        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        await using DbCommand insertIntoTileCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoTileCommand(insertIntoTileCommand);
-        await insertIntoTileCommand.PrepareAsync(cancellationToken);
-
         insertIntoTileCommand.Parameters[CdbParamName].Value = cdbName;
         SetTileParameters(insertIntoTileCommand, tile);
         insertIntoTileCommand.Parameters[ContentParamName].Value = content;
 
-        return await insertIntoTileCommand.ExecuteNonQueryAsync(cancellationToken);
+        return insertIntoTileCommand.ExecuteNonQueryAsync(cancellationToken);
     }
 
     /// <summary>
@@ -2600,18 +3041,13 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
     /// <param name="content">The file contents.</param>
     /// <param name="cancellationToken">A cancellation token.</param>
     /// <returns>The number of rows affected.</returns>
-    public virtual async Task<int> InsertIntoTileAsync(string cdbName, Tile tile, Stream content, CancellationToken cancellationToken = default)
+    public virtual Task<int> InsertIntoTileAsync(string cdbName, Tile tile, Stream content, CancellationToken cancellationToken = default)
     {
-        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        await using DbCommand insertIntoTileCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoTileCommand(insertIntoTileCommand);
-        await insertIntoTileCommand.PrepareAsync(cancellationToken);
-
         insertIntoTileCommand.Parameters[CdbParamName].Value = cdbName;
         SetTileParameters(insertIntoTileCommand, tile);
         insertIntoTileCommand.Parameters[ContentParamName].Value = content;
 
-        return await insertIntoTileCommand.ExecuteNonQueryAsync(cancellationToken);
+        return insertIntoTileCommand.ExecuteNonQueryAsync(cancellationToken);
     }
 
     #endregion
@@ -2645,11 +3081,22 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         get;
     }
 
-    private void InitializeSelectFromTileCommand(DbCommand dbCommand)
+    private DbCommand CreateSelectFromTileCommand(DbConnection dbConnection)
     {
-        dbCommand.CommandText = SelectFromTileStatement;
-        CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
-        CreateAndAttachTileParameters(dbCommand);
+        DbCommand dbCommand = dbConnection.CreateCommand();
+        try
+        {
+            dbCommand.CommandText = SelectFromTileStatement;
+            CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
+            CreateAndAttachTileParameters(dbCommand);
+            dbCommand.Prepare();
+            return dbCommand;
+        }
+        catch (Exception)
+        {
+            dbCommand.Dispose();
+            throw;
+        }
     }
 
     /// <summary>
@@ -2665,11 +3112,6 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
     public virtual bool TrySelectFromTile(string cdbName, Tile tile,
         Action<Stream> fileFoundAction)
     {
-        using DbConnection dbConnection = dbDataSource.OpenConnection();
-        using DbCommand selectFromTileCommand = dbConnection.CreateCommand();
-        InitializeSelectFromTileCommand(selectFromTileCommand);
-        selectFromTileCommand.Prepare();
-
         selectFromTileCommand.Parameters[CdbParamName].Value = cdbName;
         SetTileParameters(selectFromTileCommand, tile);
 
@@ -2702,11 +3144,6 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
         CancellationToken cancellationToken)
     {
-        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        await using DbCommand selectFromTileCommand = dbConnection.CreateCommand();
-        InitializeSelectFromTileCommand(selectFromTileCommand);
-        await selectFromTileCommand.PrepareAsync(cancellationToken);
-
         selectFromTileCommand.Parameters[CdbParamName].Value = cdbName;
         SetTileParameters(selectFromTileCommand, tile);
 
@@ -2769,12 +3206,23 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         get;
     }
 
-    private void InitializeInsertIntoTileArchivedFeatureCommand(DbCommand dbCommand)
+    private DbCommand CreateInsertIntoTileArchivedFeatureCommand(DbConnection dbConnection)
     {
-        dbCommand.CommandText = InsertIntoTileArchivedFeatureStatement;
-        CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
-        CreateAndAttachTileArchivedFeatureParameters(dbCommand);
-        CreateAndAttachParameter(dbCommand, ContentParamName, DbType.Binary);
+        DbCommand dbCommand = dbConnection.CreateCommand();
+        try
+        {
+            dbCommand.CommandText = InsertIntoTileArchivedFeatureStatement;
+            CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
+            CreateAndAttachTileArchivedFeatureParameters(dbCommand);
+            CreateAndAttachParameter(dbCommand, ContentParamName, DbType.Binary);
+            dbCommand.Prepare();
+            return dbCommand;
+        }
+        catch (Exception)
+        {
+            dbCommand.Dispose();
+            throw;
+        }
     }
 
     private void CreateAndAttachTileArchivedFeatureParameters(DbCommand dbCommand)
@@ -2822,11 +3270,6 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
     /// <returns>The number of rows affected.</returns>
     public virtual int InsertIntoTileArchivedFeature(string cdbName, TileArchivedFeature tileArchivedFeature, byte[] content)
     {
-        using DbConnection dbConnection = dbDataSource.OpenConnection();
-        using DbCommand insertIntoTileArchivedFeatureCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoTileArchivedFeatureCommand(insertIntoTileArchivedFeatureCommand);
-        insertIntoTileArchivedFeatureCommand.Prepare();
-
         insertIntoTileArchivedFeatureCommand.Parameters[CdbParamName].Value = cdbName;
         SetTileArchivedFeatureParameters(insertIntoTileArchivedFeatureCommand, tileArchivedFeature);
         insertIntoTileArchivedFeatureCommand.Parameters[ContentParamName].Value = content;
@@ -2843,11 +3286,6 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
     /// <returns>The number of rows affected.</returns>
     public virtual int InsertIntoTileArchivedFeature(string cdbName, TileArchivedFeature tileArchivedFeature, Stream content)
     {
-        using DbConnection dbConnection = dbDataSource.OpenConnection();
-        using DbCommand insertIntoTileArchivedFeatureCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoTileArchivedFeatureCommand(insertIntoTileArchivedFeatureCommand);
-        insertIntoTileArchivedFeatureCommand.Prepare();
-
         insertIntoTileArchivedFeatureCommand.Parameters[CdbParamName].Value = cdbName;
         SetTileArchivedFeatureParameters(insertIntoTileArchivedFeatureCommand, tileArchivedFeature);
         insertIntoTileArchivedFeatureCommand.Parameters[ContentParamName].Value = content;
@@ -2863,18 +3301,13 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
     /// <param name="content">The file contents.</param>
     /// <param name="cancellationToken">A cancellation token.</param>
     /// <returns>The number of rows affected.</returns>
-    public virtual async Task<int> InsertIntoTileArchivedFeatureAsync(string cdbName, TileArchivedFeature tileArchivedFeature, byte[] content, CancellationToken cancellationToken = default)
+    public virtual Task<int> InsertIntoTileArchivedFeatureAsync(string cdbName, TileArchivedFeature tileArchivedFeature, byte[] content, CancellationToken cancellationToken = default)
     {
-        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        await using DbCommand insertIntoTileArchivedFeatureCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoTileArchivedFeatureCommand(insertIntoTileArchivedFeatureCommand);
-        await insertIntoTileArchivedFeatureCommand.PrepareAsync(cancellationToken);
-
         insertIntoTileArchivedFeatureCommand.Parameters[CdbParamName].Value = cdbName;
         SetTileArchivedFeatureParameters(insertIntoTileArchivedFeatureCommand, tileArchivedFeature);
         insertIntoTileArchivedFeatureCommand.Parameters[ContentParamName].Value = content;
 
-        return await insertIntoTileArchivedFeatureCommand.ExecuteNonQueryAsync(cancellationToken);
+        return insertIntoTileArchivedFeatureCommand.ExecuteNonQueryAsync(cancellationToken);
     }
 
     /// <summary>
@@ -2885,18 +3318,13 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
     /// <param name="content">The file contents.</param>
     /// <param name="cancellationToken">A cancellation token.</param>
     /// <returns>The number of rows affected.</returns>
-    public virtual async Task<int> InsertIntoTileArchivedFeatureAsync(string cdbName, TileArchivedFeature tileArchivedFeature, Stream content, CancellationToken cancellationToken = default)
+    public virtual Task<int> InsertIntoTileArchivedFeatureAsync(string cdbName, TileArchivedFeature tileArchivedFeature, Stream content, CancellationToken cancellationToken = default)
     {
-        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        await using DbCommand insertIntoTileArchivedFeatureCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoTileArchivedFeatureCommand(insertIntoTileArchivedFeatureCommand);
-        await insertIntoTileArchivedFeatureCommand.PrepareAsync(cancellationToken);
-
         insertIntoTileArchivedFeatureCommand.Parameters[CdbParamName].Value = cdbName;
         SetTileArchivedFeatureParameters(insertIntoTileArchivedFeatureCommand, tileArchivedFeature);
         insertIntoTileArchivedFeatureCommand.Parameters[ContentParamName].Value = content;
 
-        return await insertIntoTileArchivedFeatureCommand.ExecuteNonQueryAsync(cancellationToken);
+        return insertIntoTileArchivedFeatureCommand.ExecuteNonQueryAsync(cancellationToken);
     }
 
     #endregion
@@ -2935,11 +3363,22 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         get;
     }
 
-    private void InitializeSelectFromTileArchivedFeatureCommand(DbCommand dbCommand)
+    private DbCommand CreateSelectFromTileArchivedFeatureCommand(DbConnection dbConnection)
     {
-        dbCommand.CommandText = SelectFromTileArchivedFeatureStatement;
-        CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
-        CreateAndAttachTileArchivedFeatureParameters(dbCommand);
+        DbCommand dbCommand = dbConnection.CreateCommand();
+        try
+        {
+            dbCommand.CommandText = SelectFromTileArchivedFeatureStatement;
+            CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
+            CreateAndAttachTileArchivedFeatureParameters(dbCommand);
+            dbCommand.Prepare();
+            return dbCommand;
+        }
+        catch (Exception)
+        {
+            dbCommand.Dispose();
+            throw;
+        }
     }
 
     /// <summary>
@@ -2955,11 +3394,6 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
     public virtual bool TrySelectFromTileArchivedFeature(string cdbName, TileArchivedFeature tileArchivedFeature,
         Action<Stream> fileFoundAction)
     {
-        using DbConnection dbConnection = dbDataSource.OpenConnection();
-        using DbCommand selectFromTileArchivedFeatureCommand = dbConnection.CreateCommand();
-        InitializeSelectFromTileArchivedFeatureCommand(selectFromTileArchivedFeatureCommand);
-        selectFromTileArchivedFeatureCommand.Prepare();
-
         selectFromTileArchivedFeatureCommand.Parameters[CdbParamName].Value = cdbName;
         SetTileArchivedFeatureParameters(selectFromTileArchivedFeatureCommand, tileArchivedFeature);
 
@@ -2992,11 +3426,6 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
         CancellationToken cancellationToken)
     {
-        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        await using DbCommand selectFromTileArchivedFeatureCommand = dbConnection.CreateCommand();
-        InitializeSelectFromTileArchivedFeatureCommand(selectFromTileArchivedFeatureCommand);
-        await selectFromTileArchivedFeatureCommand.PrepareAsync(cancellationToken);
-
         selectFromTileArchivedFeatureCommand.Parameters[CdbParamName].Value = cdbName;
         SetTileArchivedFeatureParameters(selectFromTileArchivedFeatureCommand, tileArchivedFeature);
 
@@ -3055,12 +3484,23 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         get;
     }
 
-    private void InitializeInsertIntoTileArchivedTextureCommand(DbCommand dbCommand)
+    private DbCommand CreateInsertIntoTileArchivedTextureCommand(DbConnection dbConnection)
     {
-        dbCommand.CommandText = InsertIntoTileArchivedTextureStatement;
-        CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
-        CreateAndAttachTileArchivedTextureParameters(dbCommand);
-        CreateAndAttachParameter(dbCommand, ContentParamName, DbType.Binary);
+        DbCommand dbCommand = dbConnection.CreateCommand();
+        try
+        {
+            dbCommand.CommandText = InsertIntoTileArchivedTextureStatement;
+            CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
+            CreateAndAttachTileArchivedTextureParameters(dbCommand);
+            CreateAndAttachParameter(dbCommand, ContentParamName, DbType.Binary);
+            dbCommand.Prepare();
+            return dbCommand;
+        }
+        catch (Exception)
+        {
+            dbCommand.Dispose();
+            throw;
+        }
     }
 
     private void CreateAndAttachTileArchivedTextureParameters(DbCommand dbCommand)
@@ -3100,11 +3540,6 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
     /// <returns>The number of rows affected.</returns>
     public virtual int InsertIntoTileArchivedTexture(string cdbName, TileArchivedTexture tileArchivedTexture, byte[] content)
     {
-        using DbConnection dbConnection = dbDataSource.OpenConnection();
-        using DbCommand insertIntoTileArchivedTextureCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoTileArchivedTextureCommand(insertIntoTileArchivedTextureCommand);
-        insertIntoTileArchivedTextureCommand.Prepare();
-
         insertIntoTileArchivedTextureCommand.Parameters[CdbParamName].Value = cdbName;
         SetTileArchivedTextureParameters(insertIntoTileArchivedTextureCommand, tileArchivedTexture);
         insertIntoTileArchivedTextureCommand.Parameters[ContentParamName].Value = content;
@@ -3121,11 +3556,6 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
     /// <returns>The number of rows affected.</returns>
     public virtual int InsertIntoTileArchivedTexture(string cdbName, TileArchivedTexture tileArchivedTexture, Stream content)
     {
-        using DbConnection dbConnection = dbDataSource.OpenConnection();
-        using DbCommand insertIntoTileArchivedTextureCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoTileArchivedTextureCommand(insertIntoTileArchivedTextureCommand);
-        insertIntoTileArchivedTextureCommand.Prepare();
-
         insertIntoTileArchivedTextureCommand.Parameters[CdbParamName].Value = cdbName;
         SetTileArchivedTextureParameters(insertIntoTileArchivedTextureCommand, tileArchivedTexture);
         insertIntoTileArchivedTextureCommand.Parameters[ContentParamName].Value = content;
@@ -3141,18 +3571,13 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
     /// <param name="content">The file contents.</param>
     /// <param name="cancellationToken">A cancellation token.</param>
     /// <returns>The number of rows affected.</returns>
-    public virtual async Task<int> InsertIntoTileArchivedTextureAsync(string cdbName, TileArchivedTexture tileArchivedTexture, byte[] content, CancellationToken cancellationToken = default)
+    public virtual Task<int> InsertIntoTileArchivedTextureAsync(string cdbName, TileArchivedTexture tileArchivedTexture, byte[] content, CancellationToken cancellationToken = default)
     {
-        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        await using DbCommand insertIntoTileArchivedTextureCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoTileArchivedTextureCommand(insertIntoTileArchivedTextureCommand);
-        await insertIntoTileArchivedTextureCommand.PrepareAsync(cancellationToken);
-
         insertIntoTileArchivedTextureCommand.Parameters[CdbParamName].Value = cdbName;
         SetTileArchivedTextureParameters(insertIntoTileArchivedTextureCommand, tileArchivedTexture);
         insertIntoTileArchivedTextureCommand.Parameters[ContentParamName].Value = content;
 
-        return await insertIntoTileArchivedTextureCommand.ExecuteNonQueryAsync(cancellationToken);
+        return insertIntoTileArchivedTextureCommand.ExecuteNonQueryAsync(cancellationToken);
     }
 
     /// <summary>
@@ -3163,18 +3588,13 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
     /// <param name="content">The file contents.</param>
     /// <param name="cancellationToken">A cancellation token.</param>
     /// <returns>The number of rows affected.</returns>
-    public virtual async Task<int> InsertIntoTileArchivedTextureAsync(string cdbName, TileArchivedTexture tileArchivedTexture, Stream content, CancellationToken cancellationToken = default)
+    public virtual Task<int> InsertIntoTileArchivedTextureAsync(string cdbName, TileArchivedTexture tileArchivedTexture, Stream content, CancellationToken cancellationToken = default)
     {
-        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        await using DbCommand insertIntoTileArchivedTextureCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoTileArchivedTextureCommand(insertIntoTileArchivedTextureCommand);
-        await insertIntoTileArchivedTextureCommand.PrepareAsync(cancellationToken);
-
         insertIntoTileArchivedTextureCommand.Parameters[CdbParamName].Value = cdbName;
         SetTileArchivedTextureParameters(insertIntoTileArchivedTextureCommand, tileArchivedTexture);
         insertIntoTileArchivedTextureCommand.Parameters[ContentParamName].Value = content;
 
-        return await insertIntoTileArchivedTextureCommand.ExecuteNonQueryAsync(cancellationToken);
+        return insertIntoTileArchivedTextureCommand.ExecuteNonQueryAsync(cancellationToken);
     }
 
     #endregion
@@ -3209,11 +3629,22 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         get;
     }
 
-    private void InitializeSelectFromTileArchivedTextureCommand(DbCommand dbCommand)
+    private DbCommand CreateSelectFromTileArchivedTextureCommand(DbConnection dbConnection)
     {
-        dbCommand.CommandText = SelectFromTileArchivedTextureStatement;
-        CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
-        CreateAndAttachTileArchivedTextureParameters(dbCommand);
+        DbCommand dbCommand = dbConnection.CreateCommand();
+        try
+        {
+            dbCommand.CommandText = SelectFromTileArchivedTextureStatement;
+            CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
+            CreateAndAttachTileArchivedTextureParameters(dbCommand);
+            dbCommand.Prepare();
+            return dbCommand;
+        }
+        catch (Exception)
+        {
+            dbCommand.Dispose();
+            throw;
+        }
     }
 
     /// <summary>
@@ -3229,11 +3660,6 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
     public virtual bool TrySelectFromTileArchivedTexture(string cdbName, TileArchivedTexture tileArchivedTexture,
         Action<Stream> fileFoundAction)
     {
-        using DbConnection dbConnection = dbDataSource.OpenConnection();
-        using DbCommand selectFromTileArchivedTextureCommand = dbConnection.CreateCommand();
-        InitializeSelectFromTileArchivedTextureCommand(selectFromTileArchivedTextureCommand);
-        selectFromTileArchivedTextureCommand.Prepare();
-
         selectFromTileArchivedTextureCommand.Parameters[CdbParamName].Value = cdbName;
         SetTileArchivedTextureParameters(selectFromTileArchivedTextureCommand, tileArchivedTexture);
 
@@ -3266,11 +3692,6 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
         CancellationToken cancellationToken)
     {
-        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        await using DbCommand selectFromTileArchivedTextureCommand = dbConnection.CreateCommand();
-        InitializeSelectFromTileArchivedTextureCommand(selectFromTileArchivedTextureCommand);
-        await selectFromTileArchivedTextureCommand.PrepareAsync(cancellationToken);
-
         selectFromTileArchivedTextureCommand.Parameters[CdbParamName].Value = cdbName;
         SetTileArchivedTextureParameters(selectFromTileArchivedTextureCommand, tileArchivedTexture);
 
@@ -3323,12 +3744,23 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         get;
     }
 
-    private void InitializeInsertIntoNavigationCommand(DbCommand dbCommand)
+    private DbCommand CreateInsertIntoNavigationCommand(DbConnection dbConnection)
     {
-        dbCommand.CommandText = InsertIntoNavigationStatement;
-        CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
-        CreateAndAttachNavigationParameters(dbCommand);
-        CreateAndAttachParameter(dbCommand, ContentParamName, DbType.Binary);
+        DbCommand dbCommand = dbConnection.CreateCommand();
+        try
+        {
+            dbCommand.CommandText = InsertIntoNavigationStatement;
+            CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
+            CreateAndAttachNavigationParameters(dbCommand);
+            CreateAndAttachParameter(dbCommand, ContentParamName, DbType.Binary);
+            dbCommand.Prepare();
+            return dbCommand;
+        }
+        catch (Exception)
+        {
+            dbCommand.Dispose();
+            throw;
+        }
     }
 
     private void CreateAndAttachNavigationParameters(DbCommand dbCommand)
@@ -3356,11 +3788,6 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
     /// <returns>The number of rows affected.</returns>
     public virtual int InsertIntoNavigation(string cdbName, Navigation navigation, byte[] content)
     {
-        using DbConnection dbConnection = dbDataSource.OpenConnection();
-        using DbCommand insertIntoNavigationCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoNavigationCommand(insertIntoNavigationCommand);
-        insertIntoNavigationCommand.Prepare();
-
         insertIntoNavigationCommand.Parameters[CdbParamName].Value = cdbName;
         SetNavigationParameters(insertIntoNavigationCommand, navigation);
         insertIntoNavigationCommand.Parameters[ContentParamName].Value = content;
@@ -3377,11 +3804,6 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
     /// <returns>The number of rows affected.</returns>
     public virtual int InsertIntoNavigation(string cdbName, Navigation navigation, Stream content)
     {
-        using DbConnection dbConnection = dbDataSource.OpenConnection();
-        using DbCommand insertIntoNavigationCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoNavigationCommand(insertIntoNavigationCommand);
-        insertIntoNavigationCommand.Prepare();
-
         insertIntoNavigationCommand.Parameters[CdbParamName].Value = cdbName;
         SetNavigationParameters(insertIntoNavigationCommand, navigation);
         insertIntoNavigationCommand.Parameters[ContentParamName].Value = content;
@@ -3397,18 +3819,13 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
     /// <param name="content">The file contents.</param>
     /// <param name="cancellationToken">A cancellation token.</param>
     /// <returns>The number of rows affected.</returns>
-    public virtual async Task<int> InsertIntoNavigationAsync(string cdbName, Navigation navigation, byte[] content, CancellationToken cancellationToken = default)
+    public virtual Task<int> InsertIntoNavigationAsync(string cdbName, Navigation navigation, byte[] content, CancellationToken cancellationToken = default)
     {
-        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        await using DbCommand insertIntoNavigationCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoNavigationCommand(insertIntoNavigationCommand);
-        await insertIntoNavigationCommand.PrepareAsync(cancellationToken);
-
         insertIntoNavigationCommand.Parameters[CdbParamName].Value = cdbName;
         SetNavigationParameters(insertIntoNavigationCommand, navigation);
         insertIntoNavigationCommand.Parameters[ContentParamName].Value = content;
 
-        return await insertIntoNavigationCommand.ExecuteNonQueryAsync(cancellationToken);
+        return insertIntoNavigationCommand.ExecuteNonQueryAsync(cancellationToken);
     }
 
     /// <summary>
@@ -3419,18 +3836,13 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
     /// <param name="content">The file contents.</param>
     /// <param name="cancellationToken">A cancellation token.</param>
     /// <returns>The number of rows affected.</returns>
-    public virtual async Task<int> InsertIntoNavigationAsync(string cdbName, Navigation navigation, Stream content, CancellationToken cancellationToken = default)
+    public virtual Task<int> InsertIntoNavigationAsync(string cdbName, Navigation navigation, Stream content, CancellationToken cancellationToken = default)
     {
-        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        await using DbCommand insertIntoNavigationCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoNavigationCommand(insertIntoNavigationCommand);
-        await insertIntoNavigationCommand.PrepareAsync(cancellationToken);
-
         insertIntoNavigationCommand.Parameters[CdbParamName].Value = cdbName;
         SetNavigationParameters(insertIntoNavigationCommand, navigation);
         insertIntoNavigationCommand.Parameters[ContentParamName].Value = content;
 
-        return await insertIntoNavigationCommand.ExecuteNonQueryAsync(cancellationToken);
+        return insertIntoNavigationCommand.ExecuteNonQueryAsync(cancellationToken);
     }
 
     #endregion
@@ -3459,11 +3871,22 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         get;
     }
 
-    private void InitializeSelectFromNavigationCommand(DbCommand dbCommand)
+    private DbCommand CreateSelectFromNavigationCommand(DbConnection dbConnection)
     {
-        dbCommand.CommandText = SelectFromNavigationStatement;
-        CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
-        CreateAndAttachNavigationParameters(dbCommand);
+        DbCommand dbCommand = dbConnection.CreateCommand();
+        try
+        {
+            dbCommand.CommandText = SelectFromNavigationStatement;
+            CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
+            CreateAndAttachNavigationParameters(dbCommand);
+            dbCommand.Prepare();
+            return dbCommand;
+        }
+        catch (Exception)
+        {
+            dbCommand.Dispose();
+            throw;
+        }
     }
 
     /// <summary>
@@ -3479,11 +3902,6 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
     public virtual bool TrySelectFromNavigation(string cdbName, Navigation navigation,
         Action<Stream> fileFoundAction)
     {
-        using DbConnection dbConnection = dbDataSource.OpenConnection();
-        using DbCommand selectFromNavigationCommand = dbConnection.CreateCommand();
-        InitializeSelectFromNavigationCommand(selectFromNavigationCommand);
-        selectFromNavigationCommand.Prepare();
-
         selectFromNavigationCommand.Parameters[CdbParamName].Value = cdbName;
         SetNavigationParameters(selectFromNavigationCommand, navigation);
 
@@ -3516,11 +3934,6 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
         CancellationToken cancellationToken)
     {
-        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        await using DbCommand selectFromNavigationCommand = dbConnection.CreateCommand();
-        InitializeSelectFromNavigationCommand(selectFromNavigationCommand);
-        await selectFromNavigationCommand.PrepareAsync(cancellationToken);
-
         selectFromNavigationCommand.Parameters[CdbParamName].Value = cdbName;
         SetNavigationParameters(selectFromNavigationCommand, navigation);
 
@@ -3658,6 +4071,30 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         {
             if (disposing)
             {
+                selectFromNavigationCommand.Dispose();
+                insertIntoNavigationCommand.Dispose();
+                selectFromTileArchivedTextureCommand.Dispose();
+                insertIntoTileArchivedTextureCommand.Dispose();
+                selectFromTileArchivedFeatureCommand.Dispose();
+                insertIntoTileArchivedFeatureCommand.Dispose();
+                selectFromTileCommand.Dispose();
+                insertIntoTileCommand.Dispose();
+                selectFromMovingModelLodCommand.Dispose();
+                insertIntoMovingModelLodCommand.Dispose();
+                selectFromMovingModelCommand.Dispose();
+                insertIntoMovingModelCommand.Dispose();
+                selectFromGeotypicalModelLodCommand.Dispose();
+                insertIntoGeotypicalModelLodCommand.Dispose();
+                selectFromGeotypicalModelCommand.Dispose();
+                insertIntoGeotypicalModelCommand.Dispose();
+                selectFromTextureLodCommand.Dispose();
+                insertIntoTextureLodCommand.Dispose();
+                selectFromTextureCommand.Dispose();
+                insertIntoTextureCommand.Dispose();
+                selectFromMetadataCommand.Dispose();
+                insertIntoMetadataCommand.Dispose();
+                selectFromCDBCommand.Dispose();
+                insertIntoCDBCommand.Dispose();
             }
 
             disposedValue = true;
@@ -3682,6 +4119,31 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
     /// <seealso href="https://learn.microsoft.com/en-us/dotnet/standard/garbage-collection/implementing-disposeasync"/>
     protected virtual async ValueTask DisposeAsyncCore()
     {
+        await Task.WhenAll(
+            selectFromNavigationCommand.DisposeAsync().AsTask(),
+            insertIntoNavigationCommand.DisposeAsync().AsTask(),
+            selectFromTileArchivedTextureCommand.DisposeAsync().AsTask(),
+            insertIntoTileArchivedTextureCommand.DisposeAsync().AsTask(),
+            selectFromTileArchivedFeatureCommand.DisposeAsync().AsTask(),
+            insertIntoTileArchivedFeatureCommand.DisposeAsync().AsTask(),
+            selectFromTileCommand.DisposeAsync().AsTask(),
+            insertIntoTileCommand.DisposeAsync().AsTask(),
+            selectFromMovingModelLodCommand.DisposeAsync().AsTask(),
+            insertIntoMovingModelLodCommand.DisposeAsync().AsTask(),
+            selectFromMovingModelCommand.DisposeAsync().AsTask(),
+            insertIntoMovingModelCommand.DisposeAsync().AsTask(),
+            selectFromGeotypicalModelLodCommand.DisposeAsync().AsTask(),
+            insertIntoGeotypicalModelLodCommand.DisposeAsync().AsTask(),
+            selectFromGeotypicalModelCommand.DisposeAsync().AsTask(),
+            insertIntoGeotypicalModelCommand.DisposeAsync().AsTask(),
+            selectFromTextureLodCommand.DisposeAsync().AsTask(),
+            insertIntoTextureLodCommand.DisposeAsync().AsTask(),
+            selectFromTextureCommand.DisposeAsync().AsTask(),
+            insertIntoTextureCommand.DisposeAsync().AsTask(),
+            selectFromMetadataCommand.DisposeAsync().AsTask(),
+            insertIntoMetadataCommand.DisposeAsync().AsTask(),
+            selectFromCDBCommand.DisposeAsync().AsTask(),
+            insertIntoCDBCommand.DisposeAsync().AsTask());
     }
 
     /// <inheritdoc/>
