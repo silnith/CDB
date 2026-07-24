@@ -1,7 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.ComponentModel.DataAnnotations;
 using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Reflection;
 using System.Text.RegularExpressions;
+using System.Xml.Serialization;
 
 namespace Silnith.CDB;
 
@@ -47,6 +53,75 @@ public record Dataset([property: Range(0, 999)] int Value) : IComparable<Dataset
     public static Dataset FromDirectoryMatch(Match match)
     {
         return new(int.Parse(match.Groups["dataset"].Value, CultureInfo.InvariantCulture));
+    }
+
+    private static IReadOnlyDictionary<int, string> DatasetNames
+    {
+        get;
+    }
+
+    static Dataset()
+    {
+        const string DatasetsResource = "Metadata/Datasets.xml";
+        Assembly assembly = typeof(Dataset).Assembly;
+
+        XmlSerializerFactory xmlSerializerFactory = new();
+
+        object? deserialized;
+        using (Stream stream = assembly.GetManifestResourceStream(DatasetsResource)
+            ?? throw new ApplicationException($"Resource {DatasetsResource} is missing from assembly {assembly}"))
+        {
+            XmlSerializer xmlSerializer = xmlSerializerFactory.CreateSerializer(typeof(XML.Metadata.Datasets.Element));
+            deserialized = xmlSerializer.Deserialize(stream);
+        }
+
+        if (deserialized is XML.Metadata.Datasets.Element datasets)
+        {
+            static KeyValuePair<int, string> MakeDataset(XML.Metadata.Datasets.Dataset.Element dataset)
+            {
+                return new KeyValuePair<int, string>(dataset.Code, dataset.Name);
+            }
+
+            DatasetNames = datasets.Datasets
+                .Select(MakeDataset)
+                .ToImmutableSortedDictionary();
+        }
+        else
+        {
+            throw new ApplicationException($"Unable to parse resource {DatasetsResource} in assembly {assembly}");
+        }
+    }
+
+    /// <summary>
+    /// The dataset code when used in a filename.
+    /// </summary>
+    public string Code => $"D{Value:D3}";
+
+    /// <summary>
+    /// The dataset code when used as a directory name.
+    /// </summary>
+    public string Directory
+    {
+        get
+        {
+            static string DirectoryName(int val)
+            {
+                return $"{val:D3}_{DatasetNames[val]}";
+            }
+
+            return Value switch
+            {
+                500 or 510 or 503 => DirectoryName(500),
+                501 or 511 or 504 or 505 => DirectoryName(501),
+                506 or 508 => DirectoryName(506),
+                507 or 509 or 513 => DirectoryName(507),
+                502 or 512 => DirectoryName(502),
+                600 or 603 => DirectoryName(600),
+                601 or 604 or 605 => DirectoryName(601),
+                606 => DirectoryName(606),
+                _ => DirectoryName(Value),
+            };
+        }
     }
 
     /// <inheritdoc/>

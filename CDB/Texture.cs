@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Globalization;
+using System.IO;
 using System.Text.RegularExpressions;
 
 namespace Silnith.CDB;
@@ -17,7 +18,7 @@ public record Texture(
         [property: Range(0, 999)] int ComponentSelector1,
         [property: Range(0, 999)] int ComponentSelector2,
         string Name,
-        string FileType)
+        string FileType) : ICDBIdentifier
 {
     /// <summary>
     /// The pattern for the first two directories in a texture hierarchy.
@@ -69,8 +70,14 @@ public record Texture(
             match.Groups["file_type"].Value);
     }
 
-    /// <summary>
-    /// The texture file name.
-    /// </summary>
+    /// <inheritdoc/>
     public string Filename => $"D{Dataset.Value:D3}_S{ComponentSelector1:D3}_T{ComponentSelector2:D3}_{Name}.{FileType}";
+
+    /// <inheritdoc/>
+    public string RelativePath => Path.Combine(
+        "GTModel",
+        Dataset.Directory,
+        Name.Substring(0, 1).ToUpperInvariant(),
+        Name.Substring(1, 1).ToUpperInvariant(),
+        Name);
 }

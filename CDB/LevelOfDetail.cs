@@ -132,7 +132,15 @@ public record LevelOfDetail([property: Range(-10, 23)] int Value) : IComparable<
     /// <summary>
     /// The form this level of detail takes when part of a filename.
     /// </summary>
+    // TODO: Use W for textures?  (Datasets 601, 604, 605)
     public string Code => Value < 0 ? $"LC{Value:D2}" : $"L{Value:D2}";
+
+    /// <summary>
+    /// The form this level of detail takes when part of a tiled dataset directory.
+    /// See 3.6.2.4. Directory Level 4 (LOD Directory)
+    /// </summary>
+    /// <seealso href="https://docs.ogc.org/is/15-113r7/15-113r7.html#DirectoryLevel4LODDirectory"/>
+    public string TiledCode => Value < 0 ? "LC" : $"L{Value:D2}";
 
     /// <inheritdoc/>
     public int CompareTo(LevelOfDetail? other)

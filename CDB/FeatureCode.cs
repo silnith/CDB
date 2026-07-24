@@ -1,7 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.ComponentModel.DataAnnotations;
 using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Reflection;
 using System.Text.RegularExpressions;
+using System.Xml.Serialization;
 
 namespace Silnith.CDB;
 
@@ -100,10 +106,103 @@ public record FeatureCode(
             int.Parse(typeMatch.Groups["type"].Value, CultureInfo.InvariantCulture));
     }
 
+    private static IReadOnlyDictionary<string, string> FeatureCategoryNames
+    {
+        get;
+    }
+
+    private static IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> FeatureSubcategoryNames
+    {
+        get;
+    }
+
+    private static IReadOnlyDictionary<string, IReadOnlyDictionary<string, IReadOnlyDictionary<int, string>>> FeatureTypeNames
+    {
+        get;
+    }
+
+    static FeatureCode()
+    {
+        Assembly assembly = typeof(FeatureCode).Assembly;
+        const string FeatureDictionaryResource = "Metadata/Feature_Data_Dictionary.xml";
+
+        XmlSerializerFactory xmlSerializerFactory = new();
+
+        object? deserialized;
+        using (Stream stream = assembly.GetManifestResourceStream(FeatureDictionaryResource)
+            ?? throw new ApplicationException($"Resource {FeatureDictionaryResource} is missing from assembly {assembly}"))
+        {
+            XmlSerializer xmlSerializer = xmlSerializerFactory.CreateSerializer(typeof(XML.Metadata.FeatureDataDictionary.Element));
+            deserialized = xmlSerializer.Deserialize(stream);
+        }
+
+        if (deserialized is XML.Metadata.FeatureDataDictionary.Element featureData)
+        {
+            static KeyValuePair<string, string> MakeCategory(XML.Metadata.FeatureDataDictionary.Category.Element category)
+            {
+                return new KeyValuePair<string, string>(category.Code.ToUpperInvariant(), category.Label);
+            }
+
+            FeatureCategoryNames = featureData.Categories
+                .Select(MakeCategory)
+                .ToImmutableSortedDictionary();
+
+            static KeyValuePair<string, IReadOnlyDictionary<string, string>> MakeSubcategory(XML.Metadata.FeatureDataDictionary.Category.Element category)
+            {
+                static KeyValuePair<string, string> MakeSubcategory(XML.Metadata.FeatureDataDictionary.Category.Subcategory.Element subcategory)
+                {
+                    return new KeyValuePair<string, string>(subcategory.Code.ToUpperInvariant(), subcategory.Label);
+                }
+
+                return new KeyValuePair<string, IReadOnlyDictionary<string, string>>(
+                    category.Code.ToUpperInvariant(),
+                    category.Subcategories
+                        .Select(MakeSubcategory)
+                        .ToImmutableSortedDictionary());
+            }
+
+            FeatureSubcategoryNames = featureData.Categories
+                .Select(MakeSubcategory)
+                .ToImmutableSortedDictionary();
+
+            static KeyValuePair<string, IReadOnlyDictionary<string, IReadOnlyDictionary<int, string>>> MakeType(XML.Metadata.FeatureDataDictionary.Category.Element category)
+            {
+                static KeyValuePair<string, IReadOnlyDictionary<int, string>> MakeType(XML.Metadata.FeatureDataDictionary.Category.Subcategory.Element subcategory)
+                {
+                    static KeyValuePair<int, string> MakeType(XML.Metadata.FeatureDataDictionary.Category.Subcategory.FeatureType.Element type)
+                    {
+                        return new KeyValuePair<int, string>(type.Code, type.Label);
+                    }
+
+                    return new KeyValuePair<string, IReadOnlyDictionary<int, string>>(
+                        subcategory.Code.ToUpperInvariant(),
+                        subcategory.FeatureTypes.Select(MakeType).ToImmutableSortedDictionary());
+                }
+
+                return new KeyValuePair<string, IReadOnlyDictionary<string, IReadOnlyDictionary<int, string>>>(
+                    category.Code.ToUpperInvariant(),
+                    category.Subcategories.Select(MakeType).ToImmutableSortedDictionary());
+            }
+
+            FeatureTypeNames = featureData.Categories
+                .Select(MakeType)
+                .ToImmutableSortedDictionary();
+        }
+        else
+        {
+            throw new ApplicationException($"Unable to parse resource {FeatureDictionaryResource} in assembly {assembly}");
+        }
+    }
+
     /// <summary>
     /// The five-character code.
     /// </summary>
-    public string Code => $"{Category}{Subcategory}{Type:D3}";
+    public string Code => $"{Category.ToUpperInvariant()}{Subcategory.ToUpperInvariant()}{Type:D3}";
+
+    public string RelativePath => Path.Combine(
+        $"{Category.ToUpperInvariant()}_{FeatureCategoryNames[Category.ToUpperInvariant()]}",
+        $"{Subcategory.ToUpperInvariant()}_{FeatureSubcategoryNames[Category.ToUpperInvariant()][Subcategory.ToUpperInvariant()]}",
+        $"{Type:D3}_{FeatureTypeNames[Category.ToUpperInvariant()][Subcategory.ToUpperInvariant()][Type]}");
 
     /// <inheritdoc/>
     public int CompareTo(FeatureCode? other)

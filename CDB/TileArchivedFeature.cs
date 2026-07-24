@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Globalization;
+using System.IO;
 using System.Text.RegularExpressions;
 
 namespace Silnith.CDB;
@@ -35,7 +36,7 @@ public record TileArchivedFeature(Latitude LatitudeValue,
     FeatureCode FeatureCode,
     [property: Range(0, 999)] int FeatureSubcode,
     string Name,
-    string FileType)
+    string FileType) : ICDBIdentifier
 {
     /// <summary>
     /// The pattern for filenames in the tiled dataset directory hierarchy.
@@ -98,4 +99,64 @@ public record TileArchivedFeature(Latitude LatitudeValue,
     /// The tile unarchived feature file name.
     /// </summary>
     public string Filename => $"{LatitudeValue.Code}{LongitudeValue.Code}_D{DatasetValue.Value:D3}_S{ComponentSelector1:D3}_T{ComponentSelector2:D3}_{Level.Code}_U{Up:D}_R{Right:D}_{FeatureCode.Code}_{FeatureSubcode:D3}_{Name}.{FileType}";
+
+    /// <inheritdoc/>
+    public string ZipFilename => $"{LatitudeValue.Code}{LongitudeValue.Code}_{DatasetValue.Code}_S{ComponentSelector1:D3}_T{ComponentSelector2:D3}_{Level.Code}_U{Up:D}_R{Right:D}.zip";
+
+    /// <summary>
+    /// Datasets:
+    /// GSModelGeometry
+    /// GSModelInteriorGeometry
+    /// GSModelDescriptor
+    /// 300_GSModelGeometry
+    /// 302_GSModelSignature
+    /// 303_GSModelDescriptor
+    /// 305_GSModelInteriorGeometry
+    /// 307_GSModelInteriorDescriptor
+    /// </summary>
+    public bool Zipped => true;
+
+    /// <inheritdoc/>
+    public string RelativePath
+    {
+        get
+        {
+            string up;
+            if (Level.Value <= 3)
+            {
+                up = $"U{Up:D1}";
+            }
+            else if (Level.Value <= 6)
+            {
+                up = $"U{Up:D2}";
+            }
+            else if (Level.Value <= 9)
+            {
+                up = $"U{Up:D3}";
+            }
+            else if (Level.Value <= 13)
+            {
+                up = $"U{Up:D4}";
+            }
+            else if (Level.Value <= 16)
+            {
+                up = $"U{Up:D5}";
+            }
+            else if (Level.Value <= 19)
+            {
+                up = $"U{Up:D6}";
+            }
+            else
+            {
+                up = $"U{Up:D7}";
+            }
+            return Path.Combine(
+                "Tile",
+                LatitudeValue.Code,
+                LongitudeValue.Code,
+                DatasetValue.Directory,
+                Level.TiledCode,
+                up);
+        }
+    }
 }

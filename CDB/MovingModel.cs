@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Globalization;
+using System.IO;
 using System.Text.RegularExpressions;
 
 namespace Silnith.CDB;
@@ -17,7 +18,7 @@ public record MovingModel(
     [property: Range(0, 999)] int ComponentSelector1,
     [property: Range(0, 999)] int ComponentSelector2,
     DISEntity MMDC,
-    string FileType)
+    string FileType) : ICDBIdentifier
 {
     /// <summary>
     /// The pattern based on 3.5.1.1. MModelGeometry Naming Convention.
@@ -67,8 +68,12 @@ public record MovingModel(
             match.Groups["file_type"].Value);
     }
 
-    /// <summary>
-    /// The moving model file name.
-    /// </summary>
-    public string Filename => $"D{Dataset.Value:D3}_S{ComponentSelector1:D3}_T{ComponentSelector2:D3}_{MMDC.MovingModelDisCode}.{FileType}";
+    /// <inheritdoc/>
+    public string Filename => $"{Dataset.Code}_S{ComponentSelector1:D3}_T{ComponentSelector2:D3}_{MMDC.MovingModelDisCode}.{FileType}";
+
+    /// <inheritdoc/>
+    public string RelativePath => Path.Combine(
+        "MModel",
+        Dataset.Directory,
+        MMDC.Directories);
 }

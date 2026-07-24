@@ -1,7 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.ComponentModel.DataAnnotations;
 using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Reflection;
 using System.Text.RegularExpressions;
+using System.Xml.Serialization;
 
 namespace Silnith.CDB;
 
@@ -92,11 +98,143 @@ public record DISEntity(
             int.Parse(match.Groups["extra"].Value, CultureInfo.InvariantCulture));
     }
 
+    private static IReadOnlyDictionary<int, string> KindNames
+    {
+        get;
+    }
+
+    private static IReadOnlyDictionary<int, IReadOnlyDictionary<int, string>> DomainNames
+    {
+        get;
+    }
+
+    private static IReadOnlyDictionary<int, IReadOnlyDictionary<int, IReadOnlyDictionary<int, string>>> CategoryNames
+    {
+        get;
+    }
+
+    private static IReadOnlyDictionary<int, string> CountryNames
+    {
+        get;
+    }
+
+    static DISEntity()
+    {
+        Assembly assembly = typeof(DISEntity).Assembly;
+        XmlSerializerFactory xmlSerializerFactory = new();
+
+        {
+            const string MovingModelCodesResource = "Metadata/Moving_Model_Codes.xml";
+
+            object? deserialized;
+            using (Stream stream = assembly.GetManifestResourceStream(MovingModelCodesResource)
+                ?? throw new ApplicationException($"Resource {MovingModelCodesResource} is missing from assembly {assembly}"))
+            {
+                XmlSerializer xmlSerializer = xmlSerializerFactory.CreateSerializer(typeof(XML.Metadata.MovingModelCodes.Element));
+                deserialized = xmlSerializer.Deserialize(stream);
+            }
+
+            if (deserialized is XML.Metadata.MovingModelCodes.Element movingModelCodes)
+            {
+                static KeyValuePair<int, string> MakeKind(XML.Metadata.MovingModelCodes.Kind.Element kind)
+                {
+                    return new KeyValuePair<int, string>(kind.Code, kind.Name);
+                }
+
+                KindNames = movingModelCodes.Kinds
+                    .Select(MakeKind)
+                    .ToImmutableSortedDictionary();
+
+                static KeyValuePair<int, IReadOnlyDictionary<int, string>> MakeDomain(XML.Metadata.MovingModelCodes.Kind.Element kind)
+                {
+                    static KeyValuePair<int, string> MakeDomain(XML.Metadata.MovingModelCodes.Kind.Domain.Element domain)
+                    {
+                        return new KeyValuePair<int, string>(domain.Code, domain.Name);
+                    }
+
+                    return new KeyValuePair<int, IReadOnlyDictionary<int, string>>(
+                        kind.Code,
+                        kind.Domain.Select(MakeDomain).ToImmutableSortedDictionary());
+                }
+
+                DomainNames = movingModelCodes.Kinds
+                    .Select(MakeDomain)
+                    .ToImmutableSortedDictionary();
+
+                static KeyValuePair<int, IReadOnlyDictionary<int, IReadOnlyDictionary<int, string>>> MakeCategory(XML.Metadata.MovingModelCodes.Kind.Element kind)
+                {
+                    static KeyValuePair<int, IReadOnlyDictionary<int, string>> MakeCategory(XML.Metadata.MovingModelCodes.Kind.Domain.Element domain)
+                    {
+                        static KeyValuePair<int, string> MakeCategory(XML.Metadata.MovingModelCodes.Kind.Domain.Category.Element category)
+                        {
+                            return new KeyValuePair<int, string>(category.Code, category.Name);
+                        }
+
+                        return new KeyValuePair<int, IReadOnlyDictionary<int, string>>(
+                            domain.Code,
+                            domain.Category.Select(MakeCategory).ToImmutableSortedDictionary());
+                    }
+
+                    return new KeyValuePair<int, IReadOnlyDictionary<int, IReadOnlyDictionary<int, string>>>(
+                        kind.Code,
+                        kind.Domain.Select(MakeCategory).ToImmutableSortedDictionary());
+                }
+
+                CategoryNames = movingModelCodes.Kinds
+                    .Select(MakeCategory)
+                    .ToImmutableSortedDictionary();
+            }
+            else
+            {
+                throw new ApplicationException($"Unable to parse resource {MovingModelCodesResource} in assembly {assembly}");
+            }
+        }
+
+        {
+            const string DISCountryCodesResource = "Metadata/DIS_Country_Codes.xml";
+
+            object? deserialized;
+            using (Stream stream = typeof(Dataset).Assembly.GetManifestResourceStream(DISCountryCodesResource)
+                ?? throw new ApplicationException($"Resource {DISCountryCodesResource} is missing from assembly {assembly}"))
+            {
+                XmlSerializer xmlSerializer = xmlSerializerFactory.CreateSerializer(typeof(XML.Metadata.DISCountryCodes.Element));
+                deserialized = xmlSerializer.Deserialize(stream);
+            }
+
+            if (deserialized is XML.Metadata.DISCountryCodes.Element disCountryCodes)
+            {
+                static KeyValuePair<int, string> MakeCountry(XML.Metadata.DISCountryCodes.Country.Element country)
+                {
+                    return new KeyValuePair<int, string>(country.Code, country.Name);
+                }
+
+                CountryNames = disCountryCodes.Countries
+                    .Select(MakeCountry)
+                    .ToImmutableSortedDictionary();
+            }
+            else
+            {
+                throw new ApplicationException($"Unable to parse resource {DISCountryCodesResource} in assembly {assembly}");
+            }
+        }
+    }
+
     /// <summary>
     /// The Moving Model DIS Code (MMDC) is defined in 5.7.1.3.40.
     /// </summary>
     // TODO: Explain this!
     public string MovingModelDisCode => $"{Kind:D}_{Domain:D}_{Country:D}_{Category:D}_{Subcategory:D}_{Specific:D}_{Extra:D}";
+
+    /// <summary>
+    /// The directory hierarchy that matches this DIS entity.
+    /// This includes five nested directories.
+    /// </summary>
+    public string Directories => Path.Combine(
+                $"{Kind:D}_{KindNames[Kind]}",
+                $"{Domain:D}_{DomainNames[Kind][Domain]}",
+                $"{Country:D}_{CountryNames[Country]}",
+                $"{Category:D}_{CategoryNames[Kind][Domain][Category]}",
+                $"{MovingModelDisCode}");
 
     /// <inheritdoc/>
     public int CompareTo(DISEntity? other)

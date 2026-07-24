@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Globalization;
+using System.IO;
 using System.Text.RegularExpressions;
 
 namespace Silnith.CDB;
@@ -15,7 +16,7 @@ public record Navigation(
     Dataset Dataset,
     [property: Range(0, 999)] int ComponentSelector1,
     [property: Range(0, 999)] int ComponentSelector2,
-    string FileType)
+    string FileType) : ICDBIdentifier
 {
     /// <summary>
     /// The pattern based on 3.7.2. Navigation Data Naming Convention
@@ -50,8 +51,11 @@ public record Navigation(
         return new(dataset, componentSelector1, componentSelector2, fileType);
     }
 
-    /// <summary>
-    /// The navigation file name.
-    /// </summary>
-    public string Filename => $"D{Dataset.Value:D3}_S{ComponentSelector1:D3}_T{ComponentSelector2:D3}.{FileType}";
+    /// <inheritdoc/>
+    public string Filename => $"{Dataset.Code}_S{ComponentSelector1:D3}_T{ComponentSelector2:D3}.{FileType}";
+
+    /// <inheritdoc/>
+    public string RelativePath => Path.Combine(
+        "Navigation",
+        Dataset.Directory);
 }

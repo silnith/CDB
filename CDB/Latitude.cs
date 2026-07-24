@@ -84,7 +84,7 @@ public record Latitude([property: Range(-90, 89)] int Value) : IComparable<Latit
     }
 
     /// <summary>
-    /// The latitude in the <c>S34</c> format, where the first character is the
+    /// The latitude in the <c>N##</c> format, where the first character is the
     /// hemisphere represented by <c>N</c> or <c>S</c>, followed by the two-digit
     /// absolute value of the latitude.
     /// </summary>

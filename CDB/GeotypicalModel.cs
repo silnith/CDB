@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Globalization;
+using System.IO;
 using System.Text.RegularExpressions;
 
 namespace Silnith.CDB;
@@ -21,7 +22,7 @@ public record GeotypicalModel(
     FeatureCode FeatureCode,
     [property: Range(0, 999)] int FeatureSubcode,
     string Name,
-    string FileType)
+    string FileType) : ICDBIdentifier
 {
     /// <summary>
     /// The pattern based on 3.4.1.1. GTModelGeometry Entry File Naming Convention.
@@ -67,8 +68,12 @@ public record GeotypicalModel(
             match.Groups["file_type"].Value);
     }
 
-    /// <summary>
-    /// The geotypical model file name.
-    /// </summary>
-    public string Filename => $"D{Dataset.Value:D3}_S{ComponentSelector1:D3}_T{ComponentSelector2:D3}_{FeatureCode.Code}_{FeatureSubcode:D3}_{Name}.{FileType}";
+    /// <inheritdoc/>
+    public string Filename => $"{Dataset.Code}_S{ComponentSelector1:D3}_T{ComponentSelector2:D3}_{FeatureCode.Code}_{FeatureSubcode:D3}_{Name}.{FileType}";
+
+    /// <inheritdoc/>
+    public string RelativePath => Path.Combine(
+        "GTModel",
+        Dataset.Directory,
+        FeatureCode.RelativePath);
 }

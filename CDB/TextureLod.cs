@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Globalization;
+using System.IO;
 using System.Text.RegularExpressions;
 
 namespace Silnith.CDB;
@@ -19,7 +20,7 @@ public record TextureLod(
         [property: Range(0, 999)] int ComponentSelector2,
         LevelOfDetail LevelOfDetail,
         string Name,
-        string FileType)
+        string FileType) : ICDBIdentifier
 {
     /// <summary>
     /// The pattern based on 3.4.2.1. GTModelTexture Naming Convention
@@ -64,8 +65,14 @@ public record TextureLod(
             match.Groups["file_type"].Value);
     }
 
-    /// <summary>
-    /// The texture file name.
-    /// </summary>
+    /// <inheritdoc/>
     public string Filename => $"D{Dataset.Value:D3}_S{ComponentSelector1:D3}_T{ComponentSelector2:D3}_{LevelOfDetail.Code}_{Name}.{FileType}";
+
+    /// <inheritdoc/>
+    public string RelativePath => Path.Combine(
+        "GTModel",
+        Dataset.Directory,
+        Name.Substring(0, 1).ToUpperInvariant(),
+        Name.Substring(1, 1).ToUpperInvariant(),
+        Name);
 }

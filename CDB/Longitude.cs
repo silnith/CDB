@@ -83,7 +83,7 @@ public record Longitude([property: Range(-180, 179)] int Value) : IComparable<Lo
     }
 
     /// <summary>
-    /// The longitude in the <c>E119</c> format, where the first character is
+    /// The longitude in the <c>E###</c> format, where the first character is
     /// the hemisphere represented as <c>E</c> or <c>W</c>, followed by the
     /// three-digit absolute value of the longitude.
     /// </summary>
