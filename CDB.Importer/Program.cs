@@ -210,18 +210,5 @@ internal class Program
 
         CDBInformation sqlCDBInformation = new();
         sqlCDBInformation.Initialize(sqlCDB);
-
-        foreach ((int code, string name) in sqlCDBInformation.DatasetNames)
-        {
-            Console.WriteLine(string.Format(CultureInfo.InvariantCulture, "{0:D3}_{1}", code, name));
-        }
-        foreach (FeatureCode featureCode in sqlCDBInformation.ValidFeatureSubcodes.Keys)
-        {
-            Console.WriteLine(string.Format(CultureInfo.InvariantCulture, "{0} = {1}, {2}, {3}",
-                featureCode.Code,
-                sqlCDBInformation.FeatureCategoryNames[featureCode.Category],
-                sqlCDBInformation.FeatureSubcategoryNames[featureCode.Category + featureCode.Subcategory],
-                sqlCDBInformation.FeatureTypeNames[featureCode]));
-        }
     }
 }

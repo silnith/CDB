@@ -1,111 +1,82 @@
-﻿using System.Collections.Generic;
-using System.Collections.Immutable;
-using System.Linq;
-using System.Xml.Serialization;
+﻿using System.Xml.Serialization;
 
 namespace Silnith.CDB.XML;
 
 public class CDBInformation
 {
-    public Metadata.Version.Element? Version
-    {
-        get;
-        private set;
-    }
-
-    public Metadata.Datasets.Element? Datasets
-    {
-        get;
-        set;
-    }
-
-    public IReadOnlyDictionary<int, string> DatasetNames
-    {
-        get;
-        private set;
-    } = new SortedDictionary<int, string>().ToImmutableSortedDictionary();
-
-    public Metadata.FeatureDataDictionary.Element? FeatureDataDictionary
-    {
-        get;
-        private set;
-    }
-
-    public IReadOnlyDictionary<string, string> FeatureCategoryNames
-    {
-        get;
-        private set;
-    } = new SortedDictionary<string, string>().ToImmutableDictionary();
-
-    public IReadOnlyDictionary<string, string> FeatureSubcategoryNames
-    {
-        get;
-        private set;
-    } = new SortedDictionary<string, string>().ToImmutableDictionary();
-
-    public IReadOnlyDictionary<FeatureCode, string> FeatureTypeNames
-    {
-        get;
-        private set;
-    } = new SortedDictionary<FeatureCode, string>().ToImmutableDictionary();
-
-    public IReadOnlyDictionary<FeatureCode, IEnumerable<int>> ValidFeatureSubcodes
-    {
-        get;
-        private set;
-    } = new SortedDictionary<FeatureCode, IEnumerable<int>>().ToImmutableDictionary();
-
     public void Initialize(ICDB dataStore)
     {
         XmlSerializerFactory xmlSerializerFactory = new();
-        XmlSerializer versionSerializer = xmlSerializerFactory.CreateSerializer(typeof(Metadata.Version.Element));
-        XmlSerializer datasetsSerializer = xmlSerializerFactory.CreateSerializer(typeof(Metadata.Datasets.Element));
-        XmlSerializer featureDataDictionarySerializer = xmlSerializerFactory.CreateSerializer(typeof(Metadata.FeatureDataDictionary.Element));
 
-        dataStore.TryReadFile("Metadata/Version.xml", stream =>
+        dataStore.TryReadFile("Metadata/CDB_Attributes.xml", stream =>
         {
-            Version = (Metadata.Version.Element?) versionSerializer.Deserialize(stream);
+            XmlSerializer xmlSerializer = xmlSerializerFactory.CreateSerializer(typeof(Metadata.VectorAttributes.Element));
+            _ = xmlSerializer.Deserialize(stream) as Metadata.VectorAttributes.Element;
+        });
+        dataStore.TryReadFile("Metadata/Configuration.xml", stream =>
+        {
+            XmlSerializer xmlSerializer = xmlSerializerFactory.CreateSerializer(typeof(Metadata.Configuration.Element));
+            _ = xmlSerializer.Deserialize(stream) as Metadata.Configuration.Element;
         });
         dataStore.TryReadFile("Metadata/Datasets.xml", stream =>
         {
-            Datasets = (Metadata.Datasets.Element?) datasetsSerializer.Deserialize(stream);
-            DatasetNames = Datasets!.Datasets
-                .Select(d => new KeyValuePair<int, string>(d.Code, d.Name))
-                .ToImmutableSortedDictionary();
+            XmlSerializer xmlSerializer = xmlSerializerFactory.CreateSerializer(typeof(Metadata.Datasets.Element));
+            _ = xmlSerializer.Deserialize(stream) as Metadata.Datasets.Element;
+        });
+        dataStore.TryReadFile("Metadata/Defaults.xml", stream =>
+        {
+            XmlSerializer xmlSerializer = xmlSerializerFactory.CreateSerializer(typeof(Metadata.Defaults.Element));
+            _ = xmlSerializer.Deserialize(stream) as Metadata.Defaults.Element;
+        });
+        dataStore.TryReadFile("Metadata/DIS_Country_Codes.xml", stream =>
+        {
+            XmlSerializer xmlSerializer = xmlSerializerFactory.CreateSerializer(typeof(Metadata.DISCountryCodes.Element));
+            _ = xmlSerializer.Deserialize(stream) as Metadata.DISCountryCodes.Element;
         });
         dataStore.TryReadFile("Metadata/Feature_Data_Dictionary.xml", stream =>
         {
-            FeatureDataDictionary = (Metadata.FeatureDataDictionary.Element?) featureDataDictionarySerializer.Deserialize(stream);
-            SortedDictionary<string, string> categoryNames = new();
-            SortedDictionary<string, string> subcategoryNames = new();
-            SortedDictionary<FeatureCode, string> featureTypeNames = new();
-            SortedDictionary<FeatureCode, IEnumerable<int>> validSubcodes = new();
-            foreach (var categoryElement in FeatureDataDictionary!.Categories)
-            {
-                var category = categoryElement.Code;
-                categoryNames.Add(category, categoryElement.Label);
-                foreach (var subcategoryElement in categoryElement.Subcategories)
-                {
-                    var subcategory = subcategoryElement.Code;
-                    subcategoryNames.Add(category + subcategory, subcategoryElement.Label);
-                    foreach (var featureTypeElement in subcategoryElement.FeatureTypes)
-                    {
-                        var type = featureTypeElement.Code;
-                        FeatureCode featureCode = new(category, subcategory, type);
-                        featureTypeNames.Add(featureCode, featureTypeElement.Label);
-                        foreach (var subcodeElement in featureTypeElement.Subcodes)
-                        {
-                            var subcode = subcodeElement.Code;
-                            var label4 = subcodeElement.Label;
-                        }
-                        validSubcodes.Add(featureCode, featureTypeElement.Subcodes.Select(a => a.Code).ToImmutableList());
-                    }
-                }
-            }
-            FeatureCategoryNames = categoryNames.ToImmutableSortedDictionary();
-            FeatureSubcategoryNames = subcategoryNames.ToImmutableSortedDictionary();
-            FeatureTypeNames = featureTypeNames.ToImmutableSortedDictionary();
-            ValidFeatureSubcodes = validSubcodes.ToImmutableSortedDictionary();
+            XmlSerializer xmlSerializer = xmlSerializerFactory.CreateSerializer(typeof(Metadata.FeatureDataDictionary.Element));
+            _ = xmlSerializer.Deserialize(stream) as Metadata.FeatureDataDictionary.Element;
+        });
+        dataStore.TryReadFile("Metadata/Geomatics_Attributes.xml", stream =>
+        {
+            XmlSerializer xmlSerializer = xmlSerializerFactory.CreateSerializer(typeof(Metadata.VectorAttributes.Element));
+            _ = xmlSerializer.Deserialize(stream) as Metadata.VectorAttributes.Element;
+        });
+        dataStore.TryReadFile("Metadata/Lights.xml", stream =>
+        {
+            XmlSerializer xmlSerializer = xmlSerializerFactory.CreateSerializer(typeof(Metadata.Lights.Element));
+            _ = xmlSerializer.Deserialize(stream) as Metadata.Lights.Element;
+        });
+        //dataStore.TryReadFile("Metadata/Lights_xxx.xml", stream =>
+        //{
+        //    XmlSerializer xmlSerializer = xmlSerializerFactory.CreateSerializer(typeof(Metadata.LightsTuning.Element));
+        //    _ = xmlSerializer.Deserialize(stream) as Metadata.LightsTuning.Element;
+        //});
+        dataStore.TryReadFile("Metadata/Materials.xml", stream =>
+        {
+            XmlSerializer xmlSerializer = xmlSerializerFactory.CreateSerializer(typeof(Metadata.BaseMaterialTable.Element));
+            _ = xmlSerializer.Deserialize(stream) as Metadata.BaseMaterialTable.Element;
+        });
+        dataStore.TryReadFile("Metadata/Model_Components.xml", stream =>
+        {
+            XmlSerializer xmlSerializer = xmlSerializerFactory.CreateSerializer(typeof(Metadata.ModelComponents.Element));
+            _ = xmlSerializer.Deserialize(stream) as Metadata.ModelComponents.Element;
+        });
+        dataStore.TryReadFile("Metadata/Moving_Model_Codes.xml", stream =>
+        {
+            XmlSerializer xmlSerializer = xmlSerializerFactory.CreateSerializer(typeof(Metadata.MovingModelCodes.Element));
+            _ = xmlSerializer.Deserialize(stream) as Metadata.MovingModelCodes.Element;
+        });
+        dataStore.TryReadFile("Metadata/Vendor_Attributes.xml", stream =>
+        {
+            XmlSerializer xmlSerializer = xmlSerializerFactory.CreateSerializer(typeof(Metadata.VectorAttributes.Element));
+            _ = xmlSerializer.Deserialize(stream) as Metadata.VectorAttributes.Element;
+        });
+        dataStore.TryReadFile("Metadata/Version.xml", stream =>
+        {
+            XmlSerializer xmlSerializer = xmlSerializerFactory.CreateSerializer(typeof(Metadata.Version.Element));
+            _ = xmlSerializer.Deserialize(stream) as Metadata.Version.Element;
         });
 
     }

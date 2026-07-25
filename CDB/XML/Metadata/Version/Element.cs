@@ -5,6 +5,7 @@ namespace Silnith.CDB.XML.Metadata.Version;
 /// <summary>
 /// The Version Metadata document as described in 5.1.7. Version Metadata.
 /// </summary>
+/// <seealso href="https://docs.ogc.org/is/15-113r7/15-113r7.html#VersionMetadata"/>
 [XmlRoot("Version", Namespace = "http://www.opengis.net/cdb/1.2/Version")]
 public class Element
 {
