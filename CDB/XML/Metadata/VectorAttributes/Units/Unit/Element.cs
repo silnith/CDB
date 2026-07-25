@@ -30,6 +30,6 @@ public class Element
     public string Symbol
     {
         get;
-        set
+        set;
     }
 }
