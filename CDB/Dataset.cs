@@ -95,11 +95,21 @@ public record Dataset([property: Range(0, 999)] int Value) : IComparable<Dataset
     /// <summary>
     /// The dataset code when used in a filename.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This will be of the form <c>D000</c>.
+    /// </para>
+    /// </remarks>
     public string Code => $"D{Value:D3}";
 
     /// <summary>
     /// The dataset code when used as a directory name.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This will be of the form <c>000_Name</c>.
+    /// </para>
+    /// </remarks>
     public string Directory
     {
         get
@@ -120,6 +130,41 @@ public record Dataset([property: Range(0, 999)] int Value) : IComparable<Dataset
                 601 or 604 or 605 => DirectoryName(601),
                 606 => DirectoryName(606),
                 _ => DirectoryName(Value),
+            };
+        }
+    }
+
+    /// <summary>
+    /// The first directory inside of the CDB that contains files with this dataset.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This will always be one of:
+    /// </para>
+    /// <list type="bullet">
+    /// <item><term>Metadata</term><description>Global metadata</description></item>
+    /// <item><term>GTModel</term><description>Geotypical models</description></item>
+    /// <item><term>MModel</term><description>Moving models</description></item>
+    /// <item><term>Tiles</term><description>Tiled datasets</description></item>
+    /// <item><term>Navigation</term><description>Navigation data</description></item>
+    /// </list>
+    /// </remarks>
+    public string RootDirectory
+    {
+        get
+        {
+            if (Value == 400)
+            {
+                return "Navigation";
+            }
+
+            return (Value / 100) switch
+            {
+                0 or 1 or 2 or 3 or 4 => "Tiles",
+                5 => "GTModel",
+                6 => "MModel",
+                7 => "Metadata",
+                _ => "Unknown",
             };
         }
     }

@@ -21,6 +21,7 @@ namespace Silnith.CDB;
 /// this interface.
 /// </para>
 /// </remarks>
+/// <seealso href="https://docs.ogc.org/is/15-113r7/15-113r7.html"/>
 public interface ICDB : IDisposable
 {
 

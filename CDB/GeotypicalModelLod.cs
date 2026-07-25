@@ -78,9 +78,19 @@ public record GeotypicalModelLod(
     }
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// <para>
+    /// This will be of the form <c>D000_S000_T000_L00_AB999_000_name.ext</c>.
+    /// </para>
+    /// </remarks>
     public string Filename => $"{Dataset.Code}_S{ComponentSelector1:D3}_T{ComponentSelector2:D3}_{LevelOfDetail.Code}_{FeatureCode.Code}_{FeatureSubcode:D3}_{Name}.{FileType}";
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// <para>
+    /// This will be of the form <c>GTModel/000_Dataset/A_Category/B_Subcategory/999_Type/L00</c>.
+    /// </para>
+    /// </remarks>
     public string RelativePath => Path.Combine(
         "GTModel",
         Dataset.Directory,

@@ -117,46 +117,11 @@ public record TileArchivedFeature(Latitude LatitudeValue,
     public bool Zipped => true;
 
     /// <inheritdoc/>
-    public string RelativePath
-    {
-        get
-        {
-            string up;
-            if (Level.Value <= 3)
-            {
-                up = $"U{Up:D1}";
-            }
-            else if (Level.Value <= 6)
-            {
-                up = $"U{Up:D2}";
-            }
-            else if (Level.Value <= 9)
-            {
-                up = $"U{Up:D3}";
-            }
-            else if (Level.Value <= 13)
-            {
-                up = $"U{Up:D4}";
-            }
-            else if (Level.Value <= 16)
-            {
-                up = $"U{Up:D5}";
-            }
-            else if (Level.Value <= 19)
-            {
-                up = $"U{Up:D6}";
-            }
-            else
-            {
-                up = $"U{Up:D7}";
-            }
-            return Path.Combine(
-                "Tile",
-                LatitudeValue.Code,
-                LongitudeValue.Code,
-                DatasetValue.Directory,
-                Level.TiledCode,
-                up);
-        }
-    }
+    public string RelativePath => Path.Combine(
+        DatasetValue.RootDirectory,
+        LatitudeValue.Code,
+        LongitudeValue.Code,
+        DatasetValue.Directory,
+        Level.TiledCode,
+        $"U{Up:D}");
 }

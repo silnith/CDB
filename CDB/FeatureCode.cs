@@ -197,8 +197,21 @@ public record FeatureCode(
     /// <summary>
     /// The five-character code.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This will be of the form <c>AB999</c>.
+    /// </para>
+    /// </remarks>
     public string Code => $"{Category.ToUpperInvariant()}{Subcategory.ToUpperInvariant()}{Type:D3}";
 
+    /// <summary>
+    /// The directory hierarchy that matches this feature code.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This will be of the form <c>A_Category/B_Subcategory/999_Type</c>.
+    /// </para>
+    /// </remarks>
     public string RelativePath => Path.Combine(
         $"{Category.ToUpperInvariant()}_{FeatureCategoryNames[Category.ToUpperInvariant()]}",
         $"{Subcategory.ToUpperInvariant()}_{FeatureSubcategoryNames[Category.ToUpperInvariant()][Subcategory.ToUpperInvariant()]}",

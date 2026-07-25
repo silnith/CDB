@@ -74,10 +74,21 @@ public record Texture(
     public string Filename => $"D{Dataset.Value:D3}_S{ComponentSelector1:D3}_T{ComponentSelector2:D3}_{Name}.{FileType}";
 
     /// <inheritdoc/>
-    public string RelativePath => Path.Combine(
-        "GTModel",
-        Dataset.Directory,
-        Name.Substring(0, 1).ToUpperInvariant(),
-        Name.Substring(1, 1).ToUpperInvariant(),
-        Name);
+    /// <remarks>
+    /// <para>
+    /// This will be of the form <c>GTModel/000_Dataset/A/B/Abacus</c>.
+    /// </para>
+    /// </remarks>
+    public string RelativePath
+    {
+        get
+        {
+            return Path.Combine(
+                Dataset.RootDirectory,
+                Dataset.Directory,
+                Name.Substring(0, 1).ToUpperInvariant(),
+                Name.Substring(1, 1).ToUpperInvariant(),
+                Name);
+        }
+    }
 }

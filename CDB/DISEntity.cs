@@ -222,6 +222,11 @@ public record DISEntity(
     /// <summary>
     /// The Moving Model DIS Code (MMDC) is defined in 5.7.1.3.40.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This will be of the form <c>1_2_3_4_5_6_7</c>.
+    /// </para>
+    /// </remarks>
     // TODO: Explain this!
     public string MovingModelDisCode => $"{Kind:D}_{Domain:D}_{Country:D}_{Category:D}_{Subcategory:D}_{Specific:D}_{Extra:D}";
 
@@ -229,6 +234,11 @@ public record DISEntity(
     /// The directory hierarchy that matches this DIS entity.
     /// This includes five nested directories.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This will be of the form <c>1_Kind/2_Domain/3_Country/4_Category/1_2_3_4_5_6_7</c>.
+    /// </para>
+    /// </remarks>
     public string Directories => Path.Combine(
                 $"{Kind:D}_{KindNames[Kind]}",
                 $"{Domain:D}_{DomainNames[Kind][Domain]}",
