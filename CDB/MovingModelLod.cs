@@ -2,6 +2,8 @@
 using System.Globalization;
 using System.IO;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
+using System.Threading;
 
 namespace Silnith.CDB;
 
@@ -86,4 +88,17 @@ public record MovingModelLod(
         Dataset.Directory,
         MMDC.Directories,
         LevelOfDetail.Code);
+
+    /// <inheritdoc/>
+    public Stream? ReadFromCDB(ICDB cdb)
+    {
+        return cdb.ReadMovingModelLevelOfDetail(this);
+    }
+
+    /// <inheritdoc/>
+    public Task<Stream?> ReadFromCDBAsync(ICDB cdb, CancellationToken cancellationToken)
+    {
+        return cdb.ReadMovingModelLevelOfDetailAsync(this, cancellationToken);
+    }
+
 }

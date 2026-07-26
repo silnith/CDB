@@ -90,6 +90,138 @@ public class SQLCDB : ICDB
         }
     }
 
+    /// <inheritdoc/>
+    public Stream? ReadMetadata(Metadata metadata)
+    {
+        return sqlDataStore.SelectFromMetadata(Name, metadata);
+    }
+
+    /// <inheritdoc/>
+    public Task<Stream?> ReadMetadataAsync(Metadata metadata, CancellationToken cancellationToken)
+    {
+        return sqlDataStore.SelectFromMetadataAsync(Name, metadata, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public Stream? ReadTexture(Texture texture)
+    {
+        return sqlDataStore.SelectFromTexture(Name, texture);
+    }
+
+    /// <inheritdoc/>
+    public Task<Stream?> ReadTextureAsync(Texture texture, CancellationToken cancellationToken)
+    {
+        return sqlDataStore.SelectFromTextureAsync(Name, texture, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public Stream? ReadTextureLevelOfDetail(TextureLod textureLod)
+    {
+        return sqlDataStore.SelectFromTextureLod(Name, textureLod);
+    }
+
+    /// <inheritdoc/>
+    public Task<Stream?> ReadTextureLevelOfDetailAsync(TextureLod textureLod, CancellationToken cancellationToken)
+    {
+        return sqlDataStore.SelectFromTextureLodAsync(Name, textureLod, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public Stream? ReadGeotypicalModel(GeotypicalModel geotypicalModel)
+    {
+        return sqlDataStore.SelectFromGeotypicalModel(Name, geotypicalModel);
+    }
+
+    /// <inheritdoc/>
+    public Task<Stream?> ReadGeotypicalModelAsync(GeotypicalModel geotypicalModel, CancellationToken cancellationToken)
+    {
+        return sqlDataStore.SelectFromGeotypicalModelAsync(Name, geotypicalModel, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public Stream? ReadGeotypicalModelLevelOfDetail(GeotypicalModelLod geotypicalModelLod)
+    {
+        return sqlDataStore.SelectFromGeotypicalModelLod(Name, geotypicalModelLod);
+    }
+
+    /// <inheritdoc/>
+    public Task<Stream?> ReadGeotypicalModelLevelOfDetailAsync(GeotypicalModelLod geotypicalModelLod, CancellationToken cancellationToken)
+    {
+        return sqlDataStore.SelectFromGeotypicalModelLodAsync(Name, geotypicalModelLod, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public Stream? ReadMovingModel(MovingModel movingModel)
+    {
+        return sqlDataStore.SelectFromMovingModel(Name, movingModel);
+    }
+
+    /// <inheritdoc/>
+    public Task<Stream?> ReadMovingModelAsync(MovingModel movingModel, CancellationToken cancellationToken)
+    {
+        return sqlDataStore.SelectFromMovingModelAsync(Name, movingModel, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public Stream? ReadMovingModelLevelOfDetail(MovingModelLod movingModelLod)
+    {
+        return sqlDataStore.SelectFromMovingModelLod(Name, movingModelLod);
+    }
+
+    /// <inheritdoc/>
+    public Task<Stream?> ReadMovingModelLevelOfDetailAsync(MovingModelLod movingModelLod, CancellationToken cancellationToken)
+    {
+        return sqlDataStore.SelectFromMovingModelLodAsync(Name, movingModelLod, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public Stream? ReadTile(Tile tile)
+    {
+        return sqlDataStore.SelectFromTile(Name, tile);
+    }
+
+    /// <inheritdoc/>
+    public Task<Stream?> ReadTileAsync(Tile tile, CancellationToken cancellationToken)
+    {
+        return sqlDataStore.SelectFromTileAsync(Name, tile, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public Stream? ReadTileFeature(TileArchivedFeature tileFeature)
+    {
+        return sqlDataStore.SelectFromTileArchivedFeature(Name, tileFeature);
+    }
+
+    /// <inheritdoc/>
+    public Task<Stream?> ReadTileFeatureAsync(TileArchivedFeature tileFeature, CancellationToken cancellationToken)
+    {
+        return sqlDataStore.SelectFromTileArchivedFeatureAsync(Name, tileFeature, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public Stream? ReadTileTexture(TileArchivedTexture tileTexture)
+    {
+        return sqlDataStore.SelectFromTileArchivedTexture(Name, tileTexture);
+    }
+
+    /// <inheritdoc/>
+    public Task<Stream?> ReadTileTextureAsync(TileArchivedTexture tileTexture, CancellationToken cancellationToken)
+    {
+        return sqlDataStore.SelectFromTileArchivedTextureAsync(Name, tileTexture, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public Stream? ReadNavigation(Navigation navigation)
+    {
+        return sqlDataStore.SelectFromNavigation(Name, navigation);
+    }
+
+    /// <inheritdoc/>
+    public Task<Stream?> ReadNavigationAsync(Navigation navigation, CancellationToken cancellationToken)
+    {
+        return sqlDataStore.SelectFromNavigationAsync(Name, navigation, cancellationToken);
+    }
+
     private bool TryReadMetadata(string filePathAndName, Action<Stream> fileFoundAction)
     {
         Metadata metadata = new(
@@ -338,6 +470,33 @@ public class SQLCDB : ICDB
     {
         // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
         Dispose(disposing: true);
+        GC.SuppressFinalize(this);
+    }
+
+    #endregion
+
+    #region Async Dispose Pattern
+
+    /// <summary>
+    /// Performs application-defined tasks associated with freeing, releasing, or resetting
+    /// unmanaged resources.
+    /// </summary>
+    /// <seealso href="https://learn.microsoft.com/en-us/dotnet/standard/garbage-collection/implementing-disposeasync"/>
+    protected virtual async ValueTask DisposeAsyncCore()
+    {
+        await sqlDataStore.DisposeAsync();
+    }
+
+    /// <inheritdoc/>
+    public async ValueTask DisposeAsync()
+    {
+        // Perform async cleanup.
+        await DisposeAsyncCore();
+
+        // Dispose of unmanaged resources.
+        Dispose(false);
+
+        // Suppress finalization.
         GC.SuppressFinalize(this);
     }
 

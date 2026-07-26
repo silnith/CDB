@@ -1,26 +1,29 @@
-﻿using System.Data.Common;
+﻿using System;
 using System.IO;
 
-namespace Silnith.CDB.SQL;
+namespace Silnith.CDB;
 
 /// <summary>
-/// A trivial wrapper for a stream returned by a database query.
-/// When this stream is disposed, it will also dispose the database objects
+/// A trivial wrapper for a stream returned by a disposable object.
+/// When this stream is disposed, it will also dispose the disposable objects
 /// that produced it.
 /// </summary>
 public class WrappedStream : Stream
 {
-    private readonly DbConnection dbConnection;
-    private readonly DbCommand dbCommand;
-    private readonly DbDataReader dbDataReader;
     private readonly Stream stream;
+    private readonly IDisposable[] disposables;
 
-    public WrappedStream(DbConnection dbConnection, DbCommand dbCommand, DbDataReader dbDataReader, Stream stream)
+    /// <summary>
+    /// Creates a wrapper for a stream that will dispose of the associated
+    /// objects when the stream is disposed.
+    /// </summary>
+    /// <param name="stream">The stream to wrap.</param>
+    /// <param name="disposables">Any additional objects that should be disposed
+    /// when the stream is disposed.</param>
+    public WrappedStream(Stream stream, params IDisposable[] disposables)
     {
-        this.dbConnection = dbConnection;
-        this.dbCommand = dbCommand;
-        this.dbDataReader = dbDataReader;
         this.stream = stream;
+        this.disposables = disposables;
     }
 
     /// <inheritdoc/>
@@ -84,9 +87,10 @@ public class WrappedStream : Stream
         if (disposing)
         {
             stream.Dispose();
-            dbDataReader.Dispose();
-            dbCommand.Dispose();
-            dbConnection.Dispose();
+            foreach (IDisposable disposable in disposables)
+            {
+                disposable.Dispose();
+            }
         }
 
         base.Dispose(disposing);

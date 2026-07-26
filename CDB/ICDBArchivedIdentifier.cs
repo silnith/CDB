@@ -5,22 +5,23 @@ using System.Threading.Tasks;
 namespace Silnith.CDB;
 
 /// <summary>
-/// A unique identifier for a file in a CDB data store.
+/// A unique identifier for an archived file in a CDB data store.
+/// This is a file that exists inside of an archive, so cannot be read directly.
 /// </summary>
-public interface ICDBIdentifier
+public interface ICDBArchivedIdentifier
 {
     /// <summary>
-    /// The name of the file.
+    /// The name of the entry in the archive that contains this file.
     /// </summary>
-    public string Filename
+    public string EntryName
     {
         get;
     }
 
     /// <summary>
-    /// The relative path from the CDB root directory to the file.
+    /// The identifier for the archive that contains this file.
     /// </summary>
-    public string RelativePath
+    public ICDBIdentifier ArchiveIdentifier
     {
         get;
     }

@@ -624,6 +624,62 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store.</param>
     /// <param name="metadata">The metadata identifier.</param>
+    /// <returns>A stream containing the file contents, or <see langword="null"/> if the file was not found.</returns>
+    public virtual Stream? SelectFromMetadata(string cdbName, Metadata metadata)
+    {
+        DbConnection dbConnection = dbDataSource.OpenConnection();
+        try
+        {
+            DbCommand dbCommand = dbConnection.CreateCommand();
+            try
+            {
+                InitializeSelectFromMetadataCommand(dbCommand);
+                dbCommand.Prepare();
+
+                dbCommand.Parameters[CdbParamName].Value = cdbName;
+                SetMetadataParameters(dbCommand, metadata);
+
+                DbDataReader dbDataReader = dbCommand.ExecuteReader(
+                    CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow);
+                try
+                {
+                    do
+                    {
+                        while (dbDataReader.Read())
+                        {
+                            Stream stream = dbDataReader.GetStream(ContentColumnName);
+                            return new WrappedStream(stream, dbDataReader, dbCommand, dbConnection);
+                        }
+                    } while (dbDataReader.NextResult());
+                    dbDataReader.Dispose();
+                    dbCommand.Dispose();
+                    dbConnection.Dispose();
+                    return null;
+                }
+                catch (Exception)
+                {
+                    dbDataReader.Dispose();
+                    throw;
+                }
+            }
+            catch (Exception)
+            {
+                dbCommand.Dispose();
+                throw;
+            }
+        }
+        catch (Exception)
+        {
+            dbConnection.Dispose();
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Returns a metadata file from the database.
+    /// </summary>
+    /// <param name="cdbName">The name of the CDB data store.</param>
+    /// <param name="metadata">The metadata identifier.</param>
     /// <param name="cancellationToken">A cancellation token.</param>
     /// <returns>A stream containing the file contents, or <see langword="null"/> if the file was not found.</returns>
     public virtual async Task<Stream?> SelectFromMetadataAsync(string cdbName, Metadata metadata,
@@ -650,7 +706,7 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
                         while (await dbDataReader.ReadAsync(cancellationToken))
                         {
                             Stream stream = dbDataReader.GetStream(ContentColumnName);
-                            return new WrappedStream(dbConnection, dbCommand, dbDataReader, stream);
+                            return new WrappedStream(stream, dbDataReader, dbCommand, dbConnection);
                         }
                     } while (await dbDataReader.NextResultAsync(cancellationToken));
                     await dbDataReader.DisposeAsync();
@@ -940,6 +996,120 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         return false;
     }
 
+    /// <summary>
+    /// Returns a texture file from the database.
+    /// </summary>
+    /// <param name="cdbName">The name of the CDB data store.</param>
+    /// <param name="texture">The texture identifier.</param>
+    /// <returns>A stream containing the file contents, or <see langword="null"/> if the file was not found.</returns>
+    public virtual Stream? SelectFromTexture(string cdbName, Texture texture)
+    {
+        DbConnection dbConnection = dbDataSource.OpenConnection();
+        try
+        {
+            DbCommand dbCommand = dbConnection.CreateCommand();
+            try
+            {
+                InitializeSelectFromTextureCommand(dbCommand);
+                dbCommand.Prepare();
+
+                dbCommand.Parameters[CdbParamName].Value = cdbName;
+                SetTextureParameters(dbCommand, texture);
+
+                DbDataReader dbDataReader = dbCommand.ExecuteReader(
+                    CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow);
+                try
+                {
+                    do
+                    {
+                        while (dbDataReader.Read())
+                        {
+                            Stream stream = dbDataReader.GetStream(ContentColumnName);
+                            return new WrappedStream(stream, dbDataReader, dbCommand, dbConnection);
+                        }
+                    } while (dbDataReader.NextResult());
+                    dbDataReader.Dispose();
+                    dbCommand.Dispose();
+                    dbConnection.Dispose();
+                    return null;
+                }
+                catch (Exception)
+                {
+                    dbDataReader.Dispose();
+                    throw;
+                }
+            }
+            catch (Exception)
+            {
+                dbCommand.Dispose();
+                throw;
+            }
+        }
+        catch (Exception)
+        {
+            dbConnection.Dispose();
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Returns a texture file from the database.
+    /// </summary>
+    /// <param name="cdbName">The name of the CDB data store.</param>
+    /// <param name="texture">The texture identifier.</param>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    /// <returns>A stream containing the file contents, or <see langword="null"/> if the file was not found.</returns>
+    public virtual async Task<Stream?> SelectFromTextureAsync(string cdbName, Texture texture,
+        CancellationToken cancellationToken)
+    {
+        DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
+        try
+        {
+            DbCommand dbCommand = dbConnection.CreateCommand();
+            try
+            {
+                InitializeSelectFromTextureCommand(dbCommand);
+                await dbCommand.PrepareAsync(cancellationToken);
+
+                dbCommand.Parameters[CdbParamName].Value = cdbName;
+                SetTextureParameters(dbCommand, texture);
+
+                DbDataReader dbDataReader = await dbCommand.ExecuteReaderAsync(
+                    CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow, cancellationToken);
+                try
+                {
+                    do
+                    {
+                        while (await dbDataReader.ReadAsync(cancellationToken))
+                        {
+                            Stream stream = dbDataReader.GetStream(ContentColumnName);
+                            return new WrappedStream(stream, dbDataReader, dbCommand, dbConnection);
+                        }
+                    } while (await dbDataReader.NextResultAsync(cancellationToken));
+                    await dbDataReader.DisposeAsync();
+                    await dbCommand.DisposeAsync();
+                    await dbConnection.DisposeAsync();
+                    return null;
+                }
+                catch (Exception)
+                {
+                    await dbDataReader.DisposeAsync();
+                    throw;
+                }
+            }
+            catch (Exception)
+            {
+                await dbCommand.DisposeAsync();
+                throw;
+            }
+        }
+        catch (Exception)
+        {
+            await dbConnection.DisposeAsync();
+            throw;
+        }
+    }
+
     #endregion
 
     #endregion
@@ -1196,6 +1366,120 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
             }
         } while (await dbDataReader.NextResultAsync(cancellationToken));
         return false;
+    }
+
+    /// <summary>
+    /// Returns a texture level of detail file from the database.
+    /// </summary>
+    /// <param name="cdbName">The name of the CDB data store.</param>
+    /// <param name="textureLod">The texture level of detail identifier.</param>
+    /// <returns>A stream containing the file contents, or <see langword="null"/> if the file was not found.</returns>
+    public virtual Stream? SelectFromTextureLod(string cdbName, TextureLod textureLod)
+    {
+        DbConnection dbConnection = dbDataSource.OpenConnection();
+        try
+        {
+            DbCommand dbCommand = dbConnection.CreateCommand();
+            try
+            {
+                InitializeSelectFromTextureLodCommand(dbCommand);
+                dbCommand.Prepare();
+
+                dbCommand.Parameters[CdbParamName].Value = cdbName;
+                SetTextureLodParameters(dbCommand, textureLod);
+
+                DbDataReader dbDataReader = dbCommand.ExecuteReader(
+                    CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow);
+                try
+                {
+                    do
+                    {
+                        while (dbDataReader.Read())
+                        {
+                            Stream stream = dbDataReader.GetStream(ContentColumnName);
+                            return new WrappedStream(stream, dbDataReader, dbCommand, dbConnection);
+                        }
+                    } while (dbDataReader.NextResult());
+                    dbDataReader.Dispose();
+                    dbCommand.Dispose();
+                    dbConnection.Dispose();
+                    return null;
+                }
+                catch (Exception)
+                {
+                    dbDataReader.Dispose();
+                    throw;
+                }
+            }
+            catch (Exception)
+            {
+                dbCommand.Dispose();
+                throw;
+            }
+        }
+        catch (Exception)
+        {
+            dbConnection.Dispose();
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Returns a texture level of detail file from the database.
+    /// </summary>
+    /// <param name="cdbName">The name of the CDB data store.</param>
+    /// <param name="textureLod">The texture level of detail identifier.</param>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    /// <returns>A stream containing the file contents, or <see langword="null"/> if the file was not found.</returns>
+    public virtual async Task<Stream?> SelectFromTextureLodAsync(string cdbName, TextureLod textureLod,
+        CancellationToken cancellationToken)
+    {
+        DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
+        try
+        {
+            DbCommand dbCommand = dbConnection.CreateCommand();
+            try
+            {
+                InitializeSelectFromTextureLodCommand(dbCommand);
+                await dbCommand.PrepareAsync(cancellationToken);
+
+                dbCommand.Parameters[CdbParamName].Value = cdbName;
+                SetTextureLodParameters(dbCommand, textureLod);
+
+                DbDataReader dbDataReader = await dbCommand.ExecuteReaderAsync(
+                    CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow, cancellationToken);
+                try
+                {
+                    do
+                    {
+                        while (await dbDataReader.ReadAsync(cancellationToken))
+                        {
+                            Stream stream = dbDataReader.GetStream(ContentColumnName);
+                            return new WrappedStream(stream, dbDataReader, dbCommand, dbConnection);
+                        }
+                    } while (await dbDataReader.NextResultAsync(cancellationToken));
+                    await dbDataReader.DisposeAsync();
+                    await dbCommand.DisposeAsync();
+                    await dbConnection.DisposeAsync();
+                    return null;
+                }
+                catch (Exception)
+                {
+                    await dbDataReader.DisposeAsync();
+                    throw;
+                }
+            }
+            catch (Exception)
+            {
+                await dbCommand.DisposeAsync();
+                throw;
+            }
+        }
+        catch (Exception)
+        {
+            await dbConnection.DisposeAsync();
+            throw;
+        }
     }
 
     #endregion
@@ -1517,6 +1801,120 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         return false;
     }
 
+    /// <summary>
+    /// Returns a geotypical model file from the database.
+    /// </summary>
+    /// <param name="cdbName">The name of the CDB data store.</param>
+    /// <param name="geotypicalModel">The geotypical model identifier.</param>
+    /// <returns>A stream containing the file contents, or <see langword="null"/> if the file was not found.</returns>
+    public virtual Stream? SelectFromGeotypicalModel(string cdbName, GeotypicalModel geotypicalModel)
+    {
+        DbConnection dbConnection = dbDataSource.OpenConnection();
+        try
+        {
+            DbCommand dbCommand = dbConnection.CreateCommand();
+            try
+            {
+                InitializeSelectFromGeotypicalModelCommand(dbCommand);
+                dbCommand.Prepare();
+
+                dbCommand.Parameters[CdbParamName].Value = cdbName;
+                SetGeotypicalModelParameters(dbCommand, geotypicalModel);
+
+                DbDataReader dbDataReader = dbCommand.ExecuteReader(
+                    CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow);
+                try
+                {
+                    do
+                    {
+                        while (dbDataReader.Read())
+                        {
+                            Stream stream = dbDataReader.GetStream(ContentColumnName);
+                            return new WrappedStream(stream, dbDataReader, dbCommand, dbConnection);
+                        }
+                    } while (dbDataReader.NextResult());
+                    dbDataReader.Dispose();
+                    dbCommand.Dispose();
+                    dbConnection.Dispose();
+                    return null;
+                }
+                catch (Exception)
+                {
+                    dbDataReader.Dispose();
+                    throw;
+                }
+            }
+            catch (Exception)
+            {
+                dbCommand.Dispose();
+                throw;
+            }
+        }
+        catch (Exception)
+        {
+            dbConnection.Dispose();
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Returns a geotypical model file from the database.
+    /// </summary>
+    /// <param name="cdbName">The name of the CDB data store.</param>
+    /// <param name="geotypicalModel">The geotypical model identifier.</param>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    /// <returns>A stream containing the file contents, or <see langword="null"/> if the file was not found.</returns>
+    public virtual async Task<Stream?> SelectFromGeotypicalModelAsync(string cdbName, GeotypicalModel geotypicalModel,
+        CancellationToken cancellationToken)
+    {
+        DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
+        try
+        {
+            DbCommand dbCommand = dbConnection.CreateCommand();
+            try
+            {
+                InitializeSelectFromGeotypicalModelCommand(dbCommand);
+                await dbCommand.PrepareAsync(cancellationToken);
+
+                dbCommand.Parameters[CdbParamName].Value = cdbName;
+                SetGeotypicalModelParameters(dbCommand, geotypicalModel);
+
+                DbDataReader dbDataReader = await dbCommand.ExecuteReaderAsync(
+                    CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow, cancellationToken);
+                try
+                {
+                    do
+                    {
+                        while (await dbDataReader.ReadAsync(cancellationToken))
+                        {
+                            Stream stream = dbDataReader.GetStream(ContentColumnName);
+                            return new WrappedStream(stream, dbDataReader, dbCommand, dbConnection);
+                        }
+                    } while (await dbDataReader.NextResultAsync(cancellationToken));
+                    await dbDataReader.DisposeAsync();
+                    await dbCommand.DisposeAsync();
+                    await dbConnection.DisposeAsync();
+                    return null;
+                }
+                catch (Exception)
+                {
+                    await dbDataReader.DisposeAsync();
+                    throw;
+                }
+            }
+            catch (Exception)
+            {
+                await dbCommand.DisposeAsync();
+                throw;
+            }
+        }
+        catch (Exception)
+        {
+            await dbConnection.DisposeAsync();
+            throw;
+        }
+    }
+
     #endregion
 
     #endregion
@@ -1789,6 +2187,120 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
             }
         } while (await dbDataReader.NextResultAsync(cancellationToken));
         return false;
+    }
+
+    /// <summary>
+    /// Returns a geotypical model level of detail file from the database.
+    /// </summary>
+    /// <param name="cdbName">The name of the CDB data store.</param>
+    /// <param name="geotypicalModelLod">The geotypical model level of detail identifier.</param>
+    /// <returns>A stream containing the file contents, or <see langword="null"/> if the file was not found.</returns>
+    public virtual Stream? SelectFromGeotypicalModelLod(string cdbName, GeotypicalModelLod geotypicalModelLod)
+    {
+        DbConnection dbConnection = dbDataSource.OpenConnection();
+        try
+        {
+            DbCommand dbCommand = dbConnection.CreateCommand();
+            try
+            {
+                InitializeSelectFromGeotypicalModelLodCommand(dbCommand);
+                dbCommand.Prepare();
+
+                dbCommand.Parameters[CdbParamName].Value = cdbName;
+                SetGeotypicalModelLodParameters(dbCommand, geotypicalModelLod);
+
+                DbDataReader dbDataReader = dbCommand.ExecuteReader(
+                    CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow);
+                try
+                {
+                    do
+                    {
+                        while (dbDataReader.Read())
+                        {
+                            Stream stream = dbDataReader.GetStream(ContentColumnName);
+                            return new WrappedStream(stream, dbDataReader, dbCommand, dbConnection);
+                        }
+                    } while (dbDataReader.NextResult());
+                    dbDataReader.Dispose();
+                    dbCommand.Dispose();
+                    dbConnection.Dispose();
+                    return null;
+                }
+                catch (Exception)
+                {
+                    dbDataReader.Dispose();
+                    throw;
+                }
+            }
+            catch (Exception)
+            {
+                dbCommand.Dispose();
+                throw;
+            }
+        }
+        catch (Exception)
+        {
+            dbConnection.Dispose();
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Returns a geotypical model level of detail file from the database.
+    /// </summary>
+    /// <param name="cdbName">The name of the CDB data store.</param>
+    /// <param name="geotypicalModelLod">The geotypical model level of detail identifier.</param>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    /// <returns>A stream containing the file contents, or <see langword="null"/> if the file was not found.</returns>
+    public virtual async Task<Stream?> SelectFromGeotypicalModelLodAsync(string cdbName, GeotypicalModelLod geotypicalModelLod,
+        CancellationToken cancellationToken)
+    {
+        DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
+        try
+        {
+            DbCommand dbCommand = dbConnection.CreateCommand();
+            try
+            {
+                InitializeSelectFromGeotypicalModelLodCommand(dbCommand);
+                await dbCommand.PrepareAsync(cancellationToken);
+
+                dbCommand.Parameters[CdbParamName].Value = cdbName;
+                SetGeotypicalModelLodParameters(dbCommand, geotypicalModelLod);
+
+                DbDataReader dbDataReader = await dbCommand.ExecuteReaderAsync(
+                    CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow, cancellationToken);
+                try
+                {
+                    do
+                    {
+                        while (await dbDataReader.ReadAsync(cancellationToken))
+                        {
+                            Stream stream = dbDataReader.GetStream(ContentColumnName);
+                            return new WrappedStream(stream, dbDataReader, dbCommand, dbConnection);
+                        }
+                    } while (await dbDataReader.NextResultAsync(cancellationToken));
+                    await dbDataReader.DisposeAsync();
+                    await dbCommand.DisposeAsync();
+                    await dbConnection.DisposeAsync();
+                    return null;
+                }
+                catch (Exception)
+                {
+                    await dbDataReader.DisposeAsync();
+                    throw;
+                }
+            }
+            catch (Exception)
+            {
+                await dbCommand.DisposeAsync();
+                throw;
+            }
+        }
+        catch (Exception)
+        {
+            await dbConnection.DisposeAsync();
+            throw;
+        }
     }
 
     #endregion
@@ -2136,6 +2648,120 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         return false;
     }
 
+    /// <summary>
+    /// Returns a moving model file from the database.
+    /// </summary>
+    /// <param name="cdbName">The name of the CDB data store.</param>
+    /// <param name="movingModel">The moving model identifier.</param>
+    /// <returns>A stream containing the file contents, or <see langword="null"/> if the file was not found.</returns>
+    public virtual Stream? SelectFromMovingModel(string cdbName, MovingModel movingModel)
+    {
+        DbConnection dbConnection = dbDataSource.OpenConnection();
+        try
+        {
+            DbCommand dbCommand = dbConnection.CreateCommand();
+            try
+            {
+                InitializeSelectFromMovingModelCommand(dbCommand);
+                dbCommand.Prepare();
+
+                dbCommand.Parameters[CdbParamName].Value = cdbName;
+                SetMovingModelParameters(dbCommand, movingModel);
+
+                DbDataReader dbDataReader = dbCommand.ExecuteReader(
+                    CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow);
+                try
+                {
+                    do
+                    {
+                        while (dbDataReader.Read())
+                        {
+                            Stream stream = dbDataReader.GetStream(ContentColumnName);
+                            return new WrappedStream(stream, dbDataReader, dbCommand, dbConnection);
+                        }
+                    } while (dbDataReader.NextResult());
+                    dbDataReader.Dispose();
+                    dbCommand.Dispose();
+                    dbConnection.Dispose();
+                    return null;
+                }
+                catch (Exception)
+                {
+                    dbDataReader.Dispose();
+                    throw;
+                }
+            }
+            catch (Exception)
+            {
+                dbCommand.Dispose();
+                throw;
+            }
+        }
+        catch (Exception)
+        {
+            dbConnection.Dispose();
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Returns a moving model file from the database.
+    /// </summary>
+    /// <param name="cdbName">The name of the CDB data store.</param>
+    /// <param name="movingModel">The moving model identifier.</param>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    /// <returns>A stream containing the file contents, or <see langword="null"/> if the file was not found.</returns>
+    public virtual async Task<Stream?> SelectFromMovingModelAsync(string cdbName, MovingModel movingModel,
+        CancellationToken cancellationToken)
+    {
+        DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
+        try
+        {
+            DbCommand dbCommand = dbConnection.CreateCommand();
+            try
+            {
+                InitializeSelectFromMovingModelCommand(dbCommand);
+                await dbCommand.PrepareAsync(cancellationToken);
+
+                dbCommand.Parameters[CdbParamName].Value = cdbName;
+                SetMovingModelParameters(dbCommand, movingModel);
+
+                DbDataReader dbDataReader = await dbCommand.ExecuteReaderAsync(
+                    CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow, cancellationToken);
+                try
+                {
+                    do
+                    {
+                        while (await dbDataReader.ReadAsync(cancellationToken))
+                        {
+                            Stream stream = dbDataReader.GetStream(ContentColumnName);
+                            return new WrappedStream(stream, dbDataReader, dbCommand, dbConnection);
+                        }
+                    } while (await dbDataReader.NextResultAsync(cancellationToken));
+                    await dbDataReader.DisposeAsync();
+                    await dbCommand.DisposeAsync();
+                    await dbConnection.DisposeAsync();
+                    return null;
+                }
+                catch (Exception)
+                {
+                    await dbDataReader.DisposeAsync();
+                    throw;
+                }
+            }
+            catch (Exception)
+            {
+                await dbCommand.DisposeAsync();
+                throw;
+            }
+        }
+        catch (Exception)
+        {
+            await dbConnection.DisposeAsync();
+            throw;
+        }
+    }
+
     #endregion
 
     #endregion
@@ -2416,6 +3042,120 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
             }
         } while (await dbDataReader.NextResultAsync(cancellationToken));
         return false;
+    }
+
+    /// <summary>
+    /// Returns a moving model level of detail file from the database.
+    /// </summary>
+    /// <param name="cdbName">The name of the CDB data store.</param>
+    /// <param name="movingModelLod">The moving model level of detail identifier.</param>
+    /// <returns>A stream containing the file contents, or <see langword="null"/> if the file was not found.</returns>
+    public virtual Stream? SelectFromMovingModelLod(string cdbName, MovingModelLod movingModelLod)
+    {
+        DbConnection dbConnection = dbDataSource.OpenConnection();
+        try
+        {
+            DbCommand dbCommand = dbConnection.CreateCommand();
+            try
+            {
+                InitializeSelectFromMovingModelLodCommand(dbCommand);
+                dbCommand.Prepare();
+
+                dbCommand.Parameters[CdbParamName].Value = cdbName;
+                SetMovingModelLodParameters(dbCommand, movingModelLod);
+
+                DbDataReader dbDataReader = dbCommand.ExecuteReader(
+                    CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow);
+                try
+                {
+                    do
+                    {
+                        while (dbDataReader.Read())
+                        {
+                            Stream stream = dbDataReader.GetStream(ContentColumnName);
+                            return new WrappedStream(stream, dbDataReader, dbCommand, dbConnection);
+                        }
+                    } while (dbDataReader.NextResult());
+                    dbDataReader.Dispose();
+                    dbCommand.Dispose();
+                    dbConnection.Dispose();
+                    return null;
+                }
+                catch (Exception)
+                {
+                    dbDataReader.Dispose();
+                    throw;
+                }
+            }
+            catch (Exception)
+            {
+                dbCommand.Dispose();
+                throw;
+            }
+        }
+        catch (Exception)
+        {
+            dbConnection.Dispose();
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Returns a moving model level of detail file from the database.
+    /// </summary>
+    /// <param name="cdbName">The name of the CDB data store.</param>
+    /// <param name="movingModelLod">The moving model level of detail identifier.</param>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    /// <returns>A stream containing the file contents, or <see langword="null"/> if the file was not found.</returns>
+    public virtual async Task<Stream?> SelectFromMovingModelLodAsync(string cdbName, MovingModelLod movingModelLod,
+        CancellationToken cancellationToken)
+    {
+        DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
+        try
+        {
+            DbCommand dbCommand = dbConnection.CreateCommand();
+            try
+            {
+                InitializeSelectFromMovingModelLodCommand(dbCommand);
+                await dbCommand.PrepareAsync(cancellationToken);
+
+                dbCommand.Parameters[CdbParamName].Value = cdbName;
+                SetMovingModelLodParameters(dbCommand, movingModelLod);
+
+                DbDataReader dbDataReader = await dbCommand.ExecuteReaderAsync(
+                    CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow, cancellationToken);
+                try
+                {
+                    do
+                    {
+                        while (await dbDataReader.ReadAsync(cancellationToken))
+                        {
+                            Stream stream = dbDataReader.GetStream(ContentColumnName);
+                            return new WrappedStream(stream, dbDataReader, dbCommand, dbConnection);
+                        }
+                    } while (await dbDataReader.NextResultAsync(cancellationToken));
+                    await dbDataReader.DisposeAsync();
+                    await dbCommand.DisposeAsync();
+                    await dbConnection.DisposeAsync();
+                    return null;
+                }
+                catch (Exception)
+                {
+                    await dbDataReader.DisposeAsync();
+                    throw;
+                }
+            }
+            catch (Exception)
+            {
+                await dbCommand.DisposeAsync();
+                throw;
+            }
+        }
+        catch (Exception)
+        {
+            await dbConnection.DisposeAsync();
+            throw;
+        }
     }
 
     #endregion
@@ -2724,6 +3464,120 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         return false;
     }
 
+    /// <summary>
+    /// Returns a tiled dataset file from the database.
+    /// </summary>
+    /// <param name="cdbName">The name of the CDB data store.</param>
+    /// <param name="tile">The tile identifier.</param>
+    /// <returns>A stream containing the file contents, or <see langword="null"/> if the file was not found.</returns>
+    public virtual Stream? SelectFromTile(string cdbName, Tile tile)
+    {
+        DbConnection dbConnection = dbDataSource.OpenConnection();
+        try
+        {
+            DbCommand dbCommand = dbConnection.CreateCommand();
+            try
+            {
+                InitializeSelectFromTileCommand(dbCommand);
+                dbCommand.Prepare();
+
+                dbCommand.Parameters[CdbParamName].Value = cdbName;
+                SetTileParameters(dbCommand, tile);
+
+                DbDataReader dbDataReader = dbCommand.ExecuteReader(
+                    CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow);
+                try
+                {
+                    do
+                    {
+                        while (dbDataReader.Read())
+                        {
+                            Stream stream = dbDataReader.GetStream(ContentColumnName);
+                            return new WrappedStream(stream, dbDataReader, dbCommand, dbConnection);
+                        }
+                    } while (dbDataReader.NextResult());
+                    dbDataReader.Dispose();
+                    dbCommand.Dispose();
+                    dbConnection.Dispose();
+                    return null;
+                }
+                catch (Exception)
+                {
+                    dbDataReader.Dispose();
+                    throw;
+                }
+            }
+            catch (Exception)
+            {
+                dbCommand.Dispose();
+                throw;
+            }
+        }
+        catch (Exception)
+        {
+            dbConnection.Dispose();
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Returns a tiled dataset file from the database.
+    /// </summary>
+    /// <param name="cdbName">The name of the CDB data store.</param>
+    /// <param name="tile">The tile identifier.</param>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    /// <returns>A stream containing the file contents, or <see langword="null"/> if the file was not found.</returns>
+    public virtual async Task<Stream?> SelectFromTileAsync(string cdbName, Tile tile,
+        CancellationToken cancellationToken)
+    {
+        DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
+        try
+        {
+            DbCommand dbCommand = dbConnection.CreateCommand();
+            try
+            {
+                InitializeSelectFromTileCommand(dbCommand);
+                await dbCommand.PrepareAsync(cancellationToken);
+
+                dbCommand.Parameters[CdbParamName].Value = cdbName;
+                SetTileParameters(dbCommand, tile);
+
+                DbDataReader dbDataReader = await dbCommand.ExecuteReaderAsync(
+                    CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow, cancellationToken);
+                try
+                {
+                    do
+                    {
+                        while (await dbDataReader.ReadAsync(cancellationToken))
+                        {
+                            Stream stream = dbDataReader.GetStream(ContentColumnName);
+                            return new WrappedStream(stream, dbDataReader, dbCommand, dbConnection);
+                        }
+                    } while (await dbDataReader.NextResultAsync(cancellationToken));
+                    await dbDataReader.DisposeAsync();
+                    await dbCommand.DisposeAsync();
+                    await dbConnection.DisposeAsync();
+                    return null;
+                }
+                catch (Exception)
+                {
+                    await dbDataReader.DisposeAsync();
+                    throw;
+                }
+            }
+            catch (Exception)
+            {
+                await dbCommand.DisposeAsync();
+                throw;
+            }
+        }
+        catch (Exception)
+        {
+            await dbConnection.DisposeAsync();
+            throw;
+        }
+    }
+
     #endregion
 
     #endregion
@@ -3014,6 +3868,120 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         return false;
     }
 
+    /// <summary>
+    /// Returns an un-archived tiled dataset feature file from the database.
+    /// </summary>
+    /// <param name="cdbName">The name of the CDB data store.</param>
+    /// <param name="tileArchivedFeature">The tiled dataset feature identifier.</param>
+    /// <returns>A stream containing the file contents, or <see langword="null"/> if the file was not found.</returns>
+    public virtual Stream? SelectFromTileArchivedFeature(string cdbName, TileArchivedFeature tileArchivedFeature)
+    {
+        DbConnection dbConnection = dbDataSource.OpenConnection();
+        try
+        {
+            DbCommand dbCommand = dbConnection.CreateCommand();
+            try
+            {
+                InitializeSelectFromTileArchivedFeatureCommand(dbCommand);
+                dbCommand.Prepare();
+
+                dbCommand.Parameters[CdbParamName].Value = cdbName;
+                SetTileArchivedFeatureParameters(dbCommand, tileArchivedFeature);
+
+                DbDataReader dbDataReader = dbCommand.ExecuteReader(
+                    CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow);
+                try
+                {
+                    do
+                    {
+                        while (dbDataReader.Read())
+                        {
+                            Stream stream = dbDataReader.GetStream(ContentColumnName);
+                            return new WrappedStream(stream, dbDataReader, dbCommand, dbConnection);
+                        }
+                    } while (dbDataReader.NextResult());
+                    dbDataReader.Dispose();
+                    dbCommand.Dispose();
+                    dbConnection.Dispose();
+                    return null;
+                }
+                catch (Exception)
+                {
+                    dbDataReader.Dispose();
+                    throw;
+                }
+            }
+            catch (Exception)
+            {
+                dbCommand.Dispose();
+                throw;
+            }
+        }
+        catch (Exception)
+        {
+            dbConnection.Dispose();
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Returns an un-archived tiled dataset feature file from the database.
+    /// </summary>
+    /// <param name="cdbName">The name of the CDB data store.</param>
+    /// <param name="tileArchivedFeature">The tiled dataset feature identifier.</param>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    /// <returns>A stream containing the file contents, or <see langword="null"/> if the file was not found.</returns>
+    public virtual async Task<Stream?> SelectFromTileArchivedFeatureAsync(string cdbName, TileArchivedFeature tileArchivedFeature,
+        CancellationToken cancellationToken)
+    {
+        DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
+        try
+        {
+            DbCommand dbCommand = dbConnection.CreateCommand();
+            try
+            {
+                InitializeSelectFromTileArchivedFeatureCommand(dbCommand);
+                await dbCommand.PrepareAsync(cancellationToken);
+
+                dbCommand.Parameters[CdbParamName].Value = cdbName;
+                SetTileArchivedFeatureParameters(dbCommand, tileArchivedFeature);
+
+                DbDataReader dbDataReader = await dbCommand.ExecuteReaderAsync(
+                    CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow, cancellationToken);
+                try
+                {
+                    do
+                    {
+                        while (await dbDataReader.ReadAsync(cancellationToken))
+                        {
+                            Stream stream = dbDataReader.GetStream(ContentColumnName);
+                            return new WrappedStream(stream, dbDataReader, dbCommand, dbConnection);
+                        }
+                    } while (await dbDataReader.NextResultAsync(cancellationToken));
+                    await dbDataReader.DisposeAsync();
+                    await dbCommand.DisposeAsync();
+                    await dbConnection.DisposeAsync();
+                    return null;
+                }
+                catch (Exception)
+                {
+                    await dbDataReader.DisposeAsync();
+                    throw;
+                }
+            }
+            catch (Exception)
+            {
+                await dbCommand.DisposeAsync();
+                throw;
+            }
+        }
+        catch (Exception)
+        {
+            await dbConnection.DisposeAsync();
+            throw;
+        }
+    }
+
     #endregion
 
     #endregion
@@ -3288,6 +4256,120 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         return false;
     }
 
+    /// <summary>
+    /// Returns an un-archived tiled dataset texture file from the database.
+    /// </summary>
+    /// <param name="cdbName">The name of the CDB data store.</param>
+    /// <param name="tileArchivedTexture">The tiled dataset texture identifier.</param>
+    /// <returns>A stream containing the file contents, or <see langword="null"/> if the file was not found.</returns>
+    public virtual Stream? SelectFromTileArchivedTexture(string cdbName, TileArchivedTexture tileArchivedTexture)
+    {
+        DbConnection dbConnection = dbDataSource.OpenConnection();
+        try
+        {
+            DbCommand dbCommand = dbConnection.CreateCommand();
+            try
+            {
+                InitializeSelectFromTileArchivedTextureCommand(dbCommand);
+                dbCommand.Prepare();
+
+                dbCommand.Parameters[CdbParamName].Value = cdbName;
+                SetTileArchivedTextureParameters(dbCommand, tileArchivedTexture);
+
+                DbDataReader dbDataReader = dbCommand.ExecuteReader(
+                    CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow);
+                try
+                {
+                    do
+                    {
+                        while (dbDataReader.Read())
+                        {
+                            Stream stream = dbDataReader.GetStream(ContentColumnName);
+                            return new WrappedStream(stream, dbDataReader, dbCommand, dbConnection);
+                        }
+                    } while (dbDataReader.NextResult());
+                    dbDataReader.Dispose();
+                    dbCommand.Dispose();
+                    dbConnection.Dispose();
+                    return null;
+                }
+                catch (Exception)
+                {
+                    dbDataReader.Dispose();
+                    throw;
+                }
+            }
+            catch (Exception)
+            {
+                dbCommand.Dispose();
+                throw;
+            }
+        }
+        catch (Exception)
+        {
+            dbConnection.Dispose();
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Returns an un-archived tiled dataset texture file from the database.
+    /// </summary>
+    /// <param name="cdbName">The name of the CDB data store.</param>
+    /// <param name="tileArchivedTexture">The tiled dataset texture identifier.</param>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    /// <returns>A stream containing the file contents, or <see langword="null"/> if the file was not found.</returns>
+    public virtual async Task<Stream?> SelectFromTileArchivedTextureAsync(string cdbName, TileArchivedTexture tileArchivedTexture,
+        CancellationToken cancellationToken)
+    {
+        DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
+        try
+        {
+            DbCommand dbCommand = dbConnection.CreateCommand();
+            try
+            {
+                InitializeSelectFromTileArchivedTextureCommand(dbCommand);
+                await dbCommand.PrepareAsync(cancellationToken);
+
+                dbCommand.Parameters[CdbParamName].Value = cdbName;
+                SetTileArchivedTextureParameters(dbCommand, tileArchivedTexture);
+
+                DbDataReader dbDataReader = await dbCommand.ExecuteReaderAsync(
+                    CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow, cancellationToken);
+                try
+                {
+                    do
+                    {
+                        while (await dbDataReader.ReadAsync(cancellationToken))
+                        {
+                            Stream stream = dbDataReader.GetStream(ContentColumnName);
+                            return new WrappedStream(stream, dbDataReader, dbCommand, dbConnection);
+                        }
+                    } while (await dbDataReader.NextResultAsync(cancellationToken));
+                    await dbDataReader.DisposeAsync();
+                    await dbCommand.DisposeAsync();
+                    await dbConnection.DisposeAsync();
+                    return null;
+                }
+                catch (Exception)
+                {
+                    await dbDataReader.DisposeAsync();
+                    throw;
+                }
+            }
+            catch (Exception)
+            {
+                await dbCommand.DisposeAsync();
+                throw;
+            }
+        }
+        catch (Exception)
+        {
+            await dbConnection.DisposeAsync();
+            throw;
+        }
+    }
+
     #endregion
 
     #endregion
@@ -3536,6 +4618,120 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
             }
         } while (await dbDataReader.NextResultAsync(cancellationToken));
         return false;
+    }
+
+    /// <summary>
+    /// Returns a navigation file from the database.
+    /// </summary>
+    /// <param name="cdbName">The name of the CDB data store.</param>
+    /// <param name="navigation">The navigation identifier.</param>
+    /// <returns>A stream containing the file contents, or <see langword="null"/> if the file was not found.</returns>
+    public virtual Stream? SelectFromNavigation(string cdbName, Navigation navigation)
+    {
+        DbConnection dbConnection = dbDataSource.OpenConnection();
+        try
+        {
+            DbCommand dbCommand = dbConnection.CreateCommand();
+            try
+            {
+                InitializeSelectFromNavigationCommand(dbCommand);
+                dbCommand.Prepare();
+
+                dbCommand.Parameters[CdbParamName].Value = cdbName;
+                SetNavigationParameters(dbCommand, navigation);
+
+                DbDataReader dbDataReader = dbCommand.ExecuteReader(
+                    CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow);
+                try
+                {
+                    do
+                    {
+                        while (dbDataReader.Read())
+                        {
+                            Stream stream = dbDataReader.GetStream(ContentColumnName);
+                            return new WrappedStream(stream, dbDataReader, dbCommand, dbConnection);
+                        }
+                    } while (dbDataReader.NextResult());
+                    dbDataReader.Dispose();
+                    dbCommand.Dispose();
+                    dbConnection.Dispose();
+                    return null;
+                }
+                catch (Exception)
+                {
+                    dbDataReader.Dispose();
+                    throw;
+                }
+            }
+            catch (Exception)
+            {
+                dbCommand.Dispose();
+                throw;
+            }
+        }
+        catch (Exception)
+        {
+            dbConnection.Dispose();
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Returns a navigation file from the database.
+    /// </summary>
+    /// <param name="cdbName">The name of the CDB data store.</param>
+    /// <param name="navigation">The navigation identifier.</param>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    /// <returns>A stream containing the file contents, or <see langword="null"/> if the file was not found.</returns>
+    public virtual async Task<Stream?> SelectFromNavigationAsync(string cdbName, Navigation navigation,
+        CancellationToken cancellationToken)
+    {
+        DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
+        try
+        {
+            DbCommand dbCommand = dbConnection.CreateCommand();
+            try
+            {
+                InitializeSelectFromNavigationCommand(dbCommand);
+                await dbCommand.PrepareAsync(cancellationToken);
+
+                dbCommand.Parameters[CdbParamName].Value = cdbName;
+                SetNavigationParameters(dbCommand, navigation);
+
+                DbDataReader dbDataReader = await dbCommand.ExecuteReaderAsync(
+                    CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow, cancellationToken);
+                try
+                {
+                    do
+                    {
+                        while (await dbDataReader.ReadAsync(cancellationToken))
+                        {
+                            Stream stream = dbDataReader.GetStream(ContentColumnName);
+                            return new WrappedStream(stream, dbDataReader, dbCommand, dbConnection);
+                        }
+                    } while (await dbDataReader.NextResultAsync(cancellationToken));
+                    await dbDataReader.DisposeAsync();
+                    await dbCommand.DisposeAsync();
+                    await dbConnection.DisposeAsync();
+                    return null;
+                }
+                catch (Exception)
+                {
+                    await dbDataReader.DisposeAsync();
+                    throw;
+                }
+            }
+            catch (Exception)
+            {
+                await dbCommand.DisposeAsync();
+                throw;
+            }
+        }
+        catch (Exception)
+        {
+            await dbConnection.DisposeAsync();
+            throw;
+        }
     }
 
     #endregion

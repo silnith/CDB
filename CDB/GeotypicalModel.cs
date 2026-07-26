@@ -2,6 +2,8 @@
 using System.Globalization;
 using System.IO;
 using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Silnith.CDB;
 
@@ -86,4 +88,17 @@ public record GeotypicalModel(
         "GTModel",
         Dataset.Directory,
         FeatureCode.RelativePath);
+
+    /// <inheritdoc/>
+    public Stream? ReadFromCDB(ICDB cdb)
+    {
+        return cdb.ReadGeotypicalModel(this);
+    }
+
+    /// <inheritdoc/>
+    public Task<Stream?> ReadFromCDBAsync(ICDB cdb, CancellationToken cancellationToken)
+    {
+        return cdb.ReadGeotypicalModelAsync(this, cancellationToken);
+    }
+
 }

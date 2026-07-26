@@ -2,6 +2,8 @@
 using System.Globalization;
 using System.IO;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
+using System.Threading;
 
 namespace Silnith.CDB;
 
@@ -36,7 +38,7 @@ public record TileArchivedFeature(Latitude LatitudeValue,
     FeatureCode FeatureCode,
     [property: Range(0, 999)] int FeatureSubcode,
     string Name,
-    string FileType) : ICDBIdentifier
+    string FileType) : ICDBArchivedIdentifier
 {
     /// <summary>
     /// The pattern for filenames in the tiled dataset directory hierarchy.
@@ -95,33 +97,22 @@ public record TileArchivedFeature(Latitude LatitudeValue,
             match.Groups["ext"].Value);
     }
 
-    /// <summary>
-    /// The tile unarchived feature file name.
-    /// </summary>
-    public string Filename => $"{LatitudeValue.Code}{LongitudeValue.Code}_D{DatasetValue.Value:D3}_S{ComponentSelector1:D3}_T{ComponentSelector2:D3}_{Level.Code}_U{Up:D}_R{Right:D}_{FeatureCode.Code}_{FeatureSubcode:D3}_{Name}.{FileType}";
+    /// <inheritdoc/>
+    public string EntryName => $"{LatitudeValue.Code}{LongitudeValue.Code}_D{DatasetValue.Value:D3}_S{ComponentSelector1:D3}_T{ComponentSelector2:D3}_{Level.Code}_U{Up:D}_R{Right:D}_{FeatureCode.Code}_{FeatureSubcode:D3}_{Name}.{FileType}";
 
     /// <inheritdoc/>
-    public string ZipFilename => $"{LatitudeValue.Code}{LongitudeValue.Code}_{DatasetValue.Code}_S{ComponentSelector1:D3}_T{ComponentSelector2:D3}_{Level.Code}_U{Up:D}_R{Right:D}.zip";
-
-    /// <summary>
-    /// Datasets:
-    /// GSModelGeometry
-    /// GSModelInteriorGeometry
-    /// GSModelDescriptor
-    /// 300_GSModelGeometry
-    /// 302_GSModelSignature
-    /// 303_GSModelDescriptor
-    /// 305_GSModelInteriorGeometry
-    /// 307_GSModelInteriorDescriptor
-    /// </summary>
-    public bool Zipped => true;
+    public ICDBIdentifier ArchiveIdentifier => new Tile(LatitudeValue, LongitudeValue, DatasetValue, ComponentSelector1, ComponentSelector2, Level, Up, Right, "zip");
 
     /// <inheritdoc/>
-    public string RelativePath => Path.Combine(
-        DatasetValue.RootDirectory,
-        LatitudeValue.Code,
-        LongitudeValue.Code,
-        DatasetValue.Directory,
-        Level.TiledCode,
-        $"U{Up:D}");
+    public Stream? ReadFromCDB(ICDB cdb)
+    {
+        return cdb.ReadTileFeature(this);
+    }
+
+    /// <inheritdoc/>
+    public Task<Stream?> ReadFromCDBAsync(ICDB cdb, CancellationToken cancellationToken)
+    {
+        return cdb.ReadTileFeatureAsync(this, cancellationToken);
+    }
+
 }

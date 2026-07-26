@@ -3,6 +3,8 @@ using Microsoft.Extensions.Options;
 using Silnith.CDB.FileSystem.Visitor;
 using System;
 using System.IO;
+using System.IO.Compression;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -84,6 +86,254 @@ public class FileSystemCDB : ICDB
         get;
     }
 
+    private static readonly FileStreamOptions fileStreamOptions = new()
+    {
+        Mode = FileMode.Open,
+        Access = FileAccess.Read,
+        Share = FileShare.Read,
+        Options = FileOptions.SequentialScan | FileOptions.Asynchronous,
+        BufferSize = 0,
+    };
+
+    private Stream? ReadFile(ICDBIdentifier identifier)
+    {
+        FileInfo file = new(Path.Combine(CdbRoot.FullName, identifier.RelativePath, identifier.Filename));
+        if (file.Exists)
+        {
+            logger.LogTrace("Found: {File}", file);
+            return new DoubleBufferedStream(new FileStream(file.FullName, fileStreamOptions));
+        }
+        else
+        {
+            logger.LogTrace("Not found: {File}", file);
+            return null;
+        }
+    }
+
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0060:Remove unused parameter", Justification = "No.")]
+    private Task<Stream?> ReadFileAsync(ICDBIdentifier identifier, CancellationToken cancellationToken)
+    {
+        FileInfo file = new(Path.Combine(CdbRoot.FullName, identifier.RelativePath, identifier.Filename));
+        if (file.Exists)
+        {
+            logger.LogTrace("Found: {File}", file);
+            return Task.FromResult<Stream?>(new DoubleBufferedStream(new FileStream(file.FullName, fileStreamOptions)));
+        }
+        else
+        {
+            logger.LogTrace("Not found: {File}", file);
+            return Task.FromResult<Stream?>(null);
+        }
+    }
+
+    private Stream? ReadArchivedFile(ICDBArchivedIdentifier archivedIdentifier)
+    {
+        Stream? tileStream = ReadFile(archivedIdentifier.ArchiveIdentifier);
+        if (tileStream is null)
+        {
+            return null;
+        }
+        try
+        {
+            ZipArchive zipArchive = new(tileStream, ZipArchiveMode.Read);
+            try
+            {
+                ZipArchiveEntry? zipArchiveEntry = zipArchive.GetEntry(archivedIdentifier.EntryName);
+                if (zipArchiveEntry is not null)
+                {
+                    Stream stream = zipArchiveEntry.Open();
+                    return new WrappedStream(stream, zipArchive, tileStream);
+                }
+                else
+                {
+                    zipArchive.Dispose();
+                    tileStream.Dispose();
+                    return null;
+                }
+            }
+            catch (Exception)
+            {
+                zipArchive.Dispose();
+                throw;
+            }
+        }
+        catch (Exception)
+        {
+            tileStream.Dispose();
+            throw;
+        }
+    }
+
+    private async Task<Stream?> ReadArchivedFileAsync(ICDBArchivedIdentifier archivedIdentifier, CancellationToken cancellationToken)
+    {
+        Stream? tileStream = await ReadFileAsync(archivedIdentifier.ArchiveIdentifier, cancellationToken);
+        if (tileStream is null)
+        {
+            return null;
+        }
+        try
+        {
+            ZipArchive zipArchive = new(tileStream, ZipArchiveMode.Read);
+            try
+            {
+                ZipArchiveEntry? zipArchiveEntry = zipArchive.GetEntry(archivedIdentifier.EntryName);
+                if (zipArchiveEntry is not null)
+                {
+                    Stream stream = zipArchiveEntry.Open();
+                    return new WrappedStream(stream, zipArchive, tileStream);
+                }
+                else
+                {
+                    zipArchive.Dispose();
+                    await tileStream.DisposeAsync();
+                    return null;
+                }
+            }
+            catch (Exception)
+            {
+                zipArchive.Dispose();
+                throw;
+            }
+        }
+        catch (Exception)
+        {
+            await tileStream.DisposeAsync();
+            throw;
+        }
+    }
+
+    /// <inheritdoc/>
+    public Stream? ReadMetadata(Metadata metadata)
+    {
+        return ReadFile(metadata);
+    }
+
+    /// <inheritdoc/>
+    public Task<Stream?> ReadMetadataAsync(Metadata metadata, CancellationToken cancellationToken)
+    {
+        return ReadFileAsync(metadata, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public Stream? ReadTexture(Texture texture)
+    {
+        return ReadFile(texture);
+    }
+
+    /// <inheritdoc/>
+    public Task<Stream?> ReadTextureAsync(Texture texture, CancellationToken cancellationToken)
+    {
+        return ReadFileAsync(texture, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public Stream? ReadTextureLevelOfDetail(TextureLod textureLod)
+    {
+        return ReadFile(textureLod);
+    }
+
+    /// <inheritdoc/>
+    public Task<Stream?> ReadTextureLevelOfDetailAsync(TextureLod textureLod, CancellationToken cancellationToken)
+    {
+        return ReadFileAsync(textureLod, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public Stream? ReadGeotypicalModel(GeotypicalModel geotypicalModel)
+    {
+        return ReadFile(geotypicalModel);
+    }
+
+    /// <inheritdoc/>
+    public Task<Stream?> ReadGeotypicalModelAsync(GeotypicalModel geotypicalModel, CancellationToken cancellationToken)
+    {
+        return ReadFileAsync(geotypicalModel, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public Stream? ReadGeotypicalModelLevelOfDetail(GeotypicalModelLod geotypicalModelLod)
+    {
+        return ReadFile(geotypicalModelLod);
+    }
+
+    /// <inheritdoc/>
+    public Task<Stream?> ReadGeotypicalModelLevelOfDetailAsync(GeotypicalModelLod geotypicalModelLod, CancellationToken cancellationToken)
+    {
+        return ReadFileAsync(geotypicalModelLod, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public Stream? ReadMovingModel(MovingModel movingModel)
+    {
+        return ReadFile(movingModel);
+    }
+
+    /// <inheritdoc/>
+    public Task<Stream?> ReadMovingModelAsync(MovingModel movingModel, CancellationToken cancellationToken)
+    {
+        return ReadFileAsync(movingModel, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public Stream? ReadMovingModelLevelOfDetail(MovingModelLod movingModelLod)
+    {
+        return ReadFile(movingModelLod);
+    }
+
+    /// <inheritdoc/>
+    public Task<Stream?> ReadMovingModelLevelOfDetailAsync(MovingModelLod movingModelLod, CancellationToken cancellationToken)
+    {
+        return ReadFileAsync(movingModelLod, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public Stream? ReadTile(Tile tile)
+    {
+        return ReadFile(tile);
+    }
+
+    /// <inheritdoc/>
+    public Task<Stream?> ReadTileAsync(Tile tile, CancellationToken cancellationToken)
+    {
+        return ReadFileAsync(tile, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public Stream? ReadTileFeature(TileArchivedFeature tileFeature)
+    {
+        return ReadArchivedFile(tileFeature);
+    }
+
+    /// <inheritdoc/>
+    public Task<Stream?> ReadTileFeatureAsync(TileArchivedFeature tileFeature, CancellationToken cancellationToken)
+    {
+        return ReadArchivedFileAsync(tileFeature, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public Stream? ReadTileTexture(TileArchivedTexture tileTexture)
+    {
+        return ReadArchivedFile(tileTexture);
+    }
+
+    /// <inheritdoc/>
+    public Task<Stream?> ReadTileTextureAsync(TileArchivedTexture tileTexture, CancellationToken cancellationToken)
+    {
+        return ReadArchivedFileAsync(tileTexture, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public Stream? ReadNavigation(Navigation navigation)
+    {
+        return ReadFile(navigation);
+    }
+
+    /// <inheritdoc/>
+    public Task<Stream?> ReadNavigationAsync(Navigation navigation, CancellationToken cancellationToken)
+    {
+        return ReadFileAsync(navigation, cancellationToken);
+    }
+
     /// <inheritdoc/>
     public bool TryReadFile(string filePathAndName, Action<Stream> fileFoundAction)
     {
@@ -91,15 +341,7 @@ public class FileSystemCDB : ICDB
         if (file.Exists)
         {
             logger.LogTrace("Found: {File}", file);
-            FileStreamOptions options = new()
-            {
-                Mode = FileMode.Open,
-                Access = FileAccess.Read,
-                Share = FileShare.Read,
-                Options = FileOptions.SequentialScan | FileOptions.Asynchronous,
-                BufferSize = 0,
-            };
-            using DoubleBufferedStream doubleBufferedStream = new(new FileStream(file.FullName, options));
+            using DoubleBufferedStream doubleBufferedStream = new(new FileStream(file.FullName, fileStreamOptions));
             fileFoundAction(doubleBufferedStream);
             return true;
         }
@@ -119,15 +361,7 @@ public class FileSystemCDB : ICDB
         if (file.Exists)
         {
             logger.LogTrace("Found: {File}", file);
-            FileStreamOptions options = new()
-            {
-                Mode = FileMode.Open,
-                Access = FileAccess.Read,
-                Share = FileShare.Read,
-                Options = FileOptions.SequentialScan | FileOptions.Asynchronous,
-                BufferSize = 0,
-            };
-            await using DoubleBufferedStream doubleBufferedStream = new(new FileStream(file.FullName, options));
+            await using DoubleBufferedStream doubleBufferedStream = new(new FileStream(file.FullName, fileStreamOptions));
             await fileFoundAsyncAction(doubleBufferedStream, cancellationToken);
             return true;
         }
@@ -215,6 +449,32 @@ public class FileSystemCDB : ICDB
     {
         // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
         Dispose(disposing: true);
+        GC.SuppressFinalize(this);
+    }
+
+    #endregion
+
+    #region Async Dispose Pattern
+
+    /// <summary>
+    /// Performs application-defined tasks associated with freeing, releasing, or resetting
+    /// unmanaged resources.
+    /// </summary>
+    /// <seealso href="https://learn.microsoft.com/en-us/dotnet/standard/garbage-collection/implementing-disposeasync"/>
+    protected virtual async ValueTask DisposeAsyncCore()
+    {
+    }
+
+    /// <inheritdoc/>
+    public async ValueTask DisposeAsync()
+    {
+        // Perform async cleanup.
+        await DisposeAsyncCore();
+
+        // Dispose of unmanaged resources.
+        Dispose(false);
+
+        // Suppress finalization.
         GC.SuppressFinalize(this);
     }
 

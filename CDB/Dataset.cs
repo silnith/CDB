@@ -169,6 +169,37 @@ public record Dataset([property: Range(0, 999)] int Value) : IComparable<Dataset
         }
     }
 
+    /// <summary>
+    /// Whether this dataset lives inside of a zip archive.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The following datasets are contained inside of zip archives:
+    /// <list type="bullet">
+    /// <item><term>300</term><description>GSModelGeometry</description></item>
+    /// <item><term>301</term><description>GSModelTexture</description></item>
+    /// <item><term>302</term><description>GSModelSignature</description></item>
+    /// <item><term>303</term><description>GSModelDescriptor</description></item>
+    /// <item><term>304</term><description>GSModelMaterial</description></item>
+    /// <item><term>305</term><description>GSModelInteriorGeometry</description></item>
+    /// <item><term>306</term><description>GSModelInteriorTexture</description></item>
+    /// <item><term>307</term><description>GSModelInteriorDescriptor</description></item>
+    /// <item><term>308</term><description>GSModelInteriorMaterial</description></item>
+    /// </list>
+    /// </para>
+    /// </remarks>
+    public bool IsZipped
+    {
+        get
+        {
+            return Value switch
+            {
+                300 or 301 or 302 or 303 or 304 or 305 or 306 or 307 or 308 => true,
+                _ => false,
+            };
+        }
+    }
+
     /// <inheritdoc/>
     public int CompareTo(Dataset? other)
     {

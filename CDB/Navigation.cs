@@ -2,6 +2,8 @@
 using System.Globalization;
 using System.IO;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
+using System.Threading;
 
 namespace Silnith.CDB;
 
@@ -58,4 +60,17 @@ public record Navigation(
     public string RelativePath => Path.Combine(
         "Navigation",
         Dataset.Directory);
+
+    /// <inheritdoc/>
+    public Stream? ReadFromCDB(ICDB cdb)
+    {
+        return cdb.ReadNavigation(this);
+    }
+
+    /// <inheritdoc/>
+    public Task<Stream?> ReadFromCDBAsync(ICDB cdb, CancellationToken cancellationToken)
+    {
+        return cdb.ReadNavigationAsync(this, cancellationToken);
+    }
+
 }

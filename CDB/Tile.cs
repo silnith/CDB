@@ -2,6 +2,8 @@
 using System.Globalization;
 using System.IO;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
+using System.Threading;
 
 namespace Silnith.CDB;
 
@@ -82,12 +84,6 @@ public record Tile(
     /// <inheritdoc/>
     public string Filename => $"{LatitudeValue.Code}{LongitudeValue.Code}_{DatasetValue.Code}_S{ComponentSelector1:D3}_T{ComponentSelector2:D3}_{Level.Code}_U{Up:D}_R{Right:D}.{FileType}";
 
-    /*
-     * Datasets:
-     * 309_GSModelCMT
-     * 310_T2DModelGeometry
-     */
-
     /// <inheritdoc/>
     public string RelativePath => Path.Combine(
         DatasetValue.RootDirectory,
@@ -96,4 +92,17 @@ public record Tile(
         DatasetValue.Directory,
         Level.TiledCode,
         $"U{Up:D}");
+
+    /// <inheritdoc/>
+    public Stream? ReadFromCDB(ICDB cdb)
+    {
+        return cdb.ReadTile(this);
+    }
+
+    /// <inheritdoc/>
+    public Task<Stream?> ReadFromCDBAsync(ICDB cdb, CancellationToken cancellationToken)
+    {
+        return cdb.ReadTileAsync(this, cancellationToken);
+    }
+
 }

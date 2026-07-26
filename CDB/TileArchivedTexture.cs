@@ -2,6 +2,8 @@
 using System.Globalization;
 using System.IO;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
+using System.Threading;
 
 namespace Silnith.CDB;
 
@@ -35,7 +37,7 @@ public record TileArchivedTexture(
     int Up,
     int Right,
     string Name,
-    string FileType) : ICDBIdentifier
+    string FileType) : ICDBArchivedIdentifier
 {
     /// <summary>
     /// The pattern for filenames in the tiled dataset directory hierarchy.
@@ -85,36 +87,22 @@ public record TileArchivedTexture(
             match.Groups["ext"].Value);
     }
 
-    /// <summary>
-    /// The tile unarchived texture file name.
-    /// </summary>
-    public string Filename => $"{LatitudeValue.Code}{LongitudeValue.Code}_D{DatasetValue.Value:D3}_S{ComponentSelector1:D3}_T{ComponentSelector2:D3}_{Level.Code}_U{Up:D}_R{Right:D}_{Name}.{FileType}";
+    /// <inheritdoc/>
+    public string EntryName => $"{LatitudeValue.Code}{LongitudeValue.Code}_D{DatasetValue.Value:D3}_S{ComponentSelector1:D3}_T{ComponentSelector2:D3}_{Level.Code}_U{Up:D}_R{Right:D}_{Name}.{FileType}";
 
     /// <inheritdoc/>
-    public string ZipFilename => $"{LatitudeValue.Code}{LongitudeValue.Code}_{DatasetValue.Code}_S{ComponentSelector1:D3}_T{ComponentSelector2:D3}_{Level.Code}_U{Up:D}_R{Right:D}.zip";
-
-    /// <summary>
-    /// Datasets:
-    /// GSModelTexture
-    /// GSModelInteriorTexture
-    /// GSModelMaterial
-    /// GSModelInteriorMaterial
-    /// GSModelCMT
-    /// GSModelInteriorCMT
-    /// 
-    /// 301_GSModelTexture
-    /// 304_GSModelMaterial
-    /// 306_GSModelInteriorTexture
-    /// 308_GSModelInteriorMaterial
-    /// </summary>
-    public bool Zipped => true;
+    public ICDBIdentifier ArchiveIdentifier => new Tile(LatitudeValue, LongitudeValue, DatasetValue, ComponentSelector1, ComponentSelector2, Level, Up, Right, "zip");
 
     /// <inheritdoc/>
-    public string RelativePath => Path.Combine(
-        DatasetValue.RootDirectory,
-        LatitudeValue.Code,
-        LongitudeValue.Code,
-        DatasetValue.Directory,
-        Level.TiledCode,
-        $"U{Up:D}");
+    public Stream? ReadFromCDB(ICDB cdb)
+    {
+        return cdb.ReadTileTexture(this);
+    }
+
+    /// <inheritdoc/>
+    public Task<Stream?> ReadFromCDBAsync(ICDB cdb, CancellationToken cancellationToken)
+    {
+        return cdb.ReadTileTextureAsync(this, cancellationToken);
+    }
+
 }
