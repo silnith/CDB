@@ -198,11 +198,11 @@ public class DoubleBufferedStream : Stream
     /// The buffer that is currently receiving data from the underlying stream
     /// in a thread pool task.
     /// </summary>
-    private ViewBuffer writeBuffer;
+    private ViewBuffer fillBuffer;
 
     /// <summary>
     /// A cancellation source for cancelling the thread pool task filling the
-    /// <see cref="writeBuffer"/>.
+    /// <see cref="fillBuffer"/>.
     /// </summary>
     /// <remarks>
     /// <para>
@@ -211,13 +211,13 @@ public class DoubleBufferedStream : Stream
     /// the currently buffered data.
     /// </para>
     /// </remarks>
-    private CancellationTokenSource writeTaskCancellationSource;
+    private CancellationTokenSource fillTaskCancellationSource;
 
     /// <summary>
-    /// The currently executing task that is filling the <see cref="writeBuffer"/>
+    /// The currently executing task that is filling the <see cref="fillBuffer"/>
     /// with data.
     /// </summary>
-    private Task fillWriteBufferTask;
+    private Task fillBufferTask;
 
     /// <summary>
     /// Creates a new double buffered stream wrapping the provided stream.
@@ -236,25 +236,25 @@ public class DoubleBufferedStream : Stream
 
         underlyingStream = stream;
         readBuffer = new ViewBuffer(BufferSize);
-        writeBuffer = new ViewBuffer(BufferSize);
+        fillBuffer = new ViewBuffer(BufferSize);
 
         /*
-         * This should not be necessary.  The call to CreateNewFillWriteBufferTask
+         * This should not be necessary.  The call to CreateNewFillBufferTask
          * initializes this member variable.  However, the .NET compiler seems
          * unable to deduce that.
          * 
          * Anyway, this object will be immediately overwritten by the method.
          */
-        writeTaskCancellationSource = new();
+        fillTaskCancellationSource = new();
 
         Position = 0;
-        fillWriteBufferTask = CreateNewFillWriteBufferTask();
+        fillBufferTask = CreateNewFillBufferTask();
     }
 
     /// <summary>
     /// Creates a new <see cref="CancellationTokenSource"/> to control the new
-    /// read request that will fill the write buffer.  Then fires off a read
-    /// request to fill the write buffer.  The new task goes into the common
+    /// read request that will fill the fill buffer.  Then fires off a read
+    /// request to fill the fill buffer.  The new task goes into the common
     /// thread pool.
     /// </summary>
     /// <remarks>
@@ -264,13 +264,13 @@ public class DoubleBufferedStream : Stream
     /// to be the read buffer.
     /// </para>
     /// </remarks>
-    /// <returns>A <see cref="Task"/> representing the <see cref="FillWriteBuffer"/>
+    /// <returns>A <see cref="Task"/> representing the <see cref="FillBuffer"/>
     /// call running in the thread pool.</returns>
-    private Task CreateNewFillWriteBufferTask()
+    private Task CreateNewFillBufferTask()
     {
-        writeTaskCancellationSource = new();
+        fillTaskCancellationSource = new();
 
-        return Task.Run(FillWriteBuffer, writeTaskCancellationSource.Token);
+        return Task.Run(FillBuffer, fillTaskCancellationSource.Token);
     }
 
     /// <summary>
@@ -282,40 +282,40 @@ public class DoubleBufferedStream : Stream
     /// This is always run in the common thread pool.
     /// </para>
     /// </remarks>
-    /// <seealso cref="CreateNewFillWriteBufferTask"/>
+    /// <seealso cref="CreateNewFillBufferTask"/>
     /// <seealso cref="Task.Run(Func{Task?}, CancellationToken)"/>
-    private async Task FillWriteBuffer()
+    private async Task FillBuffer()
     {
-        writeBuffer.Offset = underlyingStream.Position;
-        writeBuffer.Stream.Position = 0;
-        int bytesRead = await underlyingStream.ReadAsync(writeBuffer.Buffer, writeTaskCancellationSource.Token);
-        writeBuffer.Length = bytesRead;
+        fillBuffer.Offset = underlyingStream.Position;
+        fillBuffer.Stream.Position = 0;
+        int bytesRead = await underlyingStream.ReadAsync(fillBuffer.Buffer, fillTaskCancellationSource.Token);
+        fillBuffer.Length = bytesRead;
     }
 
     /// <summary>
-    /// Replaces the current read buffer with the current write buffer.
-    /// If the write buffer is still being filled, this will block until it is ready.
+    /// Replaces the current read buffer with the current fill buffer.
+    /// If the fill buffer is still being filled, this will block until it is ready.
     /// Afterwards, kicks off a new read request to the underlying stream,
-    /// reinitializing the <see cref="fillWriteBufferTask"/>.
+    /// reinitializing the <see cref="fillBufferTask"/>.
     /// </summary>
     private void SwapBuffers()
     {
-        fillWriteBufferTask.GetAwaiter().GetResult();
-        (writeBuffer, readBuffer) = (readBuffer, writeBuffer);
-        fillWriteBufferTask = CreateNewFillWriteBufferTask();
+        fillBufferTask.GetAwaiter().GetResult();
+        (fillBuffer, readBuffer) = (readBuffer, fillBuffer);
+        fillBufferTask = CreateNewFillBufferTask();
     }
 
     /// <summary>
-    /// Replaces the current read buffer with the current write buffer.
-    /// If the write buffer is still being filled, this will block until it is ready.
+    /// Replaces the current read buffer with the current fill buffer.
+    /// If the fill buffer is still being filled, this will block until it is ready.
     /// Afterwards, kicks off a new read request to the underlying stream,
-    /// reinitializing the <see cref="fillWriteBufferTask"/>.
+    /// reinitializing the <see cref="fillBufferTask"/>.
     /// </summary>
     private async Task SwapBuffersAsync()
     {
-        await fillWriteBufferTask;
-        (writeBuffer, readBuffer) = (readBuffer, writeBuffer);
-        fillWriteBufferTask = CreateNewFillWriteBufferTask();
+        await fillBufferTask;
+        (fillBuffer, readBuffer) = (readBuffer, fillBuffer);
+        fillBufferTask = CreateNewFillBufferTask();
     }
 
     /// <summary>
@@ -324,8 +324,8 @@ public class DoubleBufferedStream : Stream
     /// <remarks>
     /// <para>
     /// This invalidates the current read buffer so no new data will be read
-    /// from it, cancels the existing task filling the write buffer, and
-    /// creates a new task to fill the write buffer based on the current
+    /// from it, cancels the existing task filling the fill buffer, and
+    /// creates a new task to fill the fill buffer based on the current
     /// position in the stream.
     /// </para>
     /// <para>
@@ -343,10 +343,10 @@ public class DoubleBufferedStream : Stream
         /*
          * Gracefully shut down the existing read task.  (We always have one.)
          */
-        writeTaskCancellationSource.Cancel();
+        fillTaskCancellationSource.Cancel();
         try
         {
-            fillWriteBufferTask.GetAwaiter().GetResult();
+            fillBufferTask.GetAwaiter().GetResult();
         }
         catch (Exception)
         {
@@ -358,7 +358,7 @@ public class DoubleBufferedStream : Stream
          * not contain the current position, and it will call SwapBuffers.
          */
         underlyingStream.Position = Position;
-        fillWriteBufferTask = CreateNewFillWriteBufferTask();
+        fillBufferTask = CreateNewFillBufferTask();
     }
 
     /// <summary>
@@ -367,8 +367,8 @@ public class DoubleBufferedStream : Stream
     /// <remarks>
     /// <para>
     /// This invalidates the current read buffer so no new data will be read
-    /// from it, cancels the existing task filling the write buffer, and
-    /// creates a new task to fill the write buffer based on the current
+    /// from it, cancels the existing task filling the fill buffer, and
+    /// creates a new task to fill the fill buffer based on the current
     /// position in the stream.
     /// </para>
     /// <para>
@@ -386,10 +386,10 @@ public class DoubleBufferedStream : Stream
         /*
          * Gracefully shut down the existing read task.  (We always have one.)
          */
-        writeTaskCancellationSource.Cancel();
+        fillTaskCancellationSource.Cancel();
         try
         {
-            await fillWriteBufferTask;
+            await fillBufferTask;
         }
         catch (Exception)
         {
@@ -401,7 +401,7 @@ public class DoubleBufferedStream : Stream
          * not contain the current position, and it will call SwapBuffers.
          */
         underlyingStream.Position = Position;
-        fillWriteBufferTask = CreateNewFillWriteBufferTask();
+        fillBufferTask = CreateNewFillBufferTask();
     }
 
     /// <inheritdoc/>
@@ -453,7 +453,7 @@ public class DoubleBufferedStream : Stream
 
             /*
              * No need to check if we exhausted the read buffer, because we always
-             * have the write buffer being filled in the background.
+             * have the fill buffer being filled in the background.
              */
 
             return bytesRead;
@@ -462,9 +462,9 @@ public class DoubleBufferedStream : Stream
         {
             /*
              * We are outside the read buffer.
-             * Check if the write buffer is expected to contain the requested data.
+             * Check if the fill buffer is expected to contain the requested data.
              */
-            if (writeBuffer.CouldContain(Position))
+            if (fillBuffer.CouldContain(Position))
             {
                 /*
                  * The next load from the underlying stream at least requested
@@ -482,7 +482,7 @@ public class DoubleBufferedStream : Stream
             }
 
             /*
-             * The write buffer should contain the requested data, once the load
+             * The fill buffer should contain the requested data, once the load
              * completes.  Swap the buffers, blocking if necessary for the load
              * to complete.
              */
@@ -524,7 +524,7 @@ public class DoubleBufferedStream : Stream
 
             /*
              * No need to check if we exhausted the read buffer, because we always
-             * have the write buffer being filled in the background.
+             * have the fill buffer being filled in the background.
              */
 
             return bytesRead;
@@ -533,9 +533,9 @@ public class DoubleBufferedStream : Stream
         {
             /*
              * We are outside the read buffer.
-             * Check if the write buffer is expected to contain the requested data.
+             * Check if the fill buffer is expected to contain the requested data.
              */
-            if (writeBuffer.CouldContain(Position))
+            if (fillBuffer.CouldContain(Position))
             {
                 /*
                  * The next load from the underlying stream at least requested
@@ -553,7 +553,7 @@ public class DoubleBufferedStream : Stream
             }
 
             /*
-             * The write buffer should contain the requested data, once the load
+             * The fill buffer should contain the requested data, once the load
              * completes.  Swap the buffers, blocking if necessary for the load
              * to complete.
              */
@@ -588,7 +588,7 @@ public class DoubleBufferedStream : Stream
 
             /*
              * No need to check if we exhausted the read buffer, because we always
-             * have the write buffer being filled in the background.
+             * have the fill buffer being filled in the background.
              */
 
             return theByte;
@@ -597,9 +597,9 @@ public class DoubleBufferedStream : Stream
         {
             /*
              * We are outside the read buffer.
-             * Check if the write buffer is expected to contain the requested data.
+             * Check if the fill buffer is expected to contain the requested data.
              */
-            if (writeBuffer.CouldContain(Position))
+            if (fillBuffer.CouldContain(Position))
             {
                 /*
                  * The next load from the underlying stream at least requested
@@ -617,7 +617,7 @@ public class DoubleBufferedStream : Stream
             }
 
             /*
-             * The write buffer should contain the requested data, once the load
+             * The fill buffer should contain the requested data, once the load
              * completes.  Swap the buffers, blocking if necessary for the load
              * to complete.
              */
@@ -655,7 +655,7 @@ public class DoubleBufferedStream : Stream
         {
             /*
              * The stream is exhausted, do not bother checking the status of the
-             * read and write buffers.
+             * read and fill buffers.
              */
         }
         else
@@ -668,7 +668,7 @@ public class DoubleBufferedStream : Stream
             }
             else
             {
-                if (writeBuffer.CouldContain(Position))
+                if (fillBuffer.CouldContain(Position))
                 {
                     /*
                      * We will speculatively assume that everything will be good, and do nothing.
@@ -714,10 +714,10 @@ public class DoubleBufferedStream : Stream
     {
         if (disposing)
         {
-            writeTaskCancellationSource.Cancel();
+            fillTaskCancellationSource.Cancel();
             try
             {
-                fillWriteBufferTask.GetAwaiter().GetResult();
+                fillBufferTask.GetAwaiter().GetResult();
             }
             catch (Exception)
             {
@@ -726,7 +726,7 @@ public class DoubleBufferedStream : Stream
                  */
             }
 
-            writeBuffer.Dispose();
+            fillBuffer.Dispose();
             readBuffer.Dispose();
 
             underlyingStream.Dispose();
