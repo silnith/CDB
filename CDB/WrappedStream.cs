@@ -8,6 +8,13 @@ namespace Silnith.CDB;
 /// When this stream is disposed, it will also dispose the disposable objects
 /// that produced it.
 /// </summary>
+/// <remarks>
+/// <para>
+/// This is necessary for accessing resources that require intermediate
+/// resources be created in order to read them.  (i.e. database
+/// connections, prepared statements, file archives, etc.)
+/// </para>
+/// </remarks>
 public class WrappedStream : Stream
 {
     private readonly Stream stream;
