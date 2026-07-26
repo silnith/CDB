@@ -33,7 +33,7 @@ public record Tile(
         LevelOfDetail Level,
         int Up,
         int Right,
-        string FileType) : ICDBIdentifier
+        string FileType) : ICDBFileIdentifier
 {
     /// <summary>
     /// The pattern for filenames in the tiled dataset directory hierarchy.

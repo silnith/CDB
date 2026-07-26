@@ -18,7 +18,7 @@ public record Navigation(
     Dataset Dataset,
     [property: Range(0, 999)] int ComponentSelector1,
     [property: Range(0, 999)] int ComponentSelector2,
-    string FileType) : ICDBIdentifier
+    string FileType) : ICDBFileIdentifier
 {
     /// <summary>
     /// The pattern based on 3.7.2. Navigation Data Naming Convention

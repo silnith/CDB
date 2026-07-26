@@ -4,7 +4,6 @@ using Silnith.CDB.FileSystem.Visitor;
 using System;
 using System.IO;
 using System.IO.Compression;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -95,7 +94,7 @@ public class FileSystemCDB : ICDB
         BufferSize = 0,
     };
 
-    private Stream? ReadFile(ICDBIdentifier identifier)
+    private Stream? ReadFile(ICDBFileIdentifier identifier)
     {
         FileInfo file = new(Path.Combine(CdbRoot.FullName, identifier.RelativePath, identifier.Filename));
         if (file.Exists)
@@ -111,7 +110,7 @@ public class FileSystemCDB : ICDB
     }
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0060:Remove unused parameter", Justification = "No.")]
-    private Task<Stream?> ReadFileAsync(ICDBIdentifier identifier, CancellationToken cancellationToken)
+    private Task<Stream?> ReadFileAsync(ICDBFileIdentifier identifier, CancellationToken cancellationToken)
     {
         FileInfo file = new(Path.Combine(CdbRoot.FullName, identifier.RelativePath, identifier.Filename));
         if (file.Exists)

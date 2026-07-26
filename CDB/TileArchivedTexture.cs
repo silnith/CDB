@@ -91,7 +91,7 @@ public record TileArchivedTexture(
     public string EntryName => $"{LatitudeValue.Code}{LongitudeValue.Code}_D{DatasetValue.Value:D3}_S{ComponentSelector1:D3}_T{ComponentSelector2:D3}_{Level.Code}_U{Up:D}_R{Right:D}_{Name}.{FileType}";
 
     /// <inheritdoc/>
-    public ICDBIdentifier ArchiveIdentifier => new Tile(LatitudeValue, LongitudeValue, DatasetValue, ComponentSelector1, ComponentSelector2, Level, Up, Right, "zip");
+    public ICDBFileIdentifier ArchiveIdentifier => new Tile(LatitudeValue, LongitudeValue, DatasetValue, ComponentSelector1, ComponentSelector2, Level, Up, Right, "zip");
 
     /// <inheritdoc/>
     public Stream? ReadFromCDB(ICDB cdb)

@@ -22,7 +22,7 @@ public record TextureLod(
         [property: Range(0, 999)] int ComponentSelector2,
         LevelOfDetail LevelOfDetail,
         string Name,
-        string FileType) : ICDBIdentifier
+        string FileType) : ICDBFileIdentifier
 {
     /// <summary>
     /// The pattern based on 3.4.2.1. GTModelTexture Naming Convention

@@ -22,7 +22,7 @@ public record MovingModelLod(
     [property: Range(0, 999)] int ComponentSelector2,
     LevelOfDetail LevelOfDetail,
     DISEntity MMDC,
-    string FileType) : ICDBIdentifier
+    string FileType) : ICDBFileIdentifier
 {
     /// <summary>
     /// The pattern based on 3.5.1.1. MModelGeometry Naming Convention.

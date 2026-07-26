@@ -20,7 +20,7 @@ public record Texture(
         [property: Range(0, 999)] int ComponentSelector1,
         [property: Range(0, 999)] int ComponentSelector2,
         string Name,
-        string FileType) : ICDBIdentifier
+        string FileType) : ICDBFileIdentifier
 {
     /// <summary>
     /// The pattern for the first two directories in a texture hierarchy.

@@ -24,7 +24,7 @@ public record GeotypicalModel(
     FeatureCode FeatureCode,
     [property: Range(0, 999)] int FeatureSubcode,
     string Name,
-    string FileType) : ICDBIdentifier
+    string FileType) : ICDBFileIdentifier
 {
     /// <summary>
     /// The pattern based on 3.4.1.1. GTModelGeometry Entry File Naming Convention.
