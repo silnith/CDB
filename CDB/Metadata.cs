@@ -12,12 +12,6 @@ namespace Silnith.CDB;
 public record Metadata(string Name, string FileType) : ICDBFileIdentifier
 {
     /// <inheritdoc/>
-    public string Filename => $"{Name}.{FileType}";
-
-    /// <inheritdoc/>
-    public string RelativePath => "Metadata";
-
-    /// <inheritdoc/>
     public Stream? ReadFromCDB(ICDB cdb)
     {
         return cdb.ReadMetadata(this);
@@ -28,5 +22,11 @@ public record Metadata(string Name, string FileType) : ICDBFileIdentifier
     {
         return cdb.ReadMetadataAsync(this, cancellationToken);
     }
+
+    /// <inheritdoc/>
+    public string RelativePath => "Metadata";
+
+    /// <inheritdoc/>
+    public string Filename => $"{Name}.{FileType}";
 
 }

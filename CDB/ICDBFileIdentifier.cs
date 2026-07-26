@@ -6,17 +6,17 @@
 public interface ICDBFileIdentifier : ICDBIdentifier
 {
     /// <summary>
-    /// The name of the file.
+    /// The relative path from the CDB root directory to the file.
     /// </summary>
-    public string Filename
+    public string RelativePath
     {
         get;
     }
 
     /// <summary>
-    /// The relative path from the CDB root directory to the file.
+    /// The name of the file.
     /// </summary>
-    public string RelativePath
+    public string Filename
     {
         get;
     }

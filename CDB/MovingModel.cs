@@ -71,15 +71,6 @@ public record MovingModel(
     }
 
     /// <inheritdoc/>
-    public string Filename => $"{Dataset.Code}_S{ComponentSelector1:D3}_T{ComponentSelector2:D3}_{MMDC.MovingModelDisCode}.{FileType}";
-
-    /// <inheritdoc/>
-    public string RelativePath => Path.Combine(
-        "MModel",
-        Dataset.Directory,
-        MMDC.Directories);
-
-    /// <inheritdoc/>
     public Stream? ReadFromCDB(ICDB cdb)
     {
         return cdb.ReadMovingModel(this);
@@ -90,5 +81,24 @@ public record MovingModel(
     {
         return cdb.ReadMovingModelAsync(this, cancellationToken);
     }
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// <para>
+    /// This will be of the form <c>MModel/000_Dataset/1_Kind/2_Domain/3_Country/4_Category/1_2_3_4_5_6_7</c>.
+    /// </para>
+    /// </remarks>
+    public string RelativePath => Path.Combine(
+        "MModel",
+        Dataset.Directory,
+        MMDC.Directories);
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// <para>
+    /// This will be of the form <c>D000_S000_T000_1_2_3_4_5_6_7.ext</c>.
+    /// </para>
+    /// </remarks>
+    public string Filename => $"{Dataset.Code}_S{ComponentSelector1:D3}_T{ComponentSelector2:D3}_{MMDC.MovingModelDisCode}.{FileType}";
 
 }

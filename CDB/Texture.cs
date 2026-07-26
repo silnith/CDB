@@ -73,12 +73,21 @@ public record Texture(
     }
 
     /// <inheritdoc/>
-    public string Filename => $"D{Dataset.Value:D3}_S{ComponentSelector1:D3}_T{ComponentSelector2:D3}_{Name}.{FileType}";
+    public Stream? ReadFromCDB(ICDB cdb)
+    {
+        return cdb.ReadTexture(this);
+    }
+
+    /// <inheritdoc/>
+    public Task<Stream?> ReadFromCDBAsync(ICDB cdb, CancellationToken cancellationToken)
+    {
+        return cdb.ReadTextureAsync(this, cancellationToken);
+    }
 
     /// <inheritdoc/>
     /// <remarks>
     /// <para>
-    /// This will be of the form <c>GTModel/000_Dataset/A/B/Abacus</c>.
+    /// This will be of the form <c>*Model/000_Dataset/A/B/Abacus</c>.
     /// </para>
     /// </remarks>
     public string RelativePath
@@ -95,15 +104,11 @@ public record Texture(
     }
 
     /// <inheritdoc/>
-    public Stream? ReadFromCDB(ICDB cdb)
-    {
-        return cdb.ReadTexture(this);
-    }
-
-    /// <inheritdoc/>
-    public Task<Stream?> ReadFromCDBAsync(ICDB cdb, CancellationToken cancellationToken)
-    {
-        return cdb.ReadTextureAsync(this, cancellationToken);
-    }
+    /// <remarks>
+    /// <para>
+    /// This will be of the form <c>D000_S000_T000_name.ext</c>.
+    /// </para>
+    /// </remarks>
+    public string Filename => $"D{Dataset.Value:D3}_S{ComponentSelector1:D3}_T{ComponentSelector2:D3}_{Name}.{FileType}";
 
 }

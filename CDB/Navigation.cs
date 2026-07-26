@@ -54,14 +54,6 @@ public record Navigation(
     }
 
     /// <inheritdoc/>
-    public string Filename => $"{Dataset.Code}_S{ComponentSelector1:D3}_T{ComponentSelector2:D3}.{FileType}";
-
-    /// <inheritdoc/>
-    public string RelativePath => Path.Combine(
-        "Navigation",
-        Dataset.Directory);
-
-    /// <inheritdoc/>
     public Stream? ReadFromCDB(ICDB cdb)
     {
         return cdb.ReadNavigation(this);
@@ -72,5 +64,23 @@ public record Navigation(
     {
         return cdb.ReadNavigationAsync(this, cancellationToken);
     }
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// <para>
+    /// This will be <c>Navigation/400_NavData</c>.
+    /// </para>
+    /// </remarks>
+    public string RelativePath => Path.Combine(
+        "Navigation",
+        Dataset.Directory);
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// <para>
+    /// This will be of the form <c>D000_S000_T000.ext</c>.
+    /// </para>
+    /// </remarks>
+    public string Filename => $"{Dataset.Code}_S{ComponentSelector1:D3}_T{ComponentSelector2:D3}.{FileType}";
 
 }

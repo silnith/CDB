@@ -68,22 +68,6 @@ public record TextureLod(
     }
 
     /// <inheritdoc/>
-    public string Filename => $"D{Dataset.Value:D3}_S{ComponentSelector1:D3}_T{ComponentSelector2:D3}_{LevelOfDetail.Code}_{Name}.{FileType}";
-
-    /// <inheritdoc/>
-    /// <remarks>
-    /// <para>
-    /// This will be of the form <c>GTModel/000_Dataset/A/B/Abacus</c>.
-    /// </para>
-    /// </remarks>
-    public string RelativePath => Path.Combine(
-        Dataset.RootDirectory,
-        Dataset.Directory,
-        Name.Substring(0, 1).ToUpperInvariant(),
-        Name.Substring(1, 1).ToUpperInvariant(),
-        Name);
-
-    /// <inheritdoc/>
     public Stream? ReadFromCDB(ICDB cdb)
     {
         return cdb.ReadTextureLevelOfDetail(this);
@@ -94,5 +78,27 @@ public record TextureLod(
     {
         return cdb.ReadTextureLevelOfDetailAsync(this, cancellationToken);
     }
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// <para>
+    /// This will be of the form <c>*Model/000_Dataset/A/B/Abacus</c>.
+    /// </para>
+    /// </remarks>
+    public string RelativePath => Path.Combine(
+        Dataset.RootDirectory,
+        Dataset.Directory,
+        Name.Substring(0, 1).ToUpperInvariant(),
+        Name.Substring(1, 1).ToUpperInvariant(),
+        Name);
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// <para>
+    /// This will be of the form <c>D000_S000_T000_L00_name.ext</c>.
+    /// </para>
+    /// </remarks>
+    // TODO: Are there some cases where we need to use W instead of L?
+    public string Filename => $"D{Dataset.Value:D3}_S{ComponentSelector1:D3}_T{ComponentSelector2:D3}_{LevelOfDetail.Code}_{Name}.{FileType}";
 
 }

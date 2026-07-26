@@ -88,12 +88,6 @@ public record TileArchivedTexture(
     }
 
     /// <inheritdoc/>
-    public string EntryName => $"{LatitudeValue.Code}{LongitudeValue.Code}_D{DatasetValue.Value:D3}_S{ComponentSelector1:D3}_T{ComponentSelector2:D3}_{Level.Code}_U{Up:D}_R{Right:D}_{Name}.{FileType}";
-
-    /// <inheritdoc/>
-    public ICDBFileIdentifier ArchiveIdentifier => new Tile(LatitudeValue, LongitudeValue, DatasetValue, ComponentSelector1, ComponentSelector2, Level, Up, Right, "zip");
-
-    /// <inheritdoc/>
     public Stream? ReadFromCDB(ICDB cdb)
     {
         return cdb.ReadTileTexture(this);
@@ -104,5 +98,21 @@ public record TileArchivedTexture(
     {
         return cdb.ReadTileTextureAsync(this, cancellationToken);
     }
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// <para>
+    /// This will be a <see cref="Tile"/> matching all the common members of this, with the file type <c>zip</c>.
+    /// </para>
+    /// </remarks>
+    public ICDBFileIdentifier ArchiveIdentifier => new Tile(LatitudeValue, LongitudeValue, DatasetValue, ComponentSelector1, ComponentSelector2, Level, Up, Right, "zip");
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// <para>
+    /// This will be of the form <c>N00E000_D000_S000_T000_L00_U0_R0_name.ext</c>.
+    /// </para>
+    /// </remarks>
+    public string EntryName => $"{LatitudeValue.Code}{LongitudeValue.Code}_D{DatasetValue.Value:D3}_S{ComponentSelector1:D3}_T{ComponentSelector2:D3}_{Level.Code}_U{Up:D}_R{Right:D}_{Name}.{FileType}";
 
 }

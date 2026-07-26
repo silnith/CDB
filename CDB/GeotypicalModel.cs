@@ -71,12 +71,16 @@ public record GeotypicalModel(
     }
 
     /// <inheritdoc/>
-    /// <remarks>
-    /// <para>
-    /// This will be of the form <c>D000_S000_T000_AB999_000_name.ext</c>.
-    /// </para>
-    /// </remarks>
-    public string Filename => $"{Dataset.Code}_S{ComponentSelector1:D3}_T{ComponentSelector2:D3}_{FeatureCode.Code}_{FeatureSubcode:D3}_{Name}.{FileType}";
+    public Stream? ReadFromCDB(ICDB cdb)
+    {
+        return cdb.ReadGeotypicalModel(this);
+    }
+
+    /// <inheritdoc/>
+    public Task<Stream?> ReadFromCDBAsync(ICDB cdb, CancellationToken cancellationToken)
+    {
+        return cdb.ReadGeotypicalModelAsync(this, cancellationToken);
+    }
 
     /// <inheritdoc/>
     /// <remarks>
@@ -90,15 +94,11 @@ public record GeotypicalModel(
         FeatureCode.RelativePath);
 
     /// <inheritdoc/>
-    public Stream? ReadFromCDB(ICDB cdb)
-    {
-        return cdb.ReadGeotypicalModel(this);
-    }
-
-    /// <inheritdoc/>
-    public Task<Stream?> ReadFromCDBAsync(ICDB cdb, CancellationToken cancellationToken)
-    {
-        return cdb.ReadGeotypicalModelAsync(this, cancellationToken);
-    }
+    /// <remarks>
+    /// <para>
+    /// This will be of the form <c>D000_S000_T000_AB999_000_name.ext</c>.
+    /// </para>
+    /// </remarks>
+    public string Filename => $"{Dataset.Code}_S{ComponentSelector1:D3}_T{ComponentSelector2:D3}_{FeatureCode.Code}_{FeatureSubcode:D3}_{Name}.{FileType}";
 
 }

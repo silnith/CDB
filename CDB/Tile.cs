@@ -82,18 +82,6 @@ public record Tile(
     }
 
     /// <inheritdoc/>
-    public string Filename => $"{LatitudeValue.Code}{LongitudeValue.Code}_{DatasetValue.Code}_S{ComponentSelector1:D3}_T{ComponentSelector2:D3}_{Level.Code}_U{Up:D}_R{Right:D}.{FileType}";
-
-    /// <inheritdoc/>
-    public string RelativePath => Path.Combine(
-        DatasetValue.RootDirectory,
-        LatitudeValue.Code,
-        LongitudeValue.Code,
-        DatasetValue.Directory,
-        Level.TiledCode,
-        $"U{Up:D}");
-
-    /// <inheritdoc/>
     public Stream? ReadFromCDB(ICDB cdb)
     {
         return cdb.ReadTile(this);
@@ -104,5 +92,27 @@ public record Tile(
     {
         return cdb.ReadTileAsync(this, cancellationToken);
     }
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// <para>
+    /// This will be of the form <c>Tiles/N00/E000/000_Dataset/L00/U0</c>.
+    /// </para>
+    /// </remarks>
+    public string RelativePath => Path.Combine(
+        DatasetValue.RootDirectory,
+        LatitudeValue.Code,
+        LongitudeValue.Code,
+        DatasetValue.Directory,
+        Level.TiledCode,
+        $"U{Up:D}");
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// <para>
+    /// This will be of the form <c>N00E000_D000_S000_T000_L00_U0_R0.ext</c>.
+    /// </para>
+    /// </remarks>
+    public string Filename => $"{LatitudeValue.Code}{LongitudeValue.Code}_{DatasetValue.Code}_S{ComponentSelector1:D3}_T{ComponentSelector2:D3}_{Level.Code}_U{Up:D}_R{Right:D}.{FileType}";
 
 }

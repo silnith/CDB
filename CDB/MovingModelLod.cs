@@ -80,16 +80,6 @@ public record MovingModelLod(
     }
 
     /// <inheritdoc/>
-    public string Filename => $"{Dataset.Code}_S{ComponentSelector1:D3}_T{ComponentSelector2:D3}_{LevelOfDetail.Code}_{MMDC.MovingModelDisCode}.{FileType}";
-
-    /// <inheritdoc/>
-    public string RelativePath => Path.Combine(
-        "MModel",
-        Dataset.Directory,
-        MMDC.Directories,
-        LevelOfDetail.Code);
-
-    /// <inheritdoc/>
     public Stream? ReadFromCDB(ICDB cdb)
     {
         return cdb.ReadMovingModelLevelOfDetail(this);
@@ -100,5 +90,25 @@ public record MovingModelLod(
     {
         return cdb.ReadMovingModelLevelOfDetailAsync(this, cancellationToken);
     }
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// <para>
+    /// This will be of the form <c>MModel/000_Dataset/1_Kind/2_Domain/3_Country/4_Category/1_2_3_4_5_6_7/L00</c>.
+    /// </para>
+    /// </remarks>
+    public string RelativePath => Path.Combine(
+        "MModel",
+        Dataset.Directory,
+        MMDC.Directories,
+        LevelOfDetail.Code);
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// <para>
+    /// This will be of the form <c>D000_S000_T000_L00_1_2_3_4_5_6_7.ext</c>.
+    /// </para>
+    /// </remarks>
+    public string Filename => $"{Dataset.Code}_S{ComponentSelector1:D3}_T{ComponentSelector2:D3}_{LevelOfDetail.Code}_{MMDC.MovingModelDisCode}.{FileType}";
 
 }

@@ -7,17 +7,17 @@
 public interface ICDBArchivedIdentifier : ICDBIdentifier
 {
     /// <summary>
-    /// The name of the entry in the archive that contains this file.
+    /// The identifier for the archive that contains this file.
     /// </summary>
-    public string EntryName
+    public ICDBFileIdentifier ArchiveIdentifier
     {
         get;
     }
 
     /// <summary>
-    /// The identifier for the archive that contains this file.
+    /// The name of the entry in the archive that contains this file.
     /// </summary>
-    public ICDBFileIdentifier ArchiveIdentifier
+    public string EntryName
     {
         get;
     }

@@ -80,12 +80,16 @@ public record GeotypicalModelLod(
     }
 
     /// <inheritdoc/>
-    /// <remarks>
-    /// <para>
-    /// This will be of the form <c>D000_S000_T000_L00_AB999_000_name.ext</c>.
-    /// </para>
-    /// </remarks>
-    public string Filename => $"{Dataset.Code}_S{ComponentSelector1:D3}_T{ComponentSelector2:D3}_{LevelOfDetail.Code}_{FeatureCode.Code}_{FeatureSubcode:D3}_{Name}.{FileType}";
+    public Stream? ReadFromCDB(ICDB cdb)
+    {
+        return cdb.ReadGeotypicalModelLevelOfDetail(this);
+    }
+
+    /// <inheritdoc/>
+    public Task<Stream?> ReadFromCDBAsync(ICDB cdb, CancellationToken cancellationToken)
+    {
+        return cdb.ReadGeotypicalModelLevelOfDetailAsync(this, cancellationToken);
+    }
 
     /// <inheritdoc/>
     /// <remarks>
@@ -100,15 +104,11 @@ public record GeotypicalModelLod(
         LevelOfDetail.Code);
 
     /// <inheritdoc/>
-    public Stream? ReadFromCDB(ICDB cdb)
-    {
-        return cdb.ReadGeotypicalModelLevelOfDetail(this);
-    }
-
-    /// <inheritdoc/>
-    public Task<Stream?> ReadFromCDBAsync(ICDB cdb, CancellationToken cancellationToken)
-    {
-        return cdb.ReadGeotypicalModelLevelOfDetailAsync(this, cancellationToken);
-    }
+    /// <remarks>
+    /// <para>
+    /// This will be of the form <c>D000_S000_T000_L00_AB999_000_name.ext</c>.
+    /// </para>
+    /// </remarks>
+    public string Filename => $"{Dataset.Code}_S{ComponentSelector1:D3}_T{ComponentSelector2:D3}_{LevelOfDetail.Code}_{FeatureCode.Code}_{FeatureSubcode:D3}_{Name}.{FileType}";
 
 }
