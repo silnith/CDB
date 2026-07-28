@@ -10,6 +10,8 @@ using System.Threading.Tasks;
 
 namespace Silnith.CDB.SQL;
 
+#pragma warning disable CS1573 // Parameter has no matching param tag in the XML comment (but other parameters do)
+
 /// <summary>
 /// A CDB data store that uses an SQL database for its storage.
 /// </summary>
@@ -20,7 +22,7 @@ namespace Silnith.CDB.SQL;
 /// projects.
 /// </para>
 /// </remarks>
-public abstract class SQLDataStore : IDisposable, IAsyncDisposable
+public abstract class SQLDataStore : ISQLDataStore
 {
     /// <summary>
     /// Creates a parameter for a database command, sets the name and type of
@@ -39,7 +41,7 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         dbParameter.ParameterName = dbParameterName;
     }
 
-    private readonly DbDataSource dbDataSource;
+    internal readonly DbDataSource dbDataSource;
 
     /// <summary>
     /// Creates a new CDB storage backend using the provided SQL connection
@@ -60,10 +62,20 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         }
     }
 
+    public PersistentConnection GetPersistentConnection()
+    {
+        return new PersistentConnection(this);
+    }
+
     private void CreateSchema()
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
 
+        CreateSchema(dbConnection);
+    }
+
+    protected internal virtual void CreateSchema(DbConnection dbConnection)
+    {
         using DbTransaction dbTransaction = dbConnection.BeginTransaction(IsolationLevel.Serializable);
 
         using DbCommand dbCommand = dbConnection.CreateCommand();
@@ -242,59 +254,62 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         get;
     }
 
-    private void InitializeInsertIntoCDBCommand(DbCommand dbCommand)
+    internal void InitializeInsertIntoCDBCommand(DbCommand dbCommand)
     {
         dbCommand.CommandText = InsertIntoCDBStatement;
         CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
     }
 
-    /// <summary>
-    /// Inserts a name into the table identifying all the unique data stores
-    /// contained in the database.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// An <see cref="SQLDataStore"/> is capable of holding multiple CDB data stores.
-    /// Each distinct data store is identified by a name.
-    /// </para>
-    /// </remarks>
-    /// <param name="cdbName">The name of a new CDB data store.</param>
-    /// <returns>The number of database rows affected.</returns>
-    public virtual int InsertIntoCDB(string cdbName)
+    /// <inheritdoc/>
+    public int InsertIntoCDB(string cdbName)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
         using DbCommand insertIntoCDBCommand = dbConnection.CreateCommand();
         InitializeInsertIntoCDBCommand(insertIntoCDBCommand);
         insertIntoCDBCommand.Prepare();
 
+        return InsertIntoCDB(insertIntoCDBCommand, cdbName);
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.InsertIntoCDB(string)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoCDBCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual int InsertIntoCDB(DbCommand insertIntoCDBCommand,
+        string cdbName)
+    {
         insertIntoCDBCommand.Parameters[CdbParamName].Value = cdbName;
 
         return insertIntoCDBCommand.ExecuteNonQuery();
     }
 
-    /// <summary>
-    /// Inserts a name into the table identifying all the unique data stores
-    /// contained in the database.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// An <see cref="SQLDataStore"/> is capable of holding multiple CDB data stores.
-    /// Each distinct data store is identified by a name.
-    /// </para>
-    /// </remarks>
-    /// <param name="cdbName">The name of a new CDB data store.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The number of database rows affected.</returns>
-    public virtual async Task<int> InsertIntoCDBAsync(string cdbName, CancellationToken cancellationToken = default)
+    /// <inheritdoc/>
+    public async Task<int> InsertIntoCDBAsync(string cdbName, CancellationToken cancellationToken)
     {
         await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
         await using DbCommand insertIntoCDBCommand = dbConnection.CreateCommand();
         InitializeInsertIntoCDBCommand(insertIntoCDBCommand);
         await insertIntoCDBCommand.PrepareAsync(cancellationToken);
 
+        return await InsertIntoCDBAsync(insertIntoCDBCommand, cdbName, cancellationToken);
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.InsertIntoCDBAsync(string, CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoCDBCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual Task<int> InsertIntoCDBAsync(DbCommand insertIntoCDBCommand,
+        string cdbName, CancellationToken cancellationToken = default)
+    {
         insertIntoCDBCommand.Parameters[CdbParamName].Value = cdbName;
 
-        return await insertIntoCDBCommand.ExecuteNonQueryAsync(cancellationToken);
+        return insertIntoCDBCommand.ExecuteNonQueryAsync(cancellationToken);
     }
 
     #endregion
@@ -318,22 +333,31 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         get;
     }
 
-    private void InitializeSelectFromCDBCommand(DbCommand dbCommand)
+    internal void InitializeSelectFromCDBCommand(DbCommand dbCommand)
     {
         dbCommand.CommandText = SelectFromCDBStatement;
     }
 
-    /// <summary>
-    /// Returns all CDB data store names in the database.
-    /// </summary>
-    /// <returns>All the names of the distinct CDB data stores in the database.</returns>
-    public virtual IEnumerable<string> SelectFromCDB()
+    /// <inheritdoc/>
+    public IEnumerable<string> SelectFromCDB()
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
         using DbCommand selectFromCDBCommand = dbConnection.CreateCommand();
         InitializeSelectFromCDBCommand(selectFromCDBCommand);
         selectFromCDBCommand.Prepare();
 
+        return SelectFromCDB(selectFromCDBCommand);
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.SelectFromCDBAsync(CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="selectFromCDBCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual IEnumerable<string> SelectFromCDB(DbCommand selectFromCDBCommand)
+    {
         using DbDataReader dbDataReader = selectFromCDBCommand.ExecuteReader(
             CommandBehavior.SequentialAccess | CommandBehavior.SingleResult);
         do
@@ -346,17 +370,30 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         } while (dbDataReader.NextResult());
     }
 
-    /// <summary>
-    /// Returns all CDB data store names in the database.
-    /// </summary>
-    /// <returns>All the names of the distinct CDB data stores in the database.</returns>
-    public virtual async IAsyncEnumerable<string> SelectFromCDBAsync([EnumeratorCancellation] CancellationToken cancellationToken = default)
+    /// <inheritdoc/>
+    public async IAsyncEnumerable<string> SelectFromCDBAsync([EnumeratorCancellation] CancellationToken cancellationToken)
     {
         await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
         await using DbCommand selectFromCDBCommand = dbConnection.CreateCommand();
         InitializeSelectFromCDBCommand(selectFromCDBCommand);
         await selectFromCDBCommand.PrepareAsync(cancellationToken);
 
+        await foreach (string cdb in SelectFromCDBAsync(selectFromCDBCommand, cancellationToken).WithCancellation(cancellationToken))
+        {
+            yield return cdb;
+        }
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.SelectFromCDBAsync(CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="selectFromCDBCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual async IAsyncEnumerable<string> SelectFromCDBAsync(DbCommand selectFromCDBCommand,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
         await using DbDataReader dbDataReader = await selectFromCDBCommand.ExecuteReaderAsync(
             CommandBehavior.SequentialAccess | CommandBehavior.SingleResult, cancellationToken);
         do
@@ -423,7 +460,7 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         dbCommand.Parameters[FileTypeParamName].Value = metadata.FileType;
     }
 
-    private void InitializeInsertIntoMetadataCommand(DbCommand dbCommand)
+    internal void InitializeInsertIntoMetadataCommand(DbCommand dbCommand)
     {
         dbCommand.CommandText = InsertIntoMetadataStatement;
         CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
@@ -431,20 +468,27 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         CreateAndAttachParameter(dbCommand, ContentParamName, DbType.Binary);
     }
 
-    /// <summary>
-    /// Inserts a metadata file into the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
-    /// <param name="metadata">The metadata identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <returns>The number of rows affected.</returns>
-    public virtual int InsertIntoMetadata(string cdbName, Metadata metadata, byte[] content)
+    /// <inheritdoc/>
+    public int InsertIntoMetadata(string cdbName, Metadata metadata, byte[] content)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
         using DbCommand insertIntoMetadataCommand = dbConnection.CreateCommand();
         InitializeInsertIntoMetadataCommand(insertIntoMetadataCommand);
         insertIntoMetadataCommand.Prepare();
 
+        return InsertIntoMetadata(insertIntoMetadataCommand, cdbName, metadata, content);
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.InsertIntoMetadata(string, Metadata, byte[])"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoMetadataCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual int InsertIntoMetadata(DbCommand insertIntoMetadataCommand,
+        string cdbName, Metadata metadata, byte[] content)
+    {
         insertIntoMetadataCommand.Parameters[CdbParamName].Value = cdbName;
         SetMetadataParameters(insertIntoMetadataCommand, metadata);
         insertIntoMetadataCommand.Parameters[ContentParamName].Value = content;
@@ -452,20 +496,27 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         return insertIntoMetadataCommand.ExecuteNonQuery();
     }
 
-    /// <summary>
-    /// Inserts a metadata file into the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
-    /// <param name="metadata">The metadata identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <returns>The number of rows affected.</returns>
-    public virtual int InsertIntoMetadata(string cdbName, Metadata metadata, Stream content)
+    /// <inheritdoc/>
+    public int InsertIntoMetadata(string cdbName, Metadata metadata, Stream content)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
         using DbCommand insertIntoMetadataCommand = dbConnection.CreateCommand();
         InitializeInsertIntoMetadataCommand(insertIntoMetadataCommand);
         insertIntoMetadataCommand.Prepare();
 
+        return InsertIntoMetadata(insertIntoMetadataCommand, cdbName, metadata, content);
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.InsertIntoMetadata(string, Metadata, Stream)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoMetadataCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual int InsertIntoMetadata(DbCommand insertIntoMetadataCommand,
+        string cdbName, Metadata metadata, Stream content)
+    {
         insertIntoMetadataCommand.Parameters[CdbParamName].Value = cdbName;
         SetMetadataParameters(insertIntoMetadataCommand, metadata);
         insertIntoMetadataCommand.Parameters[ContentParamName].Value = content;
@@ -473,48 +524,66 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         return insertIntoMetadataCommand.ExecuteNonQuery();
     }
 
-    /// <summary>
-    /// Inserts a metadata file into the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
-    /// <param name="metadata">The metadata identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The number of rows affected.</returns>
-    public virtual async Task<int> InsertIntoMetadataAsync(string cdbName, Metadata metadata, byte[] content, CancellationToken cancellationToken = default)
+    /// <inheritdoc/>
+    public async Task<int> InsertIntoMetadataAsync(string cdbName, Metadata metadata, byte[] content,
+        CancellationToken cancellationToken)
     {
         await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
         await using DbCommand insertIntoMetadataCommand = dbConnection.CreateCommand();
         InitializeInsertIntoMetadataCommand(insertIntoMetadataCommand);
         await insertIntoMetadataCommand.PrepareAsync(cancellationToken);
 
-        insertIntoMetadataCommand.Parameters[CdbParamName].Value = cdbName;
-        SetMetadataParameters(insertIntoMetadataCommand, metadata);
-        insertIntoMetadataCommand.Parameters[ContentParamName].Value = content;
-
-        return await insertIntoMetadataCommand.ExecuteNonQueryAsync(cancellationToken);
+        return await InsertIntoMetadataAsync(insertIntoMetadataCommand, cdbName, metadata, content,
+            cancellationToken);
     }
 
-    /// <summary>
-    /// Inserts a metadata file into the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
-    /// <param name="metadata">The metadata identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The number of rows affected.</returns>
-    public virtual async Task<int> InsertIntoMetadataAsync(string cdbName, Metadata metadata, Stream content, CancellationToken cancellationToken = default)
+    /// <inheritdoc cref="ISQLDataStore.InsertIntoMetadataAsync(string, Metadata, byte[], CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoMetadataCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual Task<int> InsertIntoMetadataAsync(DbCommand insertIntoMetadataCommand,
+        string cdbName, Metadata metadata, byte[] content,
+        CancellationToken cancellationToken)
+    {
+        insertIntoMetadataCommand.Parameters[CdbParamName].Value = cdbName;
+        SetMetadataParameters(insertIntoMetadataCommand, metadata);
+        insertIntoMetadataCommand.Parameters[ContentParamName].Value = content;
+
+        return insertIntoMetadataCommand.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<int> InsertIntoMetadataAsync(string cdbName, Metadata metadata, Stream content,
+        CancellationToken cancellationToken)
     {
         await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
         await using DbCommand insertIntoMetadataCommand = dbConnection.CreateCommand();
         InitializeInsertIntoMetadataCommand(insertIntoMetadataCommand);
         await insertIntoMetadataCommand.PrepareAsync(cancellationToken);
 
+        return await InsertIntoMetadataAsync(insertIntoMetadataCommand, cdbName, metadata, content,
+            cancellationToken);
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.InsertIntoMetadataAsync(string, Metadata, Stream, CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoMetadataCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual Task<int> InsertIntoMetadataAsync(DbCommand insertIntoMetadataCommand,
+        string cdbName, Metadata metadata, Stream content,
+        CancellationToken cancellationToken)
+    {
         insertIntoMetadataCommand.Parameters[CdbParamName].Value = cdbName;
         SetMetadataParameters(insertIntoMetadataCommand, metadata);
         insertIntoMetadataCommand.Parameters[ContentParamName].Value = content;
 
-        return await insertIntoMetadataCommand.ExecuteNonQueryAsync(cancellationToken);
+        return insertIntoMetadataCommand.ExecuteNonQueryAsync(cancellationToken);
     }
 
     #endregion
@@ -541,30 +610,36 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         get;
     }
 
-    private void InitializeSelectFromMetadataCommand(DbCommand dbCommand)
+    internal void InitializeSelectFromMetadataCommand(DbCommand dbCommand)
     {
         dbCommand.CommandText = SelectFromMetadataStatement;
         CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
         CreateAndAttachMetadataParameters(dbCommand);
     }
 
-    /// <summary>
-    /// Tries to find a metadata file in the database.
-    /// If the file was found, runs <paramref name="fileFoundAction"/> on the file contents.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="metadata">The metadata identifier.</param>
-    /// <param name="fileFoundAction">The action to run if the file is found.
-    /// The stream will be automatically closed after the action returns or
-    /// throws an exception.</param>
-    /// <returns><see langword="true"/> if the file was found.</returns>
-    public virtual bool TrySelectFromMetadata(string cdbName, Metadata metadata, Action<Stream> fileFoundAction)
+    /// <inheritdoc/>
+    public bool TrySelectFromMetadata(string cdbName, Metadata metadata, Action<Stream> fileFoundAction)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
         using DbCommand selectFromMetadataCommand = dbConnection.CreateCommand();
         InitializeSelectFromMetadataCommand(selectFromMetadataCommand);
         selectFromMetadataCommand.Prepare();
 
+        return TrySelectFromMetadata(selectFromMetadataCommand, cdbName, metadata,
+            fileFoundAction);
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.TrySelectFromMetadata(string, Metadata, Action{Stream})"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="selectFromMetadataCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual bool TrySelectFromMetadata(DbCommand selectFromMetadataCommand,
+        string cdbName, Metadata metadata,
+        Action<Stream> fileFoundAction)
+    {
         selectFromMetadataCommand.Parameters[CdbParamName].Value = cdbName;
         SetMetadataParameters(selectFromMetadataCommand, metadata);
 
@@ -582,18 +657,8 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         return false;
     }
 
-    /// <summary>
-    /// Tries to find a metadata file in the database.
-    /// If the file was found, runs <paramref name="fileFoundAsyncAction"/> on the file contents.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="metadata">The metadata identifier.</param>
-    /// <param name="fileFoundAsyncAction">The action to run if the file is found.
-    /// The stream will be automatically closed after the action returns or
-    /// throws an exception.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns><see langword="true"/> if the file was found.</returns>
-    public virtual async Task<bool> TrySelectFromMetadataAsync(string cdbName, Metadata metadata,
+    /// <inheritdoc/>
+    public async Task<bool> TrySelectFromMetadataAsync(string cdbName, Metadata metadata,
         Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
         CancellationToken cancellationToken)
     {
@@ -602,6 +667,22 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         InitializeSelectFromMetadataCommand(selectFromMetadataCommand);
         await selectFromMetadataCommand.PrepareAsync(cancellationToken);
 
+        return await TrySelectFromMetadataAsync(selectFromMetadataCommand, cdbName, metadata,
+            fileFoundAsyncAction, cancellationToken);
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.TrySelectFromMetadataAsync(string, Metadata, Func{Stream, CancellationToken, Task}, CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="selectFromMetadataCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual async Task<bool> TrySelectFromMetadataAsync(DbCommand selectFromMetadataCommand,
+        string cdbName, Metadata metadata,
+        Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
+        CancellationToken cancellationToken)
+    {
         selectFromMetadataCommand.Parameters[CdbParamName].Value = cdbName;
         SetMetadataParameters(selectFromMetadataCommand, metadata);
 
@@ -619,52 +700,33 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         return false;
     }
 
-    /// <summary>
-    /// Returns a metadata file from the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="metadata">The metadata identifier.</param>
-    /// <returns>A stream containing the file contents, or <see langword="null"/> if the file was not found.</returns>
-    public virtual Stream? SelectFromMetadata(string cdbName, Metadata metadata)
+    /// <inheritdoc/>
+    public Stream? SelectFromMetadata(string cdbName, Metadata metadata)
     {
         DbConnection dbConnection = dbDataSource.OpenConnection();
         try
         {
-            DbCommand dbCommand = dbConnection.CreateCommand();
+            DbCommand selectFromMetadataCommand = dbConnection.CreateCommand();
             try
             {
-                InitializeSelectFromMetadataCommand(dbCommand);
-                dbCommand.Prepare();
+                InitializeSelectFromMetadataCommand(selectFromMetadataCommand);
+                selectFromMetadataCommand.Prepare();
 
-                dbCommand.Parameters[CdbParamName].Value = cdbName;
-                SetMetadataParameters(dbCommand, metadata);
-
-                DbDataReader dbDataReader = dbCommand.ExecuteReader(
-                    CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow);
-                try
+                Stream? stream = SelectFromMetadata(selectFromMetadataCommand, cdbName, metadata);
+                if (stream is not null)
                 {
-                    do
-                    {
-                        while (dbDataReader.Read())
-                        {
-                            Stream stream = dbDataReader.GetStream(ContentColumnName);
-                            return new WrappedStream(stream, dbDataReader, dbCommand, dbConnection);
-                        }
-                    } while (dbDataReader.NextResult());
-                    dbDataReader.Dispose();
-                    dbCommand.Dispose();
+                    return new WrappedStream(stream, selectFromMetadataCommand, dbConnection);
+                }
+                else
+                {
+                    selectFromMetadataCommand.Dispose();
                     dbConnection.Dispose();
                     return null;
-                }
-                catch (Exception)
-                {
-                    dbDataReader.Dispose();
-                    throw;
                 }
             }
             catch (Exception)
             {
-                dbCommand.Dispose();
+                selectFromMetadataCommand.Dispose();
                 throw;
             }
         }
@@ -675,60 +737,111 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         }
     }
 
-    /// <summary>
-    /// Returns a metadata file from the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="metadata">The metadata identifier.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>A stream containing the file contents, or <see langword="null"/> if the file was not found.</returns>
-    public virtual async Task<Stream?> SelectFromMetadataAsync(string cdbName, Metadata metadata,
+    /// <inheritdoc cref="ISQLDataStore.SelectFromMetadata(string, Metadata)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="selectFromMetadataCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual Stream? SelectFromMetadata(DbCommand selectFromMetadataCommand,
+        string cdbName, Metadata metadata)
+    {
+        selectFromMetadataCommand.Parameters[CdbParamName].Value = cdbName;
+        SetMetadataParameters(selectFromMetadataCommand, metadata);
+
+        DbDataReader dbDataReader = selectFromMetadataCommand.ExecuteReader(
+            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow);
+        try
+        {
+            do
+            {
+                while (dbDataReader.Read())
+                {
+                    Stream stream = dbDataReader.GetStream(ContentColumnName);
+                    return new WrappedStream(stream, dbDataReader);
+                }
+            } while (dbDataReader.NextResult());
+            dbDataReader.Dispose();
+            return null;
+        }
+        catch (Exception)
+        {
+            dbDataReader.Dispose();
+            throw;
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task<Stream?> SelectFromMetadataAsync(string cdbName, Metadata metadata,
         CancellationToken cancellationToken)
     {
         DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
         try
         {
-            DbCommand dbCommand = dbConnection.CreateCommand();
+            DbCommand selectFromMetadataCommand = dbConnection.CreateCommand();
             try
             {
-                InitializeSelectFromMetadataCommand(dbCommand);
-                await dbCommand.PrepareAsync(cancellationToken);
+                InitializeSelectFromMetadataCommand(selectFromMetadataCommand);
+                await selectFromMetadataCommand.PrepareAsync(cancellationToken);
 
-                dbCommand.Parameters[CdbParamName].Value = cdbName;
-                SetMetadataParameters(dbCommand, metadata);
-
-                DbDataReader dbDataReader = await dbCommand.ExecuteReaderAsync(
-                    CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow, cancellationToken);
-                try
+                Stream? stream = await SelectFromMetadataAsync(selectFromMetadataCommand, cdbName, metadata, cancellationToken);
+                if (stream is not null)
                 {
-                    do
-                    {
-                        while (await dbDataReader.ReadAsync(cancellationToken))
-                        {
-                            Stream stream = dbDataReader.GetStream(ContentColumnName);
-                            return new WrappedStream(stream, dbDataReader, dbCommand, dbConnection);
-                        }
-                    } while (await dbDataReader.NextResultAsync(cancellationToken));
-                    await dbDataReader.DisposeAsync();
-                    await dbCommand.DisposeAsync();
+                    return new WrappedStream(stream, selectFromMetadataCommand, dbConnection);
+                }
+                else
+                {
+                    await selectFromMetadataCommand.DisposeAsync();
                     await dbConnection.DisposeAsync();
                     return null;
-                }
-                catch (Exception)
-                {
-                    await dbDataReader.DisposeAsync();
-                    throw;
                 }
             }
             catch (Exception)
             {
-                await dbCommand.DisposeAsync();
+                await selectFromMetadataCommand.DisposeAsync();
                 throw;
             }
         }
         catch (Exception)
         {
             await dbConnection.DisposeAsync();
+            throw;
+        }
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.SelectFromMetadataAsync(string, Metadata, CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="selectFromMetadataCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual async Task<Stream?> SelectFromMetadataAsync(DbCommand selectFromMetadataCommand,
+        string cdbName, Metadata metadata,
+        CancellationToken cancellationToken)
+    {
+        selectFromMetadataCommand.Parameters[CdbParamName].Value = cdbName;
+        SetMetadataParameters(selectFromMetadataCommand, metadata);
+
+        DbDataReader dbDataReader = await selectFromMetadataCommand.ExecuteReaderAsync(
+            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow, cancellationToken);
+        try
+        {
+            do
+            {
+                while (await dbDataReader.ReadAsync(cancellationToken))
+                {
+                    Stream stream = dbDataReader.GetStream(ContentColumnName);
+                    return new WrappedStream(stream, dbDataReader);
+                }
+            } while (await dbDataReader.NextResultAsync(cancellationToken));
+            await dbDataReader.DisposeAsync();
+            return null;
+        }
+        catch (Exception)
+        {
+            await dbDataReader.DisposeAsync();
             throw;
         }
     }
@@ -778,7 +891,7 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         get;
     }
 
-    private void InitializeInsertIntoTextureCommand(DbCommand dbCommand)
+    internal void InitializeInsertIntoTextureCommand(DbCommand dbCommand)
     {
         dbCommand.CommandText = InsertIntoTextureStatement;
         CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
@@ -804,20 +917,27 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         dbCommand.Parameters[FileTypeParamName].Value = texture.FileType;
     }
 
-    /// <summary>
-    /// Inserts a texture file into the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
-    /// <param name="texture">The texture identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <returns>The number of rows affected.</returns>
-    public virtual int InsertIntoTexture(string cdbName, Texture texture, byte[] content)
+    /// <inheritdoc/>
+    public int InsertIntoTexture(string cdbName, Texture texture, byte[] content)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
         using DbCommand insertIntoTextureCommand = dbConnection.CreateCommand();
         InitializeInsertIntoTextureCommand(insertIntoTextureCommand);
         insertIntoTextureCommand.Prepare();
 
+        return InsertIntoTexture(insertIntoTextureCommand, cdbName, texture, content);
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.InsertIntoTexture(string, Texture, byte[])"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoTextureCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual int InsertIntoTexture(DbCommand insertIntoTextureCommand,
+        string cdbName, Texture texture, byte[] content)
+    {
         insertIntoTextureCommand.Parameters[CdbParamName].Value = cdbName;
         SetTextureParameters(insertIntoTextureCommand, texture);
         insertIntoTextureCommand.Parameters[ContentParamName].Value = content;
@@ -825,20 +945,27 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         return insertIntoTextureCommand.ExecuteNonQuery();
     }
 
-    /// <summary>
-    /// Inserts a texture file into the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
-    /// <param name="texture">The texture identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <returns>The number of rows affected.</returns>
-    public virtual int InsertIntoTexture(string cdbName, Texture texture, Stream content)
+    /// <inheritdoc/>
+    public int InsertIntoTexture(string cdbName, Texture texture, Stream content)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
         using DbCommand insertIntoTextureCommand = dbConnection.CreateCommand();
         InitializeInsertIntoTextureCommand(insertIntoTextureCommand);
         insertIntoTextureCommand.Prepare();
 
+        return InsertIntoTexture(insertIntoTextureCommand, cdbName, texture, content);
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.InsertIntoTexture(string, Texture, Stream)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoTextureCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual int InsertIntoTexture(DbCommand insertIntoTextureCommand,
+        string cdbName, Texture texture, Stream content)
+    {
         insertIntoTextureCommand.Parameters[CdbParamName].Value = cdbName;
         SetTextureParameters(insertIntoTextureCommand, texture);
         insertIntoTextureCommand.Parameters[ContentParamName].Value = content;
@@ -846,48 +973,66 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         return insertIntoTextureCommand.ExecuteNonQuery();
     }
 
-    /// <summary>
-    /// Inserts a texture file into the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
-    /// <param name="texture">The texture identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The number of rows affected.</returns>
-    public virtual async Task<int> InsertIntoTextureAsync(string cdbName, Texture texture, byte[] content, CancellationToken cancellationToken = default)
+    /// <inheritdoc/>
+    public async Task<int> InsertIntoTextureAsync(string cdbName, Texture texture, byte[] content,
+        CancellationToken cancellationToken)
     {
         await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
         await using DbCommand insertIntoTextureCommand = dbConnection.CreateCommand();
         InitializeInsertIntoTextureCommand(insertIntoTextureCommand);
         await insertIntoTextureCommand.PrepareAsync(cancellationToken);
 
-        insertIntoTextureCommand.Parameters[CdbParamName].Value = cdbName;
-        SetTextureParameters(insertIntoTextureCommand, texture);
-        insertIntoTextureCommand.Parameters[ContentParamName].Value = content;
-
-        return await insertIntoTextureCommand.ExecuteNonQueryAsync(cancellationToken);
+        return await InsertIntoTextureAsync(insertIntoTextureCommand, cdbName, texture, content,
+            cancellationToken);
     }
 
-    /// <summary>
-    /// Inserts a texture file into the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
-    /// <param name="texture">The texture identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The number of rows affected.</returns>
-    public virtual async Task<int> InsertIntoTextureAsync(string cdbName, Texture texture, Stream content, CancellationToken cancellationToken = default)
+    /// <inheritdoc cref="ISQLDataStore.InsertIntoTextureAsync(string, Texture, byte[], CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoTextureCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual Task<int> InsertIntoTextureAsync(DbCommand insertIntoTextureCommand,
+        string cdbName, Texture texture, byte[] content,
+        CancellationToken cancellationToken)
+    {
+        insertIntoTextureCommand.Parameters[CdbParamName].Value = cdbName;
+        SetTextureParameters(insertIntoTextureCommand, texture);
+        insertIntoTextureCommand.Parameters[ContentParamName].Value = content;
+
+        return insertIntoTextureCommand.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<int> InsertIntoTextureAsync(string cdbName, Texture texture, Stream content,
+        CancellationToken cancellationToken)
     {
         await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
         await using DbCommand insertIntoTextureCommand = dbConnection.CreateCommand();
         InitializeInsertIntoTextureCommand(insertIntoTextureCommand);
         await insertIntoTextureCommand.PrepareAsync(cancellationToken);
 
+        return await InsertIntoTextureAsync(insertIntoTextureCommand, cdbName, texture, content,
+            cancellationToken);
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.InsertIntoTextureAsync(string, Texture, Stream, CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoTextureCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual Task<int> InsertIntoTextureAsync(DbCommand insertIntoTextureCommand,
+        string cdbName, Texture texture, Stream content,
+        CancellationToken cancellationToken)
+    {
         insertIntoTextureCommand.Parameters[CdbParamName].Value = cdbName;
         SetTextureParameters(insertIntoTextureCommand, texture);
         insertIntoTextureCommand.Parameters[ContentParamName].Value = content;
 
-        return await insertIntoTextureCommand.ExecuteNonQueryAsync(cancellationToken);
+        return insertIntoTextureCommand.ExecuteNonQueryAsync(cancellationToken);
     }
 
     #endregion
@@ -917,24 +1062,15 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         get;
     }
 
-    private void InitializeSelectFromTextureCommand(DbCommand dbCommand)
+    internal void InitializeSelectFromTextureCommand(DbCommand dbCommand)
     {
         dbCommand.CommandText = SelectFromTextureStatement;
         CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
         CreateAndAttachTextureParameters(dbCommand);
     }
 
-    /// <summary>
-    /// Tries to find a texture file in the database.
-    /// If the file was found, runs <paramref name="fileFoundAction"/> on the file contents.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="texture">The texture identifier.</param>
-    /// <param name="fileFoundAction">The action to run if the file is found.
-    /// The stream will be automatically closed after the action returns or
-    /// throws an exception.</param>
-    /// <returns><see langword="true"/> if the file was found.</returns>
-    public virtual bool TrySelectFromTexture(string cdbName, Texture texture,
+    /// <inheritdoc/>
+    public bool TrySelectFromTexture(string cdbName, Texture texture,
         Action<Stream> fileFoundAction)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
@@ -942,6 +1078,21 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         InitializeSelectFromTextureCommand(selectFromTextureCommand);
         selectFromTextureCommand.Prepare();
 
+        return TrySelectFromTexture(selectFromTextureCommand, cdbName, texture,
+            fileFoundAction);
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.TrySelectFromTexture(string, Texture, Action{Stream})"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="selectFromTextureCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual bool TrySelectFromTexture(DbCommand selectFromTextureCommand,
+        string cdbName, Texture texture,
+        Action<Stream> fileFoundAction)
+    {
         selectFromTextureCommand.Parameters[CdbParamName].Value = cdbName;
         SetTextureParameters(selectFromTextureCommand, texture);
 
@@ -959,18 +1110,8 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         return false;
     }
 
-    /// <summary>
-    /// Tries to find a texture file in the database.
-    /// If the file was found, runs <paramref name="fileFoundAsyncAction"/> on the file contents.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="texture">The texture identifier.</param>
-    /// <param name="fileFoundAsyncAction">The action to run if the file is found.
-    /// The stream will be automatically closed after the action returns or
-    /// throws an exception.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns><see langword="true"/> if the file was found.</returns>
-    public virtual async Task<bool> TrySelectFromTextureAsync(string cdbName, Texture texture,
+    /// <inheritdoc/>
+    public async Task<bool> TrySelectFromTextureAsync(string cdbName, Texture texture,
         Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
         CancellationToken cancellationToken)
     {
@@ -979,6 +1120,22 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         InitializeSelectFromTextureCommand(selectFromTextureCommand);
         await selectFromTextureCommand.PrepareAsync(cancellationToken);
 
+        return await TrySelectFromTextureAsync(selectFromTextureCommand, cdbName, texture,
+            fileFoundAsyncAction, cancellationToken);
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.TrySelectFromTextureAsync(string, Texture, Func{Stream, CancellationToken, Task}, CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="selectFromTextureCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual async Task<bool> TrySelectFromTextureAsync(DbCommand selectFromTextureCommand,
+        string cdbName, Texture texture,
+        Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
+        CancellationToken cancellationToken)
+    {
         selectFromTextureCommand.Parameters[CdbParamName].Value = cdbName;
         SetTextureParameters(selectFromTextureCommand, texture);
 
@@ -996,52 +1153,33 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         return false;
     }
 
-    /// <summary>
-    /// Returns a texture file from the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="texture">The texture identifier.</param>
-    /// <returns>A stream containing the file contents, or <see langword="null"/> if the file was not found.</returns>
-    public virtual Stream? SelectFromTexture(string cdbName, Texture texture)
+    /// <inheritdoc/>
+    public Stream? SelectFromTexture(string cdbName, Texture texture)
     {
         DbConnection dbConnection = dbDataSource.OpenConnection();
         try
         {
-            DbCommand dbCommand = dbConnection.CreateCommand();
+            DbCommand selectFromTextureCommand = dbConnection.CreateCommand();
             try
             {
-                InitializeSelectFromTextureCommand(dbCommand);
-                dbCommand.Prepare();
+                InitializeSelectFromTextureCommand(selectFromTextureCommand);
+                selectFromTextureCommand.Prepare();
 
-                dbCommand.Parameters[CdbParamName].Value = cdbName;
-                SetTextureParameters(dbCommand, texture);
-
-                DbDataReader dbDataReader = dbCommand.ExecuteReader(
-                    CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow);
-                try
+                Stream? stream = SelectFromTexture(selectFromTextureCommand, cdbName, texture);
+                if (stream is not null)
                 {
-                    do
-                    {
-                        while (dbDataReader.Read())
-                        {
-                            Stream stream = dbDataReader.GetStream(ContentColumnName);
-                            return new WrappedStream(stream, dbDataReader, dbCommand, dbConnection);
-                        }
-                    } while (dbDataReader.NextResult());
-                    dbDataReader.Dispose();
-                    dbCommand.Dispose();
+                    return new WrappedStream(stream, selectFromTextureCommand, dbConnection);
+                }
+                else
+                {
+                    selectFromTextureCommand.Dispose();
                     dbConnection.Dispose();
                     return null;
-                }
-                catch (Exception)
-                {
-                    dbDataReader.Dispose();
-                    throw;
                 }
             }
             catch (Exception)
             {
-                dbCommand.Dispose();
+                selectFromTextureCommand.Dispose();
                 throw;
             }
         }
@@ -1052,60 +1190,111 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         }
     }
 
-    /// <summary>
-    /// Returns a texture file from the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="texture">The texture identifier.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>A stream containing the file contents, or <see langword="null"/> if the file was not found.</returns>
-    public virtual async Task<Stream?> SelectFromTextureAsync(string cdbName, Texture texture,
+    /// <inheritdoc cref="ISQLDataStore.SelectFromTexture(string, Texture)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="selectFromTextureCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual Stream? SelectFromTexture(DbCommand selectFromTextureCommand,
+        string cdbName, Texture texture)
+    {
+        selectFromTextureCommand.Parameters[CdbParamName].Value = cdbName;
+        SetTextureParameters(selectFromTextureCommand, texture);
+
+        DbDataReader dbDataReader = selectFromTextureCommand.ExecuteReader(
+            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow);
+        try
+        {
+            do
+            {
+                while (dbDataReader.Read())
+                {
+                    Stream stream = dbDataReader.GetStream(ContentColumnName);
+                    return new WrappedStream(stream, dbDataReader);
+                }
+            } while (dbDataReader.NextResult());
+            dbDataReader.Dispose();
+            return null;
+        }
+        catch (Exception)
+        {
+            dbDataReader.Dispose();
+            throw;
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task<Stream?> SelectFromTextureAsync(string cdbName, Texture texture,
         CancellationToken cancellationToken)
     {
         DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
         try
         {
-            DbCommand dbCommand = dbConnection.CreateCommand();
+            DbCommand selectFromTextureCommand = dbConnection.CreateCommand();
             try
             {
-                InitializeSelectFromTextureCommand(dbCommand);
-                await dbCommand.PrepareAsync(cancellationToken);
+                InitializeSelectFromTextureCommand(selectFromTextureCommand);
+                await selectFromTextureCommand.PrepareAsync(cancellationToken);
 
-                dbCommand.Parameters[CdbParamName].Value = cdbName;
-                SetTextureParameters(dbCommand, texture);
-
-                DbDataReader dbDataReader = await dbCommand.ExecuteReaderAsync(
-                    CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow, cancellationToken);
-                try
+                Stream? stream = await SelectFromTextureAsync(selectFromTextureCommand, cdbName, texture, cancellationToken);
+                if (stream is not null)
                 {
-                    do
-                    {
-                        while (await dbDataReader.ReadAsync(cancellationToken))
-                        {
-                            Stream stream = dbDataReader.GetStream(ContentColumnName);
-                            return new WrappedStream(stream, dbDataReader, dbCommand, dbConnection);
-                        }
-                    } while (await dbDataReader.NextResultAsync(cancellationToken));
-                    await dbDataReader.DisposeAsync();
-                    await dbCommand.DisposeAsync();
+                    return new WrappedStream(stream, selectFromTextureCommand, dbConnection);
+                }
+                else
+                {
+                    await selectFromTextureCommand.DisposeAsync();
                     await dbConnection.DisposeAsync();
                     return null;
-                }
-                catch (Exception)
-                {
-                    await dbDataReader.DisposeAsync();
-                    throw;
                 }
             }
             catch (Exception)
             {
-                await dbCommand.DisposeAsync();
+                await selectFromTextureCommand.DisposeAsync();
                 throw;
             }
         }
         catch (Exception)
         {
             await dbConnection.DisposeAsync();
+            throw;
+        }
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.SelectFromTextureAsync(string, Texture, CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="selectFromTextureCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual async Task<Stream?> SelectFromTextureAsync(DbCommand selectFromTextureCommand,
+        string cdbName, Texture texture,
+        CancellationToken cancellationToken)
+    {
+        selectFromTextureCommand.Parameters[CdbParamName].Value = cdbName;
+        SetTextureParameters(selectFromTextureCommand, texture);
+
+        DbDataReader dbDataReader = await selectFromTextureCommand.ExecuteReaderAsync(
+            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow, cancellationToken);
+        try
+        {
+            do
+            {
+                while (await dbDataReader.ReadAsync(cancellationToken))
+                {
+                    Stream stream = dbDataReader.GetStream(ContentColumnName);
+                    return new WrappedStream(stream, dbDataReader);
+                }
+            } while (await dbDataReader.NextResultAsync(cancellationToken));
+            await dbDataReader.DisposeAsync();
+            return null;
+        }
+        catch (Exception)
+        {
+            await dbDataReader.DisposeAsync();
             throw;
         }
     }
@@ -1147,7 +1336,7 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         get;
     }
 
-    private void InitializeInsertIntoTextureLodCommand(DbCommand dbCommand)
+    internal void InitializeInsertIntoTextureLodCommand(DbCommand dbCommand)
     {
         dbCommand.CommandText = InsertIntoTextureLodStatement;
         CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
@@ -1175,20 +1364,27 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         dbCommand.Parameters[FileTypeParamName].Value = textureLod.FileType;
     }
 
-    /// <summary>
-    /// Inserts a texture mipmap file into the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
-    /// <param name="textureLod">The texture mipmap identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <returns>The number of rows affected.</returns>
-    public virtual int InsertIntoTextureLod(string cdbName, TextureLod textureLod, byte[] content)
+    /// <inheritdoc/>
+    public int InsertIntoTextureLod(string cdbName, TextureLod textureLod, byte[] content)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
         using DbCommand insertIntoTextureLodCommand = dbConnection.CreateCommand();
         InitializeInsertIntoTextureLodCommand(insertIntoTextureLodCommand);
         insertIntoTextureLodCommand.Prepare();
 
+        return InsertIntoTextureLod(insertIntoTextureLodCommand, cdbName, textureLod, content);
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.InsertIntoTextureLod(string, TextureLod, byte[])"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoTextureLodCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual int InsertIntoTextureLod(DbCommand insertIntoTextureLodCommand,
+        string cdbName, TextureLod textureLod, byte[] content)
+    {
         insertIntoTextureLodCommand.Parameters[CdbParamName].Value = cdbName;
         SetTextureLodParameters(insertIntoTextureLodCommand, textureLod);
         insertIntoTextureLodCommand.Parameters[ContentParamName].Value = content;
@@ -1196,20 +1392,27 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         return insertIntoTextureLodCommand.ExecuteNonQuery();
     }
 
-    /// <summary>
-    /// Inserts a texture mipmap file into the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
-    /// <param name="textureLod">The texture mipmap identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <returns>The number of rows affected.</returns>
-    public virtual int InsertIntoTextureLod(string cdbName, TextureLod textureLod, Stream content)
+    /// <inheritdoc/>
+    public int InsertIntoTextureLod(string cdbName, TextureLod textureLod, Stream content)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
         using DbCommand insertIntoTextureLodCommand = dbConnection.CreateCommand();
         InitializeInsertIntoTextureLodCommand(insertIntoTextureLodCommand);
         insertIntoTextureLodCommand.Prepare();
 
+        return InsertIntoTextureLod(insertIntoTextureLodCommand, cdbName, textureLod, content);
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.InsertIntoTextureLod(string, TextureLod, Stream)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoTextureLodCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual int InsertIntoTextureLod(DbCommand insertIntoTextureLodCommand,
+        string cdbName, TextureLod textureLod, Stream content)
+    {
         insertIntoTextureLodCommand.Parameters[CdbParamName].Value = cdbName;
         SetTextureLodParameters(insertIntoTextureLodCommand, textureLod);
         insertIntoTextureLodCommand.Parameters[ContentParamName].Value = content;
@@ -1217,48 +1420,66 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         return insertIntoTextureLodCommand.ExecuteNonQuery();
     }
 
-    /// <summary>
-    /// Inserts a texture mipmap file into the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
-    /// <param name="textureLod">The texture mipmap identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The number of rows affected.</returns>
-    public virtual async Task<int> InsertIntoTextureLodAsync(string cdbName, TextureLod textureLod, byte[] content, CancellationToken cancellationToken = default)
+    /// <inheritdoc/>
+    public async Task<int> InsertIntoTextureLodAsync(string cdbName, TextureLod textureLod, byte[] content,
+        CancellationToken cancellationToken)
     {
         await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
         await using DbCommand insertIntoTextureLodCommand = dbConnection.CreateCommand();
         InitializeInsertIntoTextureLodCommand(insertIntoTextureLodCommand);
         await insertIntoTextureLodCommand.PrepareAsync(cancellationToken);
 
-        insertIntoTextureLodCommand.Parameters[CdbParamName].Value = cdbName;
-        SetTextureLodParameters(insertIntoTextureLodCommand, textureLod);
-        insertIntoTextureLodCommand.Parameters[ContentParamName].Value = content;
-
-        return await insertIntoTextureLodCommand.ExecuteNonQueryAsync(cancellationToken);
+        return await InsertIntoTextureLodAsync(insertIntoTextureLodCommand, cdbName, textureLod, content,
+            cancellationToken);
     }
 
-    /// <summary>
-    /// Inserts a texture mipmap file into the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
-    /// <param name="textureLod">The texture mipmap identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The number of rows affected.</returns>
-    public virtual async Task<int> InsertIntoTextureLodAsync(string cdbName, TextureLod textureLod, Stream content, CancellationToken cancellationToken = default)
+    /// <inheritdoc cref="ISQLDataStore.InsertIntoTextureLodAsync(string, TextureLod, byte[], CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoTextureLodCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual Task<int> InsertIntoTextureLodAsync(DbCommand insertIntoTextureLodCommand,
+        string cdbName, TextureLod textureLod, byte[] content,
+        CancellationToken cancellationToken)
+    {
+        insertIntoTextureLodCommand.Parameters[CdbParamName].Value = cdbName;
+        SetTextureLodParameters(insertIntoTextureLodCommand, textureLod);
+        insertIntoTextureLodCommand.Parameters[ContentParamName].Value = content;
+
+        return insertIntoTextureLodCommand.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<int> InsertIntoTextureLodAsync(string cdbName, TextureLod textureLod, Stream content,
+        CancellationToken cancellationToken)
     {
         await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
         await using DbCommand insertIntoTextureLodCommand = dbConnection.CreateCommand();
         InitializeInsertIntoTextureLodCommand(insertIntoTextureLodCommand);
         await insertIntoTextureLodCommand.PrepareAsync(cancellationToken);
 
+        return await InsertIntoTextureLodAsync(insertIntoTextureLodCommand, cdbName, textureLod, content,
+            cancellationToken);
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.InsertIntoTextureLodAsync(string, TextureLod, Stream, CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoTextureLodCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual Task<int> InsertIntoTextureLodAsync(DbCommand insertIntoTextureLodCommand,
+        string cdbName, TextureLod textureLod, Stream content,
+        CancellationToken cancellationToken)
+    {
         insertIntoTextureLodCommand.Parameters[CdbParamName].Value = cdbName;
         SetTextureLodParameters(insertIntoTextureLodCommand, textureLod);
         insertIntoTextureLodCommand.Parameters[ContentParamName].Value = content;
 
-        return await insertIntoTextureLodCommand.ExecuteNonQueryAsync(cancellationToken);
+        return insertIntoTextureLodCommand.ExecuteNonQueryAsync(cancellationToken);
     }
 
     #endregion
@@ -1289,24 +1510,15 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         get;
     }
 
-    private void InitializeSelectFromTextureLodCommand(DbCommand dbCommand)
+    internal void InitializeSelectFromTextureLodCommand(DbCommand dbCommand)
     {
         dbCommand.CommandText = SelectFromTextureLodStatement;
         CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
         CreateAndAttachTextureLodParameters(dbCommand);
     }
 
-    /// <summary>
-    /// Tries to find a texture mipmap file in the database.
-    /// If the file was found, runs <paramref name="fileFoundAction"/> on the file contents.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="textureLod">The texture mipmap identifier.</param>
-    /// <param name="fileFoundAction">The action to run if the file is found.
-    /// The stream will be automatically closed after the action returns or
-    /// throws an exception.</param>
-    /// <returns><see langword="true"/> if the file was found.</returns>
-    public virtual bool TrySelectFromTextureLod(string cdbName, TextureLod textureLod,
+    /// <inheritdoc/>
+    public bool TrySelectFromTextureLod(string cdbName, TextureLod textureLod,
         Action<Stream> fileFoundAction)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
@@ -1314,6 +1526,21 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         InitializeSelectFromTextureLodCommand(selectFromTextureLodCommand);
         selectFromTextureLodCommand.Prepare();
 
+        return TrySelectFromTextureLod(selectFromTextureLodCommand, cdbName, textureLod,
+            fileFoundAction);
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.TrySelectFromTextureLod(string, TextureLod, Action{Stream})"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="selectFromTextureLodCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual bool TrySelectFromTextureLod(DbCommand selectFromTextureLodCommand,
+        string cdbName, TextureLod textureLod,
+        Action<Stream> fileFoundAction)
+    {
         selectFromTextureLodCommand.Parameters[CdbParamName].Value = cdbName;
         SetTextureLodParameters(selectFromTextureLodCommand, textureLod);
 
@@ -1331,18 +1558,8 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         return false;
     }
 
-    /// <summary>
-    /// Tries to find a texture mipmap file in the database.
-    /// If the file was found, runs <paramref name="fileFoundAsyncAction"/> on the file contents.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="textureLod">The texture mipmap identifier.</param>
-    /// <param name="fileFoundAsyncAction">The action to run if the file is found.
-    /// The stream will be automatically closed after the action returns or
-    /// throws an exception.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns><see langword="true"/> if the file was found.</returns>
-    public virtual async Task<bool> TrySelectFromTextureLodAsync(string cdbName, TextureLod textureLod,
+    /// <inheritdoc/>
+    public async Task<bool> TrySelectFromTextureLodAsync(string cdbName, TextureLod textureLod,
         Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
         CancellationToken cancellationToken)
     {
@@ -1351,6 +1568,22 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         InitializeSelectFromTextureLodCommand(selectFromTextureLodCommand);
         await selectFromTextureLodCommand.PrepareAsync(cancellationToken);
 
+        return await TrySelectFromTextureLodAsync(selectFromTextureLodCommand, cdbName, textureLod,
+            fileFoundAsyncAction, cancellationToken);
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.TrySelectFromTextureLodAsync(string, TextureLod, Func{Stream, CancellationToken, Task}, CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="selectFromTextureLodCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual async Task<bool> TrySelectFromTextureLodAsync(DbCommand selectFromTextureLodCommand,
+        string cdbName, TextureLod textureLod,
+        Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
+        CancellationToken cancellationToken)
+    {
         selectFromTextureLodCommand.Parameters[CdbParamName].Value = cdbName;
         SetTextureLodParameters(selectFromTextureLodCommand, textureLod);
 
@@ -1368,52 +1601,33 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         return false;
     }
 
-    /// <summary>
-    /// Returns a texture level of detail file from the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="textureLod">The texture level of detail identifier.</param>
-    /// <returns>A stream containing the file contents, or <see langword="null"/> if the file was not found.</returns>
-    public virtual Stream? SelectFromTextureLod(string cdbName, TextureLod textureLod)
+    /// <inheritdoc/>
+    public Stream? SelectFromTextureLod(string cdbName, TextureLod textureLod)
     {
         DbConnection dbConnection = dbDataSource.OpenConnection();
         try
         {
-            DbCommand dbCommand = dbConnection.CreateCommand();
+            DbCommand selectFromTextureLodCommand = dbConnection.CreateCommand();
             try
             {
-                InitializeSelectFromTextureLodCommand(dbCommand);
-                dbCommand.Prepare();
+                InitializeSelectFromTextureLodCommand(selectFromTextureLodCommand);
+                selectFromTextureLodCommand.Prepare();
 
-                dbCommand.Parameters[CdbParamName].Value = cdbName;
-                SetTextureLodParameters(dbCommand, textureLod);
-
-                DbDataReader dbDataReader = dbCommand.ExecuteReader(
-                    CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow);
-                try
+                Stream? stream = SelectFromTextureLod(selectFromTextureLodCommand, cdbName, textureLod);
+                if (stream is not null)
                 {
-                    do
-                    {
-                        while (dbDataReader.Read())
-                        {
-                            Stream stream = dbDataReader.GetStream(ContentColumnName);
-                            return new WrappedStream(stream, dbDataReader, dbCommand, dbConnection);
-                        }
-                    } while (dbDataReader.NextResult());
-                    dbDataReader.Dispose();
-                    dbCommand.Dispose();
+                    return new WrappedStream(stream, selectFromTextureLodCommand, dbConnection);
+                }
+                else
+                {
+                    selectFromTextureLodCommand.Dispose();
                     dbConnection.Dispose();
                     return null;
-                }
-                catch (Exception)
-                {
-                    dbDataReader.Dispose();
-                    throw;
                 }
             }
             catch (Exception)
             {
-                dbCommand.Dispose();
+                selectFromTextureLodCommand.Dispose();
                 throw;
             }
         }
@@ -1424,60 +1638,111 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         }
     }
 
-    /// <summary>
-    /// Returns a texture level of detail file from the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="textureLod">The texture level of detail identifier.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>A stream containing the file contents, or <see langword="null"/> if the file was not found.</returns>
-    public virtual async Task<Stream?> SelectFromTextureLodAsync(string cdbName, TextureLod textureLod,
+    /// <inheritdoc cref="ISQLDataStore.SelectFromTextureLod(string, TextureLod)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="selectFromTextureLodCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual Stream? SelectFromTextureLod(DbCommand selectFromTextureLodCommand,
+        string cdbName, TextureLod textureLod)
+    {
+        selectFromTextureLodCommand.Parameters[CdbParamName].Value = cdbName;
+        SetTextureLodParameters(selectFromTextureLodCommand, textureLod);
+
+        DbDataReader dbDataReader = selectFromTextureLodCommand.ExecuteReader(
+            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow);
+        try
+        {
+            do
+            {
+                while (dbDataReader.Read())
+                {
+                    Stream stream = dbDataReader.GetStream(ContentColumnName);
+                    return new WrappedStream(stream, dbDataReader);
+                }
+            } while (dbDataReader.NextResult());
+            dbDataReader.Dispose();
+            return null;
+        }
+        catch (Exception)
+        {
+            dbDataReader.Dispose();
+            throw;
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task<Stream?> SelectFromTextureLodAsync(string cdbName, TextureLod textureLod,
         CancellationToken cancellationToken)
     {
         DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
         try
         {
-            DbCommand dbCommand = dbConnection.CreateCommand();
+            DbCommand selectFromTextureLodCommand = dbConnection.CreateCommand();
             try
             {
-                InitializeSelectFromTextureLodCommand(dbCommand);
-                await dbCommand.PrepareAsync(cancellationToken);
+                InitializeSelectFromTextureLodCommand(selectFromTextureLodCommand);
+                await selectFromTextureLodCommand.PrepareAsync(cancellationToken);
 
-                dbCommand.Parameters[CdbParamName].Value = cdbName;
-                SetTextureLodParameters(dbCommand, textureLod);
-
-                DbDataReader dbDataReader = await dbCommand.ExecuteReaderAsync(
-                    CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow, cancellationToken);
-                try
+                Stream? stream = await SelectFromTextureLodAsync(selectFromTextureLodCommand, cdbName, textureLod, cancellationToken);
+                if (stream is not null)
                 {
-                    do
-                    {
-                        while (await dbDataReader.ReadAsync(cancellationToken))
-                        {
-                            Stream stream = dbDataReader.GetStream(ContentColumnName);
-                            return new WrappedStream(stream, dbDataReader, dbCommand, dbConnection);
-                        }
-                    } while (await dbDataReader.NextResultAsync(cancellationToken));
-                    await dbDataReader.DisposeAsync();
-                    await dbCommand.DisposeAsync();
+                    return new WrappedStream(stream, selectFromTextureLodCommand, dbConnection);
+                }
+                else
+                {
+                    await selectFromTextureLodCommand.DisposeAsync();
                     await dbConnection.DisposeAsync();
                     return null;
-                }
-                catch (Exception)
-                {
-                    await dbDataReader.DisposeAsync();
-                    throw;
                 }
             }
             catch (Exception)
             {
-                await dbCommand.DisposeAsync();
+                await selectFromTextureLodCommand.DisposeAsync();
                 throw;
             }
         }
         catch (Exception)
         {
             await dbConnection.DisposeAsync();
+            throw;
+        }
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.SelectFromTextureLodAsync(string, TextureLod, CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="selectFromTextureLodCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual async Task<Stream?> SelectFromTextureLodAsync(DbCommand selectFromTextureLodCommand,
+        string cdbName, TextureLod textureLod,
+        CancellationToken cancellationToken)
+    {
+        selectFromTextureLodCommand.Parameters[CdbParamName].Value = cdbName;
+        SetTextureLodParameters(selectFromTextureLodCommand, textureLod);
+
+        DbDataReader dbDataReader = await selectFromTextureLodCommand.ExecuteReaderAsync(
+            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow, cancellationToken);
+        try
+        {
+            do
+            {
+                while (await dbDataReader.ReadAsync(cancellationToken))
+                {
+                    Stream stream = dbDataReader.GetStream(ContentColumnName);
+                    return new WrappedStream(stream, dbDataReader);
+                }
+            } while (await dbDataReader.NextResultAsync(cancellationToken));
+            await dbDataReader.DisposeAsync();
+            return null;
+        }
+        catch (Exception)
+        {
+            await dbDataReader.DisposeAsync();
             throw;
         }
     }
@@ -1571,7 +1836,7 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         get;
     }
 
-    private void InitializeInsertIntoGeotypicalModelCommand(DbCommand dbCommand)
+    internal void InitializeInsertIntoGeotypicalModelCommand(DbCommand dbCommand)
     {
         dbCommand.CommandText = InsertIntoGeotypicalModelStatement;
         CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
@@ -1605,20 +1870,27 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         dbCommand.Parameters[FileTypeParamName].Value = geotypicalModel.FileType;
     }
 
-    /// <summary>
-    /// Inserts a geotypical model file into the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
-    /// <param name="geotypicalModel">The geotypical model identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <returns>The number of rows affected.</returns>
-    public virtual int InsertIntoGeotypicalModel(string cdbName, GeotypicalModel geotypicalModel, byte[] content)
+    /// <inheritdoc/>
+    public int InsertIntoGeotypicalModel(string cdbName, GeotypicalModel geotypicalModel, byte[] content)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
         using DbCommand insertIntoGeotypicalModelCommand = dbConnection.CreateCommand();
         InitializeInsertIntoGeotypicalModelCommand(insertIntoGeotypicalModelCommand);
         insertIntoGeotypicalModelCommand.Prepare();
 
+        return InsertIntoGeotypicalModel(insertIntoGeotypicalModelCommand, cdbName, geotypicalModel, content);
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.InsertIntoGeotypicalModel(string, GeotypicalModel, byte[])"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoGeotypicalModelCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual int InsertIntoGeotypicalModel(DbCommand insertIntoGeotypicalModelCommand,
+        string cdbName, GeotypicalModel geotypicalModel, byte[] content)
+    {
         insertIntoGeotypicalModelCommand.Parameters[CdbParamName].Value = cdbName;
         SetGeotypicalModelParameters(insertIntoGeotypicalModelCommand, geotypicalModel);
         insertIntoGeotypicalModelCommand.Parameters[ContentParamName].Value = content;
@@ -1626,20 +1898,27 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         return insertIntoGeotypicalModelCommand.ExecuteNonQuery();
     }
 
-    /// <summary>
-    /// Inserts a geotypical model file into the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
-    /// <param name="geotypicalModel">The geotypical model identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <returns>The number of rows affected.</returns>
-    public virtual int InsertIntoGeotypicalModel(string cdbName, GeotypicalModel geotypicalModel, Stream content)
+    /// <inheritdoc/>
+    public int InsertIntoGeotypicalModel(string cdbName, GeotypicalModel geotypicalModel, Stream content)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
         using DbCommand insertIntoGeotypicalModelCommand = dbConnection.CreateCommand();
         InitializeInsertIntoGeotypicalModelCommand(insertIntoGeotypicalModelCommand);
         insertIntoGeotypicalModelCommand.Prepare();
 
+        return InsertIntoGeotypicalModel(insertIntoGeotypicalModelCommand, cdbName, geotypicalModel, content);
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.InsertIntoGeotypicalModel(string, GeotypicalModel, Stream)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoGeotypicalModelCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual int InsertIntoGeotypicalModel(DbCommand insertIntoGeotypicalModelCommand,
+        string cdbName, GeotypicalModel geotypicalModel, Stream content)
+    {
         insertIntoGeotypicalModelCommand.Parameters[CdbParamName].Value = cdbName;
         SetGeotypicalModelParameters(insertIntoGeotypicalModelCommand, geotypicalModel);
         insertIntoGeotypicalModelCommand.Parameters[ContentParamName].Value = content;
@@ -1647,48 +1926,66 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         return insertIntoGeotypicalModelCommand.ExecuteNonQuery();
     }
 
-    /// <summary>
-    /// Inserts a geotypical model file into the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
-    /// <param name="geotypicalModel">The geotypical model identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The number of rows affected.</returns>
-    public virtual async Task<int> InsertIntoGeotypicalModelAsync(string cdbName, GeotypicalModel geotypicalModel, byte[] content, CancellationToken cancellationToken = default)
+    /// <inheritdoc/>
+    public async Task<int> InsertIntoGeotypicalModelAsync(string cdbName, GeotypicalModel geotypicalModel, byte[] content,
+        CancellationToken cancellationToken)
     {
         await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
         await using DbCommand insertIntoGeotypicalModelCommand = dbConnection.CreateCommand();
         InitializeInsertIntoGeotypicalModelCommand(insertIntoGeotypicalModelCommand);
         await insertIntoGeotypicalModelCommand.PrepareAsync(cancellationToken);
 
-        insertIntoGeotypicalModelCommand.Parameters[CdbParamName].Value = cdbName;
-        SetGeotypicalModelParameters(insertIntoGeotypicalModelCommand, geotypicalModel);
-        insertIntoGeotypicalModelCommand.Parameters[ContentParamName].Value = content;
-
-        return await insertIntoGeotypicalModelCommand.ExecuteNonQueryAsync(cancellationToken);
+        return await InsertIntoGeotypicalModelAsync(insertIntoGeotypicalModelCommand, cdbName, geotypicalModel, content,
+            cancellationToken);
     }
 
-    /// <summary>
-    /// Inserts a geotypical model file into the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
-    /// <param name="geotypicalModel">The geotypical model identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The number of rows affected.</returns>
-    public virtual async Task<int> InsertIntoGeotypicalModelAsync(string cdbName, GeotypicalModel geotypicalModel, Stream content, CancellationToken cancellationToken = default)
+    /// <inheritdoc cref="ISQLDataStore.InsertIntoGeotypicalModelAsync(string, GeotypicalModel, byte[], CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoGeotypicalModelCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual Task<int> InsertIntoGeotypicalModelAsync(DbCommand insertIntoGeotypicalModelCommand,
+        string cdbName, GeotypicalModel geotypicalModel, byte[] content,
+        CancellationToken cancellationToken)
+    {
+        insertIntoGeotypicalModelCommand.Parameters[CdbParamName].Value = cdbName;
+        SetGeotypicalModelParameters(insertIntoGeotypicalModelCommand, geotypicalModel);
+        insertIntoGeotypicalModelCommand.Parameters[ContentParamName].Value = content;
+
+        return insertIntoGeotypicalModelCommand.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<int> InsertIntoGeotypicalModelAsync(string cdbName, GeotypicalModel geotypicalModel, Stream content,
+        CancellationToken cancellationToken)
     {
         await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
         await using DbCommand insertIntoGeotypicalModelCommand = dbConnection.CreateCommand();
         InitializeInsertIntoGeotypicalModelCommand(insertIntoGeotypicalModelCommand);
         await insertIntoGeotypicalModelCommand.PrepareAsync(cancellationToken);
 
+        return await InsertIntoGeotypicalModelAsync(insertIntoGeotypicalModelCommand, cdbName, geotypicalModel, content,
+            cancellationToken);
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.InsertIntoGeotypicalModelAsync(string, GeotypicalModel, Stream, CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoGeotypicalModelCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual Task<int> InsertIntoGeotypicalModelAsync(DbCommand insertIntoGeotypicalModelCommand,
+        string cdbName, GeotypicalModel geotypicalModel, Stream content,
+        CancellationToken cancellationToken)
+    {
         insertIntoGeotypicalModelCommand.Parameters[CdbParamName].Value = cdbName;
         SetGeotypicalModelParameters(insertIntoGeotypicalModelCommand, geotypicalModel);
         insertIntoGeotypicalModelCommand.Parameters[ContentParamName].Value = content;
 
-        return await insertIntoGeotypicalModelCommand.ExecuteNonQueryAsync(cancellationToken);
+        return insertIntoGeotypicalModelCommand.ExecuteNonQueryAsync(cancellationToken);
     }
 
     #endregion
@@ -1722,24 +2019,15 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         get;
     }
 
-    private void InitializeSelectFromGeotypicalModelCommand(DbCommand dbCommand)
+    internal void InitializeSelectFromGeotypicalModelCommand(DbCommand dbCommand)
     {
         dbCommand.CommandText = SelectFromGeotypicalModelStatement;
         CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
         CreateAndAttachGeotypicalModelParameters(dbCommand);
     }
 
-    /// <summary>
-    /// Tries to find a geotypical model file in the database.
-    /// If the file was found, runs <paramref name="fileFoundAction"/> on the file contents.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="geotypicalModel">The geotypical model identifier.</param>
-    /// <param name="fileFoundAction">The action to run if the file is found.
-    /// The stream will be automatically closed after the action returns or
-    /// throws an exception.</param>
-    /// <returns><see langword="true"/> if the file was found.</returns>
-    public virtual bool TrySelectFromGeotypicalModel(string cdbName, GeotypicalModel geotypicalModel,
+    /// <inheritdoc/>
+    public bool TrySelectFromGeotypicalModel(string cdbName, GeotypicalModel geotypicalModel,
         Action<Stream> fileFoundAction)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
@@ -1747,6 +2035,21 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         InitializeSelectFromGeotypicalModelCommand(selectFromGeotypicalModelCommand);
         selectFromGeotypicalModelCommand.Prepare();
 
+        return TrySelectFromGeotypicalModel(selectFromGeotypicalModelCommand, cdbName, geotypicalModel,
+            fileFoundAction);
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.TrySelectFromGeotypicalModel(string, GeotypicalModel, Action{Stream})"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="selectFromGeotypicalModelCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual bool TrySelectFromGeotypicalModel(DbCommand selectFromGeotypicalModelCommand,
+        string cdbName, GeotypicalModel geotypicalModel,
+        Action<Stream> fileFoundAction)
+    {
         selectFromGeotypicalModelCommand.Parameters[CdbParamName].Value = cdbName;
         SetGeotypicalModelParameters(selectFromGeotypicalModelCommand, geotypicalModel);
 
@@ -1764,18 +2067,8 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         return false;
     }
 
-    /// <summary>
-    /// Tries to find a geotypical model file in the database.
-    /// If the file was found, runs <paramref name="fileFoundAsyncAction"/> on the file contents.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="geotypicalModel">The geotypical model identifier.</param>
-    /// <param name="fileFoundAsyncAction">The action to run if the file is found.
-    /// The stream will be automatically closed after the action returns or
-    /// throws an exception.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns><see langword="true"/> if the file was found.</returns>
-    public virtual async Task<bool> TrySelectFromGeotypicalModelAsync(string cdbName, GeotypicalModel geotypicalModel,
+    /// <inheritdoc/>
+    public async Task<bool> TrySelectFromGeotypicalModelAsync(string cdbName, GeotypicalModel geotypicalModel,
         Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
         CancellationToken cancellationToken)
     {
@@ -1784,6 +2077,22 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         InitializeSelectFromGeotypicalModelCommand(selectFromGeotypicalModelCommand);
         await selectFromGeotypicalModelCommand.PrepareAsync(cancellationToken);
 
+        return await TrySelectFromGeotypicalModelAsync(selectFromGeotypicalModelCommand, cdbName, geotypicalModel,
+            fileFoundAsyncAction, cancellationToken);
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.TrySelectFromGeotypicalModelAsync(string, GeotypicalModel, Func{Stream, CancellationToken, Task}, CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="selectFromGeotypicalModelCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual async Task<bool> TrySelectFromGeotypicalModelAsync(DbCommand selectFromGeotypicalModelCommand,
+        string cdbName, GeotypicalModel geotypicalModel,
+        Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
+        CancellationToken cancellationToken)
+    {
         selectFromGeotypicalModelCommand.Parameters[CdbParamName].Value = cdbName;
         SetGeotypicalModelParameters(selectFromGeotypicalModelCommand, geotypicalModel);
 
@@ -1801,52 +2110,33 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         return false;
     }
 
-    /// <summary>
-    /// Returns a geotypical model file from the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="geotypicalModel">The geotypical model identifier.</param>
-    /// <returns>A stream containing the file contents, or <see langword="null"/> if the file was not found.</returns>
-    public virtual Stream? SelectFromGeotypicalModel(string cdbName, GeotypicalModel geotypicalModel)
+    /// <inheritdoc/>
+    public Stream? SelectFromGeotypicalModel(string cdbName, GeotypicalModel geotypicalModel)
     {
         DbConnection dbConnection = dbDataSource.OpenConnection();
         try
         {
-            DbCommand dbCommand = dbConnection.CreateCommand();
+            DbCommand selectFromGeotypicalModelCommand = dbConnection.CreateCommand();
             try
             {
-                InitializeSelectFromGeotypicalModelCommand(dbCommand);
-                dbCommand.Prepare();
+                InitializeSelectFromGeotypicalModelCommand(selectFromGeotypicalModelCommand);
+                selectFromGeotypicalModelCommand.Prepare();
 
-                dbCommand.Parameters[CdbParamName].Value = cdbName;
-                SetGeotypicalModelParameters(dbCommand, geotypicalModel);
-
-                DbDataReader dbDataReader = dbCommand.ExecuteReader(
-                    CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow);
-                try
+                Stream? stream = SelectFromGeotypicalModel(selectFromGeotypicalModelCommand, cdbName, geotypicalModel);
+                if (stream is not null)
                 {
-                    do
-                    {
-                        while (dbDataReader.Read())
-                        {
-                            Stream stream = dbDataReader.GetStream(ContentColumnName);
-                            return new WrappedStream(stream, dbDataReader, dbCommand, dbConnection);
-                        }
-                    } while (dbDataReader.NextResult());
-                    dbDataReader.Dispose();
-                    dbCommand.Dispose();
+                    return new WrappedStream(stream, selectFromGeotypicalModelCommand, dbConnection);
+                }
+                else
+                {
+                    selectFromGeotypicalModelCommand.Dispose();
                     dbConnection.Dispose();
                     return null;
-                }
-                catch (Exception)
-                {
-                    dbDataReader.Dispose();
-                    throw;
                 }
             }
             catch (Exception)
             {
-                dbCommand.Dispose();
+                selectFromGeotypicalModelCommand.Dispose();
                 throw;
             }
         }
@@ -1857,60 +2147,111 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         }
     }
 
-    /// <summary>
-    /// Returns a geotypical model file from the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="geotypicalModel">The geotypical model identifier.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>A stream containing the file contents, or <see langword="null"/> if the file was not found.</returns>
-    public virtual async Task<Stream?> SelectFromGeotypicalModelAsync(string cdbName, GeotypicalModel geotypicalModel,
+    /// <inheritdoc cref="ISQLDataStore.SelectFromGeotypicalModel(string, GeotypicalModel)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="selectFromGeotypicalModelCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual Stream? SelectFromGeotypicalModel(DbCommand selectFromGeotypicalModelCommand,
+        string cdbName, GeotypicalModel geotypicalModel)
+    {
+        selectFromGeotypicalModelCommand.Parameters[CdbParamName].Value = cdbName;
+        SetGeotypicalModelParameters(selectFromGeotypicalModelCommand, geotypicalModel);
+
+        DbDataReader dbDataReader = selectFromGeotypicalModelCommand.ExecuteReader(
+            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow);
+        try
+        {
+            do
+            {
+                while (dbDataReader.Read())
+                {
+                    Stream stream = dbDataReader.GetStream(ContentColumnName);
+                    return new WrappedStream(stream, dbDataReader);
+                }
+            } while (dbDataReader.NextResult());
+            dbDataReader.Dispose();
+            return null;
+        }
+        catch (Exception)
+        {
+            dbDataReader.Dispose();
+            throw;
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task<Stream?> SelectFromGeotypicalModelAsync(string cdbName, GeotypicalModel geotypicalModel,
         CancellationToken cancellationToken)
     {
         DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
         try
         {
-            DbCommand dbCommand = dbConnection.CreateCommand();
+            DbCommand selectFromGeotypicalModelCommand = dbConnection.CreateCommand();
             try
             {
-                InitializeSelectFromGeotypicalModelCommand(dbCommand);
-                await dbCommand.PrepareAsync(cancellationToken);
+                InitializeSelectFromGeotypicalModelCommand(selectFromGeotypicalModelCommand);
+                await selectFromGeotypicalModelCommand.PrepareAsync(cancellationToken);
 
-                dbCommand.Parameters[CdbParamName].Value = cdbName;
-                SetGeotypicalModelParameters(dbCommand, geotypicalModel);
-
-                DbDataReader dbDataReader = await dbCommand.ExecuteReaderAsync(
-                    CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow, cancellationToken);
-                try
+                Stream? stream = await SelectFromGeotypicalModelAsync(selectFromGeotypicalModelCommand, cdbName, geotypicalModel, cancellationToken);
+                if (stream is not null)
                 {
-                    do
-                    {
-                        while (await dbDataReader.ReadAsync(cancellationToken))
-                        {
-                            Stream stream = dbDataReader.GetStream(ContentColumnName);
-                            return new WrappedStream(stream, dbDataReader, dbCommand, dbConnection);
-                        }
-                    } while (await dbDataReader.NextResultAsync(cancellationToken));
-                    await dbDataReader.DisposeAsync();
-                    await dbCommand.DisposeAsync();
+                    return new WrappedStream(stream, selectFromGeotypicalModelCommand, dbConnection);
+                }
+                else
+                {
+                    await selectFromGeotypicalModelCommand.DisposeAsync();
                     await dbConnection.DisposeAsync();
                     return null;
-                }
-                catch (Exception)
-                {
-                    await dbDataReader.DisposeAsync();
-                    throw;
                 }
             }
             catch (Exception)
             {
-                await dbCommand.DisposeAsync();
+                await selectFromGeotypicalModelCommand.DisposeAsync();
                 throw;
             }
         }
         catch (Exception)
         {
             await dbConnection.DisposeAsync();
+            throw;
+        }
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.SelectFromGeotypicalModelAsync(string, GeotypicalModel, CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="selectFromGeotypicalModelCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual async Task<Stream?> SelectFromGeotypicalModelAsync(DbCommand selectFromGeotypicalModelCommand,
+        string cdbName, GeotypicalModel geotypicalModel,
+        CancellationToken cancellationToken)
+    {
+        selectFromGeotypicalModelCommand.Parameters[CdbParamName].Value = cdbName;
+        SetGeotypicalModelParameters(selectFromGeotypicalModelCommand, geotypicalModel);
+
+        DbDataReader dbDataReader = await selectFromGeotypicalModelCommand.ExecuteReaderAsync(
+            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow, cancellationToken);
+        try
+        {
+            do
+            {
+                while (await dbDataReader.ReadAsync(cancellationToken))
+                {
+                    Stream stream = dbDataReader.GetStream(ContentColumnName);
+                    return new WrappedStream(stream, dbDataReader);
+                }
+            } while (await dbDataReader.NextResultAsync(cancellationToken));
+            await dbDataReader.DisposeAsync();
+            return null;
+        }
+        catch (Exception)
+        {
+            await dbDataReader.DisposeAsync();
             throw;
         }
     }
@@ -1956,7 +2297,7 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         get;
     }
 
-    private void InitializeInsertIntoGeotypicalModelLodCommand(DbCommand dbCommand)
+    internal void InitializeInsertIntoGeotypicalModelLodCommand(DbCommand dbCommand)
     {
         dbCommand.CommandText = InsertIntoGeotypicalModelLodStatement;
         CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
@@ -1992,20 +2333,27 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         dbCommand.Parameters[FileTypeParamName].Value = geotypicalModelLod.FileType;
     }
 
-    /// <summary>
-    /// Inserts a geotypical model level of detail file into the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
-    /// <param name="geotypicalModelLod">The geotypical model level of detail identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <returns>The number of rows affected.</returns>
-    public virtual int InsertIntoGeotypicalModelLod(string cdbName, GeotypicalModelLod geotypicalModelLod, byte[] content)
+    /// <inheritdoc/>
+    public int InsertIntoGeotypicalModelLod(string cdbName, GeotypicalModelLod geotypicalModelLod, byte[] content)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
         using DbCommand insertIntoGeotypicalModelLodCommand = dbConnection.CreateCommand();
         InitializeInsertIntoGeotypicalModelLodCommand(insertIntoGeotypicalModelLodCommand);
         insertIntoGeotypicalModelLodCommand.Prepare();
 
+        return InsertIntoGeotypicalModelLod(insertIntoGeotypicalModelLodCommand, cdbName, geotypicalModelLod, content);
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.InsertIntoGeotypicalModelLod(string, GeotypicalModelLod, byte[])"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoGeotypicalModelLodCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual int InsertIntoGeotypicalModelLod(DbCommand insertIntoGeotypicalModelLodCommand,
+        string cdbName, GeotypicalModelLod geotypicalModelLod, byte[] content)
+    {
         insertIntoGeotypicalModelLodCommand.Parameters[CdbParamName].Value = cdbName;
         SetGeotypicalModelLodParameters(insertIntoGeotypicalModelLodCommand, geotypicalModelLod);
         insertIntoGeotypicalModelLodCommand.Parameters[ContentParamName].Value = content;
@@ -2013,20 +2361,27 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         return insertIntoGeotypicalModelLodCommand.ExecuteNonQuery();
     }
 
-    /// <summary>
-    /// Inserts a geotypical model level of detail file into the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
-    /// <param name="geotypicalModelLod">The geotypical model level of detail identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <returns>The number of rows affected.</returns>
-    public virtual int InsertIntoGeotypicalModelLod(string cdbName, GeotypicalModelLod geotypicalModelLod, Stream content)
+    /// <inheritdoc/>
+    public int InsertIntoGeotypicalModelLod(string cdbName, GeotypicalModelLod geotypicalModelLod, Stream content)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
         using DbCommand insertIntoGeotypicalModelLodCommand = dbConnection.CreateCommand();
         InitializeInsertIntoGeotypicalModelLodCommand(insertIntoGeotypicalModelLodCommand);
         insertIntoGeotypicalModelLodCommand.Prepare();
 
+        return InsertIntoGeotypicalModelLod(insertIntoGeotypicalModelLodCommand, cdbName, geotypicalModelLod, content);
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.InsertIntoGeotypicalModelLod(string, GeotypicalModelLod, Stream)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoGeotypicalModelLodCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual int InsertIntoGeotypicalModelLod(DbCommand insertIntoGeotypicalModelLodCommand,
+        string cdbName, GeotypicalModelLod geotypicalModelLod, Stream content)
+    {
         insertIntoGeotypicalModelLodCommand.Parameters[CdbParamName].Value = cdbName;
         SetGeotypicalModelLodParameters(insertIntoGeotypicalModelLodCommand, geotypicalModelLod);
         insertIntoGeotypicalModelLodCommand.Parameters[ContentParamName].Value = content;
@@ -2034,48 +2389,66 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         return insertIntoGeotypicalModelLodCommand.ExecuteNonQuery();
     }
 
-    /// <summary>
-    /// Inserts a geotypical model level of detail file into the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
-    /// <param name="geotypicalModelLod">The geotypical model level of detail identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The number of rows affected.</returns>
-    public virtual async Task<int> InsertIntoGeotypicalModelLodAsync(string cdbName, GeotypicalModelLod geotypicalModelLod, byte[] content, CancellationToken cancellationToken = default)
+    /// <inheritdoc/>
+    public async Task<int> InsertIntoGeotypicalModelLodAsync(string cdbName, GeotypicalModelLod geotypicalModelLod, byte[] content,
+        CancellationToken cancellationToken)
     {
         await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
         await using DbCommand insertIntoGeotypicalModelLodCommand = dbConnection.CreateCommand();
         InitializeInsertIntoGeotypicalModelLodCommand(insertIntoGeotypicalModelLodCommand);
         await insertIntoGeotypicalModelLodCommand.PrepareAsync(cancellationToken);
 
-        insertIntoGeotypicalModelLodCommand.Parameters[CdbParamName].Value = cdbName;
-        SetGeotypicalModelLodParameters(insertIntoGeotypicalModelLodCommand, geotypicalModelLod);
-        insertIntoGeotypicalModelLodCommand.Parameters[ContentParamName].Value = content;
-
-        return await insertIntoGeotypicalModelLodCommand.ExecuteNonQueryAsync(cancellationToken);
+        return await InsertIntoGeotypicalModelLodAsync(insertIntoGeotypicalModelLodCommand, cdbName, geotypicalModelLod, content,
+            cancellationToken);
     }
 
-    /// <summary>
-    /// Inserts a geotypical model level of detail file into the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
-    /// <param name="geotypicalModelLod">The geotypical model level of detail identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The number of rows affected.</returns>
-    public virtual async Task<int> InsertIntoGeotypicalModelLodAsync(string cdbName, GeotypicalModelLod geotypicalModelLod, Stream content, CancellationToken cancellationToken = default)
+    /// <inheritdoc cref="ISQLDataStore.InsertIntoGeotypicalModelLodAsync(string, GeotypicalModelLod, byte[], CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoGeotypicalModelLodCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual Task<int> InsertIntoGeotypicalModelLodAsync(DbCommand insertIntoGeotypicalModelLodCommand,
+        string cdbName, GeotypicalModelLod geotypicalModelLod, byte[] content,
+        CancellationToken cancellationToken)
+    {
+        insertIntoGeotypicalModelLodCommand.Parameters[CdbParamName].Value = cdbName;
+        SetGeotypicalModelLodParameters(insertIntoGeotypicalModelLodCommand, geotypicalModelLod);
+        insertIntoGeotypicalModelLodCommand.Parameters[ContentParamName].Value = content;
+
+        return insertIntoGeotypicalModelLodCommand.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<int> InsertIntoGeotypicalModelLodAsync(string cdbName, GeotypicalModelLod geotypicalModelLod, Stream content,
+        CancellationToken cancellationToken)
     {
         await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
         await using DbCommand insertIntoGeotypicalModelLodCommand = dbConnection.CreateCommand();
         InitializeInsertIntoGeotypicalModelLodCommand(insertIntoGeotypicalModelLodCommand);
         await insertIntoGeotypicalModelLodCommand.PrepareAsync(cancellationToken);
 
+        return await InsertIntoGeotypicalModelLodAsync(insertIntoGeotypicalModelLodCommand, cdbName, geotypicalModelLod, content,
+            cancellationToken);
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.InsertIntoGeotypicalModelLodAsync(string, GeotypicalModelLod, Stream, CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoGeotypicalModelLodCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual Task<int> InsertIntoGeotypicalModelLodAsync(DbCommand insertIntoGeotypicalModelLodCommand,
+        string cdbName, GeotypicalModelLod geotypicalModelLod, Stream content,
+        CancellationToken cancellationToken)
+    {
         insertIntoGeotypicalModelLodCommand.Parameters[CdbParamName].Value = cdbName;
         SetGeotypicalModelLodParameters(insertIntoGeotypicalModelLodCommand, geotypicalModelLod);
         insertIntoGeotypicalModelLodCommand.Parameters[ContentParamName].Value = content;
 
-        return await insertIntoGeotypicalModelLodCommand.ExecuteNonQueryAsync(cancellationToken);
+        return insertIntoGeotypicalModelLodCommand.ExecuteNonQueryAsync(cancellationToken);
     }
 
     #endregion
@@ -2110,24 +2483,15 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         get;
     }
 
-    private void InitializeSelectFromGeotypicalModelLodCommand(DbCommand dbCommand)
+    internal void InitializeSelectFromGeotypicalModelLodCommand(DbCommand dbCommand)
     {
         dbCommand.CommandText = SelectFromGeotypicalModelLodStatement;
         CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
         CreateAndAttachGeotypicalModelLodParameters(dbCommand);
     }
 
-    /// <summary>
-    /// Tries to find a geotypical model level of detail file in the database.
-    /// If the file was found, runs <paramref name="fileFoundAction"/> on the file contents.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="geotypicalModelLod">The geotypical model level of detail identifier.</param>
-    /// <param name="fileFoundAction">The action to run if the file is found.
-    /// The stream will be automatically closed after the action returns or
-    /// throws an exception.</param>
-    /// <returns><see langword="true"/> if the file was found.</returns>
-    public virtual bool TrySelectFromGeotypicalModelLod(string cdbName, GeotypicalModelLod geotypicalModelLod,
+    /// <inheritdoc/>
+    public bool TrySelectFromGeotypicalModelLod(string cdbName, GeotypicalModelLod geotypicalModelLod,
         Action<Stream> fileFoundAction)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
@@ -2135,6 +2499,20 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         InitializeSelectFromGeotypicalModelLodCommand(selectFromGeotypicalModelLodCommand);
         selectFromGeotypicalModelLodCommand.Prepare();
 
+        return TrySelectFromGeotypicalModelLod(selectFromGeotypicalModelLodCommand, cdbName, geotypicalModelLod, fileFoundAction);
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.TrySelectFromGeotypicalModelLod(string, GeotypicalModelLod, Action{Stream})"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="selectFromGeotypicalModelLodCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual bool TrySelectFromGeotypicalModelLod(DbCommand selectFromGeotypicalModelLodCommand,
+        string cdbName, GeotypicalModelLod geotypicalModelLod,
+        Action<Stream> fileFoundAction)
+    {
         selectFromGeotypicalModelLodCommand.Parameters[CdbParamName].Value = cdbName;
         SetGeotypicalModelLodParameters(selectFromGeotypicalModelLodCommand, geotypicalModelLod);
 
@@ -2152,18 +2530,8 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         return false;
     }
 
-    /// <summary>
-    /// Tries to find a geotypical model level of detail file in the database.
-    /// If the file was found, runs <paramref name="fileFoundAsyncAction"/> on the file contents.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="geotypicalModelLod">The geotypical model level of detail identifier.</param>
-    /// <param name="fileFoundAsyncAction">The action to run if the file is found.
-    /// The stream will be automatically closed after the action returns or
-    /// throws an exception.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns><see langword="true"/> if the file was found.</returns>
-    public virtual async Task<bool> TrySelectFromGeotypicalModelLodAsync(string cdbName, GeotypicalModelLod geotypicalModelLod,
+    /// <inheritdoc/>
+    public async Task<bool> TrySelectFromGeotypicalModelLodAsync(string cdbName, GeotypicalModelLod geotypicalModelLod,
         Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
         CancellationToken cancellationToken)
     {
@@ -2172,6 +2540,22 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         InitializeSelectFromGeotypicalModelLodCommand(selectFromGeotypicalModelLodCommand);
         await selectFromGeotypicalModelLodCommand.PrepareAsync(cancellationToken);
 
+        return await TrySelectFromGeotypicalModelLodAsync(selectFromGeotypicalModelLodCommand, cdbName, geotypicalModelLod,
+            fileFoundAsyncAction, cancellationToken);
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.TrySelectFromGeotypicalModelLodAsync(string, GeotypicalModelLod, Func{Stream, CancellationToken, Task}, CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="selectFromGeotypicalModelLodCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual async Task<bool> TrySelectFromGeotypicalModelLodAsync(DbCommand selectFromGeotypicalModelLodCommand,
+        string cdbName, GeotypicalModelLod geotypicalModelLod,
+        Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
+        CancellationToken cancellationToken)
+    {
         selectFromGeotypicalModelLodCommand.Parameters[CdbParamName].Value = cdbName;
         SetGeotypicalModelLodParameters(selectFromGeotypicalModelLodCommand, geotypicalModelLod);
 
@@ -2189,52 +2573,33 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         return false;
     }
 
-    /// <summary>
-    /// Returns a geotypical model level of detail file from the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="geotypicalModelLod">The geotypical model level of detail identifier.</param>
-    /// <returns>A stream containing the file contents, or <see langword="null"/> if the file was not found.</returns>
-    public virtual Stream? SelectFromGeotypicalModelLod(string cdbName, GeotypicalModelLod geotypicalModelLod)
+    /// <inheritdoc/>
+    public Stream? SelectFromGeotypicalModelLod(string cdbName, GeotypicalModelLod geotypicalModelLod)
     {
         DbConnection dbConnection = dbDataSource.OpenConnection();
         try
         {
-            DbCommand dbCommand = dbConnection.CreateCommand();
+            DbCommand selectFromGeotypicalModelLodCommand = dbConnection.CreateCommand();
             try
             {
-                InitializeSelectFromGeotypicalModelLodCommand(dbCommand);
-                dbCommand.Prepare();
+                InitializeSelectFromGeotypicalModelLodCommand(selectFromGeotypicalModelLodCommand);
+                selectFromGeotypicalModelLodCommand.Prepare();
 
-                dbCommand.Parameters[CdbParamName].Value = cdbName;
-                SetGeotypicalModelLodParameters(dbCommand, geotypicalModelLod);
-
-                DbDataReader dbDataReader = dbCommand.ExecuteReader(
-                    CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow);
-                try
+                Stream? stream = SelectFromGeotypicalModelLod(selectFromGeotypicalModelLodCommand, cdbName, geotypicalModelLod);
+                if (stream is not null)
                 {
-                    do
-                    {
-                        while (dbDataReader.Read())
-                        {
-                            Stream stream = dbDataReader.GetStream(ContentColumnName);
-                            return new WrappedStream(stream, dbDataReader, dbCommand, dbConnection);
-                        }
-                    } while (dbDataReader.NextResult());
-                    dbDataReader.Dispose();
-                    dbCommand.Dispose();
+                    return new WrappedStream(stream, selectFromGeotypicalModelLodCommand, dbConnection);
+                }
+                else
+                {
+                    selectFromGeotypicalModelLodCommand.Dispose();
                     dbConnection.Dispose();
                     return null;
-                }
-                catch (Exception)
-                {
-                    dbDataReader.Dispose();
-                    throw;
                 }
             }
             catch (Exception)
             {
-                dbCommand.Dispose();
+                selectFromGeotypicalModelLodCommand.Dispose();
                 throw;
             }
         }
@@ -2245,60 +2610,111 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         }
     }
 
-    /// <summary>
-    /// Returns a geotypical model level of detail file from the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="geotypicalModelLod">The geotypical model level of detail identifier.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>A stream containing the file contents, or <see langword="null"/> if the file was not found.</returns>
-    public virtual async Task<Stream?> SelectFromGeotypicalModelLodAsync(string cdbName, GeotypicalModelLod geotypicalModelLod,
+    /// <inheritdoc cref="ISQLDataStore.SelectFromGeotypicalModelLod(string, GeotypicalModelLod)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="selectFromGeotypicalModelLodCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual Stream? SelectFromGeotypicalModelLod(DbCommand selectFromGeotypicalModelLodCommand,
+        string cdbName, GeotypicalModelLod geotypicalModelLod)
+    {
+        selectFromGeotypicalModelLodCommand.Parameters[CdbParamName].Value = cdbName;
+        SetGeotypicalModelLodParameters(selectFromGeotypicalModelLodCommand, geotypicalModelLod);
+
+        DbDataReader dbDataReader = selectFromGeotypicalModelLodCommand.ExecuteReader(
+            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow);
+        try
+        {
+            do
+            {
+                while (dbDataReader.Read())
+                {
+                    Stream stream = dbDataReader.GetStream(ContentColumnName);
+                    return new WrappedStream(stream, dbDataReader);
+                }
+            } while (dbDataReader.NextResult());
+            dbDataReader.Dispose();
+            return null;
+        }
+        catch (Exception)
+        {
+            dbDataReader.Dispose();
+            throw;
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task<Stream?> SelectFromGeotypicalModelLodAsync(string cdbName, GeotypicalModelLod geotypicalModelLod,
         CancellationToken cancellationToken)
     {
         DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
         try
         {
-            DbCommand dbCommand = dbConnection.CreateCommand();
+            DbCommand selectFromGeotypicalModelLodCommand = dbConnection.CreateCommand();
             try
             {
-                InitializeSelectFromGeotypicalModelLodCommand(dbCommand);
-                await dbCommand.PrepareAsync(cancellationToken);
+                InitializeSelectFromGeotypicalModelLodCommand(selectFromGeotypicalModelLodCommand);
+                await selectFromGeotypicalModelLodCommand.PrepareAsync(cancellationToken);
 
-                dbCommand.Parameters[CdbParamName].Value = cdbName;
-                SetGeotypicalModelLodParameters(dbCommand, geotypicalModelLod);
-
-                DbDataReader dbDataReader = await dbCommand.ExecuteReaderAsync(
-                    CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow, cancellationToken);
-                try
+                Stream? stream = await SelectFromGeotypicalModelLodAsync(selectFromGeotypicalModelLodCommand, cdbName, geotypicalModelLod, cancellationToken);
+                if (stream is not null)
                 {
-                    do
-                    {
-                        while (await dbDataReader.ReadAsync(cancellationToken))
-                        {
-                            Stream stream = dbDataReader.GetStream(ContentColumnName);
-                            return new WrappedStream(stream, dbDataReader, dbCommand, dbConnection);
-                        }
-                    } while (await dbDataReader.NextResultAsync(cancellationToken));
-                    await dbDataReader.DisposeAsync();
-                    await dbCommand.DisposeAsync();
+                    return new WrappedStream(stream, selectFromGeotypicalModelLodCommand, dbConnection);
+                }
+                else
+                {
+                    await selectFromGeotypicalModelLodCommand.DisposeAsync();
                     await dbConnection.DisposeAsync();
                     return null;
-                }
-                catch (Exception)
-                {
-                    await dbDataReader.DisposeAsync();
-                    throw;
                 }
             }
             catch (Exception)
             {
-                await dbCommand.DisposeAsync();
+                await selectFromGeotypicalModelLodCommand.DisposeAsync();
                 throw;
             }
         }
         catch (Exception)
         {
             await dbConnection.DisposeAsync();
+            throw;
+        }
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.SelectFromGeotypicalModelLodAsync(string, GeotypicalModelLod, CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="selectFromGeotypicalModelLodCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual async Task<Stream?> SelectFromGeotypicalModelLodAsync(DbCommand selectFromGeotypicalModelLodCommand,
+        string cdbName, GeotypicalModelLod geotypicalModelLod,
+        CancellationToken cancellationToken)
+    {
+        selectFromGeotypicalModelLodCommand.Parameters[CdbParamName].Value = cdbName;
+        SetGeotypicalModelLodParameters(selectFromGeotypicalModelLodCommand, geotypicalModelLod);
+
+        DbDataReader dbDataReader = await selectFromGeotypicalModelLodCommand.ExecuteReaderAsync(
+            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow, cancellationToken);
+        try
+        {
+            do
+            {
+                while (await dbDataReader.ReadAsync(cancellationToken))
+                {
+                    Stream stream = dbDataReader.GetStream(ContentColumnName);
+                    return new WrappedStream(stream, dbDataReader);
+                }
+            } while (await dbDataReader.NextResultAsync(cancellationToken));
+            await dbDataReader.DisposeAsync();
+            return null;
+        }
+        catch (Exception)
+        {
+            await dbDataReader.DisposeAsync();
             throw;
         }
     }
@@ -2412,7 +2828,7 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         get;
     }
 
-    private void InitializeInsertIntoMovingModelCommand(DbCommand dbCommand)
+    internal void InitializeInsertIntoMovingModelCommand(DbCommand dbCommand)
     {
         dbCommand.CommandText = InsertIntoMovingModelStatement;
         CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
@@ -2450,20 +2866,27 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         dbCommand.Parameters[FileTypeParamName].Value = movingModel.FileType;
     }
 
-    /// <summary>
-    /// Inserts a moving model file into the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
-    /// <param name="movingModel">The moving model identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <returns>The number of rows affected.</returns>
-    public virtual int InsertIntoMovingModel(string cdbName, MovingModel movingModel, byte[] content)
+    /// <inheritdoc/>
+    public int InsertIntoMovingModel(string cdbName, MovingModel movingModel, byte[] content)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
         using DbCommand insertIntoMovingModelCommand = dbConnection.CreateCommand();
         InitializeInsertIntoMovingModelCommand(insertIntoMovingModelCommand);
         insertIntoMovingModelCommand.Prepare();
 
+        return InsertIntoMovingModel(insertIntoMovingModelCommand, cdbName, movingModel, content);
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.InsertIntoMovingModel(string, MovingModel, byte[])"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoMovingModelCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual int InsertIntoMovingModel(DbCommand insertIntoMovingModelCommand,
+        string cdbName, MovingModel movingModel, byte[] content)
+    {
         insertIntoMovingModelCommand.Parameters[CdbParamName].Value = cdbName;
         SetMovingModelParameters(insertIntoMovingModelCommand, movingModel);
         insertIntoMovingModelCommand.Parameters[ContentParamName].Value = content;
@@ -2471,20 +2894,27 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         return insertIntoMovingModelCommand.ExecuteNonQuery();
     }
 
-    /// <summary>
-    /// Inserts a moving model file into the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
-    /// <param name="movingModel">The moving model identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <returns>The number of rows affected.</returns>
-    public virtual int InsertIntoMovingModel(string cdbName, MovingModel movingModel, Stream content)
+    /// <inheritdoc/>
+    public int InsertIntoMovingModel(string cdbName, MovingModel movingModel, Stream content)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
         using DbCommand insertIntoMovingModelCommand = dbConnection.CreateCommand();
         InitializeInsertIntoMovingModelCommand(insertIntoMovingModelCommand);
         insertIntoMovingModelCommand.Prepare();
 
+        return InsertIntoMovingModel(insertIntoMovingModelCommand, cdbName, movingModel, content);
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.InsertIntoMovingModel(string, MovingModel, Stream)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoMovingModelCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual int InsertIntoMovingModel(DbCommand insertIntoMovingModelCommand,
+        string cdbName, MovingModel movingModel, Stream content)
+    {
         insertIntoMovingModelCommand.Parameters[CdbParamName].Value = cdbName;
         SetMovingModelParameters(insertIntoMovingModelCommand, movingModel);
         insertIntoMovingModelCommand.Parameters[ContentParamName].Value = content;
@@ -2492,48 +2922,66 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         return insertIntoMovingModelCommand.ExecuteNonQuery();
     }
 
-    /// <summary>
-    /// Inserts a moving model file into the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
-    /// <param name="movingModel">The moving model identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The number of rows affected.</returns>
-    public virtual async Task<int> InsertIntoMovingModelAsync(string cdbName, MovingModel movingModel, byte[] content, CancellationToken cancellationToken = default)
+    /// <inheritdoc/>
+    public async Task<int> InsertIntoMovingModelAsync(string cdbName, MovingModel movingModel, byte[] content,
+        CancellationToken cancellationToken)
     {
         await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
         await using DbCommand insertIntoMovingModelCommand = dbConnection.CreateCommand();
         InitializeInsertIntoMovingModelCommand(insertIntoMovingModelCommand);
         await insertIntoMovingModelCommand.PrepareAsync(cancellationToken);
 
-        insertIntoMovingModelCommand.Parameters[CdbParamName].Value = cdbName;
-        SetMovingModelParameters(insertIntoMovingModelCommand, movingModel);
-        insertIntoMovingModelCommand.Parameters[ContentParamName].Value = content;
-
-        return await insertIntoMovingModelCommand.ExecuteNonQueryAsync(cancellationToken);
+        return await InsertIntoMovingModelAsync(insertIntoMovingModelCommand, cdbName, movingModel, content,
+            cancellationToken);
     }
 
-    /// <summary>
-    /// Inserts a moving model file into the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
-    /// <param name="movingModel">The moving model identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The number of rows affected.</returns>
-    public virtual async Task<int> InsertIntoMovingModelAsync(string cdbName, MovingModel movingModel, Stream content, CancellationToken cancellationToken = default)
+    /// <inheritdoc cref="ISQLDataStore.InsertIntoMovingModelAsync(string, MovingModel, byte[], CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoMovingModelCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual Task<int> InsertIntoMovingModelAsync(DbCommand insertIntoMovingModelCommand,
+        string cdbName, MovingModel movingModel, byte[] content,
+        CancellationToken cancellationToken)
+    {
+        insertIntoMovingModelCommand.Parameters[CdbParamName].Value = cdbName;
+        SetMovingModelParameters(insertIntoMovingModelCommand, movingModel);
+        insertIntoMovingModelCommand.Parameters[ContentParamName].Value = content;
+
+        return insertIntoMovingModelCommand.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<int> InsertIntoMovingModelAsync(string cdbName, MovingModel movingModel, Stream content,
+        CancellationToken cancellationToken)
     {
         await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
         await using DbCommand insertIntoMovingModelCommand = dbConnection.CreateCommand();
         InitializeInsertIntoMovingModelCommand(insertIntoMovingModelCommand);
         await insertIntoMovingModelCommand.PrepareAsync(cancellationToken);
 
+        return await InsertIntoMovingModelAsync(insertIntoMovingModelCommand, cdbName, movingModel, content,
+            cancellationToken);
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.InsertIntoMovingModelAsync(string, MovingModel, Stream, CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoMovingModelCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual Task<int> InsertIntoMovingModelAsync(DbCommand insertIntoMovingModelCommand,
+        string cdbName, MovingModel movingModel, Stream content,
+        CancellationToken cancellationToken)
+    {
         insertIntoMovingModelCommand.Parameters[CdbParamName].Value = cdbName;
         SetMovingModelParameters(insertIntoMovingModelCommand, movingModel);
         insertIntoMovingModelCommand.Parameters[ContentParamName].Value = content;
 
-        return await insertIntoMovingModelCommand.ExecuteNonQueryAsync(cancellationToken);
+        return insertIntoMovingModelCommand.ExecuteNonQueryAsync(cancellationToken);
     }
 
     #endregion
@@ -2569,24 +3017,15 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         get;
     }
 
-    private void InitializeSelectFromMovingModelCommand(DbCommand dbCommand)
+    internal void InitializeSelectFromMovingModelCommand(DbCommand dbCommand)
     {
         dbCommand.CommandText = SelectFromMovingModelStatement;
         CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
         CreateAndAttachMovingModelParameters(dbCommand);
     }
 
-    /// <summary>
-    /// Tries to find a moving model file in the database.
-    /// If the file was found, runs <paramref name="fileFoundAction"/> on the file contents.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="movingModel">The moving model identifier.</param>
-    /// <param name="fileFoundAction">The action to run if the file is found.
-    /// The stream will be automatically closed after the action returns or
-    /// throws an exception.</param>
-    /// <returns><see langword="true"/> if the file was found.</returns>
-    public virtual bool TrySelectFromMovingModel(string cdbName, MovingModel movingModel,
+    /// <inheritdoc/>
+    public bool TrySelectFromMovingModel(string cdbName, MovingModel movingModel,
         Action<Stream> fileFoundAction)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
@@ -2594,6 +3033,20 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         InitializeSelectFromMovingModelCommand(selectFromMovingModelCommand);
         selectFromMovingModelCommand.Prepare();
 
+        return TrySelectFromMovingModel(selectFromMovingModelCommand, cdbName, movingModel, fileFoundAction);
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.TrySelectFromMovingModel(string, MovingModel, Action{Stream})"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="selectFromMovingModelCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual bool TrySelectFromMovingModel(DbCommand selectFromMovingModelCommand,
+        string cdbName, MovingModel movingModel,
+        Action<Stream> fileFoundAction)
+    {
         selectFromMovingModelCommand.Parameters[CdbParamName].Value = cdbName;
         SetMovingModelParameters(selectFromMovingModelCommand, movingModel);
 
@@ -2611,18 +3064,8 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         return false;
     }
 
-    /// <summary>
-    /// Tries to find a moving model file in the database.
-    /// If the file was found, runs <paramref name="fileFoundAsyncAction"/> on the file contents.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="movingModel">The moving model identifier.</param>
-    /// <param name="fileFoundAsyncAction">The action to run if the file is found.
-    /// The stream will be automatically closed after the action returns or
-    /// throws an exception.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns><see langword="true"/> if the file was found.</returns>
-    public virtual async Task<bool> TrySelectFromMovingModelAsync(string cdbName, MovingModel movingModel,
+    /// <inheritdoc/>
+    public async Task<bool> TrySelectFromMovingModelAsync(string cdbName, MovingModel movingModel,
         Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
         CancellationToken cancellationToken)
     {
@@ -2631,6 +3074,22 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         InitializeSelectFromMovingModelCommand(selectFromMovingModelCommand);
         await selectFromMovingModelCommand.PrepareAsync(cancellationToken);
 
+        return await TrySelectFromMovingModelAsync(selectFromMovingModelCommand, cdbName, movingModel,
+            fileFoundAsyncAction, cancellationToken);
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.TrySelectFromMovingModelAsync(string, MovingModel, Func{Stream, CancellationToken, Task}, CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="selectFromMovingModelCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual async Task<bool> TrySelectFromMovingModelAsync(DbCommand selectFromMovingModelCommand,
+        string cdbName, MovingModel movingModel,
+        Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
+        CancellationToken cancellationToken)
+    {
         selectFromMovingModelCommand.Parameters[CdbParamName].Value = cdbName;
         SetMovingModelParameters(selectFromMovingModelCommand, movingModel);
 
@@ -2648,52 +3107,33 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         return false;
     }
 
-    /// <summary>
-    /// Returns a moving model file from the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="movingModel">The moving model identifier.</param>
-    /// <returns>A stream containing the file contents, or <see langword="null"/> if the file was not found.</returns>
-    public virtual Stream? SelectFromMovingModel(string cdbName, MovingModel movingModel)
+    /// <inheritdoc/>
+    public Stream? SelectFromMovingModel(string cdbName, MovingModel movingModel)
     {
         DbConnection dbConnection = dbDataSource.OpenConnection();
         try
         {
-            DbCommand dbCommand = dbConnection.CreateCommand();
+            DbCommand selectFromMovingModelCommand = dbConnection.CreateCommand();
             try
             {
-                InitializeSelectFromMovingModelCommand(dbCommand);
-                dbCommand.Prepare();
+                InitializeSelectFromMovingModelCommand(selectFromMovingModelCommand);
+                selectFromMovingModelCommand.Prepare();
 
-                dbCommand.Parameters[CdbParamName].Value = cdbName;
-                SetMovingModelParameters(dbCommand, movingModel);
-
-                DbDataReader dbDataReader = dbCommand.ExecuteReader(
-                    CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow);
-                try
+                Stream? stream = SelectFromMovingModel(selectFromMovingModelCommand, cdbName, movingModel);
+                if (stream is not null)
                 {
-                    do
-                    {
-                        while (dbDataReader.Read())
-                        {
-                            Stream stream = dbDataReader.GetStream(ContentColumnName);
-                            return new WrappedStream(stream, dbDataReader, dbCommand, dbConnection);
-                        }
-                    } while (dbDataReader.NextResult());
-                    dbDataReader.Dispose();
-                    dbCommand.Dispose();
+                    return new WrappedStream(stream, selectFromMovingModelCommand, dbConnection);
+                }
+                else
+                {
+                    selectFromMovingModelCommand.Dispose();
                     dbConnection.Dispose();
                     return null;
-                }
-                catch (Exception)
-                {
-                    dbDataReader.Dispose();
-                    throw;
                 }
             }
             catch (Exception)
             {
-                dbCommand.Dispose();
+                selectFromMovingModelCommand.Dispose();
                 throw;
             }
         }
@@ -2704,60 +3144,111 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         }
     }
 
-    /// <summary>
-    /// Returns a moving model file from the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="movingModel">The moving model identifier.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>A stream containing the file contents, or <see langword="null"/> if the file was not found.</returns>
-    public virtual async Task<Stream?> SelectFromMovingModelAsync(string cdbName, MovingModel movingModel,
+    /// <inheritdoc cref="ISQLDataStore.SelectFromMovingModel(string, MovingModel)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="selectFromMovingModelCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual Stream? SelectFromMovingModel(DbCommand selectFromMovingModelCommand,
+        string cdbName, MovingModel movingModel)
+    {
+        selectFromMovingModelCommand.Parameters[CdbParamName].Value = cdbName;
+        SetMovingModelParameters(selectFromMovingModelCommand, movingModel);
+
+        DbDataReader dbDataReader = selectFromMovingModelCommand.ExecuteReader(
+            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow);
+        try
+        {
+            do
+            {
+                while (dbDataReader.Read())
+                {
+                    Stream stream = dbDataReader.GetStream(ContentColumnName);
+                    return new WrappedStream(stream, dbDataReader);
+                }
+            } while (dbDataReader.NextResult());
+            dbDataReader.Dispose();
+            return null;
+        }
+        catch (Exception)
+        {
+            dbDataReader.Dispose();
+            throw;
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task<Stream?> SelectFromMovingModelAsync(string cdbName, MovingModel movingModel,
         CancellationToken cancellationToken)
     {
         DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
         try
         {
-            DbCommand dbCommand = dbConnection.CreateCommand();
+            DbCommand selectFromMovingModelCommand = dbConnection.CreateCommand();
             try
             {
-                InitializeSelectFromMovingModelCommand(dbCommand);
-                await dbCommand.PrepareAsync(cancellationToken);
+                InitializeSelectFromMovingModelCommand(selectFromMovingModelCommand);
+                await selectFromMovingModelCommand.PrepareAsync(cancellationToken);
 
-                dbCommand.Parameters[CdbParamName].Value = cdbName;
-                SetMovingModelParameters(dbCommand, movingModel);
-
-                DbDataReader dbDataReader = await dbCommand.ExecuteReaderAsync(
-                    CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow, cancellationToken);
-                try
+                Stream? stream = await SelectFromMovingModelAsync(selectFromMovingModelCommand, cdbName, movingModel, cancellationToken);
+                if (stream is not null)
                 {
-                    do
-                    {
-                        while (await dbDataReader.ReadAsync(cancellationToken))
-                        {
-                            Stream stream = dbDataReader.GetStream(ContentColumnName);
-                            return new WrappedStream(stream, dbDataReader, dbCommand, dbConnection);
-                        }
-                    } while (await dbDataReader.NextResultAsync(cancellationToken));
-                    await dbDataReader.DisposeAsync();
-                    await dbCommand.DisposeAsync();
+                    return new WrappedStream(stream, selectFromMovingModelCommand, dbConnection);
+                }
+                else
+                {
+                    await selectFromMovingModelCommand.DisposeAsync();
                     await dbConnection.DisposeAsync();
                     return null;
-                }
-                catch (Exception)
-                {
-                    await dbDataReader.DisposeAsync();
-                    throw;
                 }
             }
             catch (Exception)
             {
-                await dbCommand.DisposeAsync();
+                await selectFromMovingModelCommand.DisposeAsync();
                 throw;
             }
         }
         catch (Exception)
         {
             await dbConnection.DisposeAsync();
+            throw;
+        }
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.SelectFromMovingModelAsync(string, MovingModel, CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="selectFromMovingModelCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual async Task<Stream?> SelectFromMovingModelAsync(DbCommand selectFromMovingModelCommand,
+        string cdbName, MovingModel movingModel,
+        CancellationToken cancellationToken)
+    {
+        selectFromMovingModelCommand.Parameters[CdbParamName].Value = cdbName;
+        SetMovingModelParameters(selectFromMovingModelCommand, movingModel);
+
+        DbDataReader dbDataReader = await selectFromMovingModelCommand.ExecuteReaderAsync(
+            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow, cancellationToken);
+        try
+        {
+            do
+            {
+                while (await dbDataReader.ReadAsync(cancellationToken))
+                {
+                    Stream stream = dbDataReader.GetStream(ContentColumnName);
+                    return new WrappedStream(stream, dbDataReader);
+                }
+            } while (await dbDataReader.NextResultAsync(cancellationToken));
+            await dbDataReader.DisposeAsync();
+            return null;
+        }
+        catch (Exception)
+        {
+            await dbDataReader.DisposeAsync();
             throw;
         }
     }
@@ -2805,7 +3296,7 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         get;
     }
 
-    private void InitializeInsertIntoMovingModelLodCommand(DbCommand dbCommand)
+    internal void InitializeInsertIntoMovingModelLodCommand(DbCommand dbCommand)
     {
         dbCommand.CommandText = InsertIntoMovingModelLodStatement;
         CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
@@ -2845,20 +3336,27 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         dbCommand.Parameters[FileTypeParamName].Value = movingModelLod.FileType;
     }
 
-    /// <summary>
-    /// Inserts a moving model level of detail file into the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
-    /// <param name="movingModelLod">The moving model level of detail identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <returns>The number of rows affected.</returns>
-    public virtual int InsertIntoMovingModelLod(string cdbName, MovingModelLod movingModelLod, byte[] content)
+    /// <inheritdoc/>
+    public int InsertIntoMovingModelLod(string cdbName, MovingModelLod movingModelLod, byte[] content)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
         using DbCommand insertIntoMovingModelLodCommand = dbConnection.CreateCommand();
         InitializeInsertIntoMovingModelLodCommand(insertIntoMovingModelLodCommand);
         insertIntoMovingModelLodCommand.Prepare();
 
+        return InsertIntoMovingModelLod(insertIntoMovingModelLodCommand, cdbName, movingModelLod, content);
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.InsertIntoMovingModelLod(string, MovingModelLod, byte[])"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoMovingModelLodCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual int InsertIntoMovingModelLod(DbCommand insertIntoMovingModelLodCommand,
+        string cdbName, MovingModelLod movingModelLod, byte[] content)
+    {
         insertIntoMovingModelLodCommand.Parameters[CdbParamName].Value = cdbName;
         SetMovingModelLodParameters(insertIntoMovingModelLodCommand, movingModelLod);
         insertIntoMovingModelLodCommand.Parameters[ContentParamName].Value = content;
@@ -2866,20 +3364,27 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         return insertIntoMovingModelLodCommand.ExecuteNonQuery();
     }
 
-    /// <summary>
-    /// Inserts a moving model level of detail file into the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
-    /// <param name="movingModelLod">The moving model level of detail identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <returns>The number of rows affected.</returns>
-    public virtual int InsertIntoMovingModelLod(string cdbName, MovingModelLod movingModelLod, Stream content)
+    /// <inheritdoc/>
+    public int InsertIntoMovingModelLod(string cdbName, MovingModelLod movingModelLod, Stream content)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
         using DbCommand insertIntoMovingModelLodCommand = dbConnection.CreateCommand();
         InitializeInsertIntoMovingModelLodCommand(insertIntoMovingModelLodCommand);
         insertIntoMovingModelLodCommand.Prepare();
 
+        return InsertIntoMovingModelLod(insertIntoMovingModelLodCommand, cdbName, movingModelLod, content);
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.InsertIntoMovingModelLod(string, MovingModelLod, Stream)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoMovingModelLodCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual int InsertIntoMovingModelLod(DbCommand insertIntoMovingModelLodCommand,
+        string cdbName, MovingModelLod movingModelLod, Stream content)
+    {
         insertIntoMovingModelLodCommand.Parameters[CdbParamName].Value = cdbName;
         SetMovingModelLodParameters(insertIntoMovingModelLodCommand, movingModelLod);
         insertIntoMovingModelLodCommand.Parameters[ContentParamName].Value = content;
@@ -2887,48 +3392,66 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         return insertIntoMovingModelLodCommand.ExecuteNonQuery();
     }
 
-    /// <summary>
-    /// Inserts a moving model level of detail file into the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
-    /// <param name="movingModelLod">The moving model level of detail identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The number of rows affected.</returns>
-    public virtual async Task<int> InsertIntoMovingModelLodAsync(string cdbName, MovingModelLod movingModelLod, byte[] content, CancellationToken cancellationToken = default)
+    /// <inheritdoc/>
+    public async Task<int> InsertIntoMovingModelLodAsync(string cdbName, MovingModelLod movingModelLod, byte[] content,
+        CancellationToken cancellationToken)
     {
         await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
         await using DbCommand insertIntoMovingModelLodCommand = dbConnection.CreateCommand();
         InitializeInsertIntoMovingModelLodCommand(insertIntoMovingModelLodCommand);
         await insertIntoMovingModelLodCommand.PrepareAsync(cancellationToken);
 
-        insertIntoMovingModelLodCommand.Parameters[CdbParamName].Value = cdbName;
-        SetMovingModelLodParameters(insertIntoMovingModelLodCommand, movingModelLod);
-        insertIntoMovingModelLodCommand.Parameters[ContentParamName].Value = content;
-
-        return await insertIntoMovingModelLodCommand.ExecuteNonQueryAsync(cancellationToken);
+        return await InsertIntoMovingModelLodAsync(insertIntoMovingModelLodCommand, cdbName, movingModelLod, content,
+            cancellationToken);
     }
 
-    /// <summary>
-    /// Inserts a moving model level of detail file into the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
-    /// <param name="movingModelLod">The moving model level of detail identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The number of rows affected.</returns>
-    public virtual async Task<int> InsertIntoMovingModelLodAsync(string cdbName, MovingModelLod movingModelLod, Stream content, CancellationToken cancellationToken = default)
+    /// <inheritdoc cref="ISQLDataStore.InsertIntoMovingModelLodAsync(string, MovingModelLod, byte[], CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoMovingModelLodCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual Task<int> InsertIntoMovingModelLodAsync(DbCommand insertIntoMovingModelLodCommand,
+        string cdbName, MovingModelLod movingModelLod, byte[] content,
+        CancellationToken cancellationToken)
+    {
+        insertIntoMovingModelLodCommand.Parameters[CdbParamName].Value = cdbName;
+        SetMovingModelLodParameters(insertIntoMovingModelLodCommand, movingModelLod);
+        insertIntoMovingModelLodCommand.Parameters[ContentParamName].Value = content;
+
+        return insertIntoMovingModelLodCommand.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<int> InsertIntoMovingModelLodAsync(string cdbName, MovingModelLod movingModelLod, Stream content,
+        CancellationToken cancellationToken)
     {
         await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
         await using DbCommand insertIntoMovingModelLodCommand = dbConnection.CreateCommand();
         InitializeInsertIntoMovingModelLodCommand(insertIntoMovingModelLodCommand);
         await insertIntoMovingModelLodCommand.PrepareAsync(cancellationToken);
 
+        return await InsertIntoMovingModelLodAsync(insertIntoMovingModelLodCommand, cdbName, movingModelLod, content,
+            cancellationToken);
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.InsertIntoMovingModelLodAsync(string, MovingModelLod, Stream, CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoMovingModelLodCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual Task<int> InsertIntoMovingModelLodAsync(DbCommand insertIntoMovingModelLodCommand,
+        string cdbName, MovingModelLod movingModelLod, Stream content,
+        CancellationToken cancellationToken)
+    {
         insertIntoMovingModelLodCommand.Parameters[CdbParamName].Value = cdbName;
         SetMovingModelLodParameters(insertIntoMovingModelLodCommand, movingModelLod);
         insertIntoMovingModelLodCommand.Parameters[ContentParamName].Value = content;
 
-        return await insertIntoMovingModelLodCommand.ExecuteNonQueryAsync(cancellationToken);
+        return insertIntoMovingModelLodCommand.ExecuteNonQueryAsync(cancellationToken);
     }
 
     #endregion
@@ -2965,24 +3488,15 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         get;
     }
 
-    private void InitializeSelectFromMovingModelLodCommand(DbCommand dbCommand)
+    internal void InitializeSelectFromMovingModelLodCommand(DbCommand dbCommand)
     {
         dbCommand.CommandText = SelectFromMovingModelLodStatement;
         CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
         CreateAndAttachMovingModelLodParameters(dbCommand);
     }
 
-    /// <summary>
-    /// Tries to find a moving model level of detail file in the database.
-    /// If the file was found, runs <paramref name="fileFoundAction"/> on the file contents.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="movingModelLod">The moving model level of detail identifier.</param>
-    /// <param name="fileFoundAction">The action to run if the file is found.
-    /// The stream will be automatically closed after the action returns or
-    /// throws an exception.</param>
-    /// <returns><see langword="true"/> if the file was found.</returns>
-    public virtual bool TrySelectFromMovingModelLod(string cdbName, MovingModelLod movingModelLod,
+    /// <inheritdoc/>
+    public bool TrySelectFromMovingModelLod(string cdbName, MovingModelLod movingModelLod,
         Action<Stream> fileFoundAction)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
@@ -2990,6 +3504,20 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         InitializeSelectFromMovingModelLodCommand(selectFromMovingModelLodCommand);
         selectFromMovingModelLodCommand.Prepare();
 
+        return TrySelectFromMovingModelLod(selectFromMovingModelLodCommand, cdbName, movingModelLod, fileFoundAction);
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.TrySelectFromMovingModelLod(string, MovingModelLod, Action{Stream})"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="selectFromMovingModelLodCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual bool TrySelectFromMovingModelLod(DbCommand selectFromMovingModelLodCommand,
+        string cdbName, MovingModelLod movingModelLod,
+        Action<Stream> fileFoundAction)
+    {
         selectFromMovingModelLodCommand.Parameters[CdbParamName].Value = cdbName;
         SetMovingModelLodParameters(selectFromMovingModelLodCommand, movingModelLod);
 
@@ -3007,18 +3535,8 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         return false;
     }
 
-    /// <summary>
-    /// Tries to find a moving model level of detail file in the database.
-    /// If the file was found, runs <paramref name="fileFoundAsyncAction"/> on the file contents.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="movingModelLod">The moving model level of detail identifier.</param>
-    /// <param name="fileFoundAsyncAction">The action to run if the file is found.
-    /// The stream will be automatically closed after the action returns or
-    /// throws an exception.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns><see langword="true"/> if the file was found.</returns>
-    public virtual async Task<bool> TrySelectFromMovingModelLodAsync(string cdbName, MovingModelLod movingModelLod,
+    /// <inheritdoc/>
+    public async Task<bool> TrySelectFromMovingModelLodAsync(string cdbName, MovingModelLod movingModelLod,
         Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
         CancellationToken cancellationToken)
     {
@@ -3027,6 +3545,22 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         InitializeSelectFromMovingModelLodCommand(selectFromMovingModelLodCommand);
         await selectFromMovingModelLodCommand.PrepareAsync(cancellationToken);
 
+        return await TrySelectFromMovingModelLodAsync(selectFromMovingModelLodCommand, cdbName, movingModelLod,
+            fileFoundAsyncAction, cancellationToken);
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.TrySelectFromMovingModelLodAsync(string, MovingModelLod, Func{Stream, CancellationToken, Task}, CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="selectFromMovingModelLodCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual async Task<bool> TrySelectFromMovingModelLodAsync(DbCommand selectFromMovingModelLodCommand,
+        string cdbName, MovingModelLod movingModelLod,
+        Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
+        CancellationToken cancellationToken)
+    {
         selectFromMovingModelLodCommand.Parameters[CdbParamName].Value = cdbName;
         SetMovingModelLodParameters(selectFromMovingModelLodCommand, movingModelLod);
 
@@ -3044,52 +3578,33 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         return false;
     }
 
-    /// <summary>
-    /// Returns a moving model level of detail file from the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="movingModelLod">The moving model level of detail identifier.</param>
-    /// <returns>A stream containing the file contents, or <see langword="null"/> if the file was not found.</returns>
-    public virtual Stream? SelectFromMovingModelLod(string cdbName, MovingModelLod movingModelLod)
+    /// <inheritdoc/>
+    public Stream? SelectFromMovingModelLod(string cdbName, MovingModelLod movingModelLod)
     {
         DbConnection dbConnection = dbDataSource.OpenConnection();
         try
         {
-            DbCommand dbCommand = dbConnection.CreateCommand();
+            DbCommand selectFromMovingModelLodCommand = dbConnection.CreateCommand();
             try
             {
-                InitializeSelectFromMovingModelLodCommand(dbCommand);
-                dbCommand.Prepare();
+                InitializeSelectFromMovingModelLodCommand(selectFromMovingModelLodCommand);
+                selectFromMovingModelLodCommand.Prepare();
 
-                dbCommand.Parameters[CdbParamName].Value = cdbName;
-                SetMovingModelLodParameters(dbCommand, movingModelLod);
-
-                DbDataReader dbDataReader = dbCommand.ExecuteReader(
-                    CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow);
-                try
+                Stream? stream = SelectFromMovingModelLod(selectFromMovingModelLodCommand, cdbName, movingModelLod);
+                if (stream is not null)
                 {
-                    do
-                    {
-                        while (dbDataReader.Read())
-                        {
-                            Stream stream = dbDataReader.GetStream(ContentColumnName);
-                            return new WrappedStream(stream, dbDataReader, dbCommand, dbConnection);
-                        }
-                    } while (dbDataReader.NextResult());
-                    dbDataReader.Dispose();
-                    dbCommand.Dispose();
+                    return new WrappedStream(stream, selectFromMovingModelLodCommand, dbConnection);
+                }
+                else
+                {
+                    selectFromMovingModelLodCommand.Dispose();
                     dbConnection.Dispose();
                     return null;
-                }
-                catch (Exception)
-                {
-                    dbDataReader.Dispose();
-                    throw;
                 }
             }
             catch (Exception)
             {
-                dbCommand.Dispose();
+                selectFromMovingModelLodCommand.Dispose();
                 throw;
             }
         }
@@ -3100,60 +3615,111 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         }
     }
 
-    /// <summary>
-    /// Returns a moving model level of detail file from the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="movingModelLod">The moving model level of detail identifier.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>A stream containing the file contents, or <see langword="null"/> if the file was not found.</returns>
-    public virtual async Task<Stream?> SelectFromMovingModelLodAsync(string cdbName, MovingModelLod movingModelLod,
+    /// <inheritdoc cref="ISQLDataStore.SelectFromMovingModelLod(string, MovingModelLod)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="selectFromMovingModelLodCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual Stream? SelectFromMovingModelLod(DbCommand selectFromMovingModelLodCommand,
+        string cdbName, MovingModelLod movingModelLod)
+    {
+        selectFromMovingModelLodCommand.Parameters[CdbParamName].Value = cdbName;
+        SetMovingModelLodParameters(selectFromMovingModelLodCommand, movingModelLod);
+
+        DbDataReader dbDataReader = selectFromMovingModelLodCommand.ExecuteReader(
+            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow);
+        try
+        {
+            do
+            {
+                while (dbDataReader.Read())
+                {
+                    Stream stream = dbDataReader.GetStream(ContentColumnName);
+                    return new WrappedStream(stream, dbDataReader);
+                }
+            } while (dbDataReader.NextResult());
+            dbDataReader.Dispose();
+            return null;
+        }
+        catch (Exception)
+        {
+            dbDataReader.Dispose();
+            throw;
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task<Stream?> SelectFromMovingModelLodAsync(string cdbName, MovingModelLod movingModelLod,
         CancellationToken cancellationToken)
     {
         DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
         try
         {
-            DbCommand dbCommand = dbConnection.CreateCommand();
+            DbCommand selectFromMovingModelLodCommand = dbConnection.CreateCommand();
             try
             {
-                InitializeSelectFromMovingModelLodCommand(dbCommand);
-                await dbCommand.PrepareAsync(cancellationToken);
+                InitializeSelectFromMovingModelLodCommand(selectFromMovingModelLodCommand);
+                await selectFromMovingModelLodCommand.PrepareAsync(cancellationToken);
 
-                dbCommand.Parameters[CdbParamName].Value = cdbName;
-                SetMovingModelLodParameters(dbCommand, movingModelLod);
-
-                DbDataReader dbDataReader = await dbCommand.ExecuteReaderAsync(
-                    CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow, cancellationToken);
-                try
+                Stream? stream = await SelectFromMovingModelLodAsync(selectFromMovingModelLodCommand, cdbName, movingModelLod, cancellationToken);
+                if (stream is not null)
                 {
-                    do
-                    {
-                        while (await dbDataReader.ReadAsync(cancellationToken))
-                        {
-                            Stream stream = dbDataReader.GetStream(ContentColumnName);
-                            return new WrappedStream(stream, dbDataReader, dbCommand, dbConnection);
-                        }
-                    } while (await dbDataReader.NextResultAsync(cancellationToken));
-                    await dbDataReader.DisposeAsync();
-                    await dbCommand.DisposeAsync();
+                    return new WrappedStream(stream, selectFromMovingModelLodCommand, dbConnection);
+                }
+                else
+                {
+                    await selectFromMovingModelLodCommand.DisposeAsync();
                     await dbConnection.DisposeAsync();
                     return null;
-                }
-                catch (Exception)
-                {
-                    await dbDataReader.DisposeAsync();
-                    throw;
                 }
             }
             catch (Exception)
             {
-                await dbCommand.DisposeAsync();
+                await selectFromMovingModelLodCommand.DisposeAsync();
                 throw;
             }
         }
         catch (Exception)
         {
             await dbConnection.DisposeAsync();
+            throw;
+        }
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.SelectFromMovingModelLodAsync(string, MovingModelLod, CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="selectFromMovingModelLodCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual async Task<Stream?> SelectFromMovingModelLodAsync(DbCommand selectFromMovingModelLodCommand,
+        string cdbName, MovingModelLod movingModelLod,
+        CancellationToken cancellationToken)
+    {
+        selectFromMovingModelLodCommand.Parameters[CdbParamName].Value = cdbName;
+        SetMovingModelLodParameters(selectFromMovingModelLodCommand, movingModelLod);
+
+        DbDataReader dbDataReader = await selectFromMovingModelLodCommand.ExecuteReaderAsync(
+            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow, cancellationToken);
+        try
+        {
+            do
+            {
+                while (await dbDataReader.ReadAsync(cancellationToken))
+                {
+                    Stream stream = dbDataReader.GetStream(ContentColumnName);
+                    return new WrappedStream(stream, dbDataReader);
+                }
+            } while (await dbDataReader.NextResultAsync(cancellationToken));
+            await dbDataReader.DisposeAsync();
+            return null;
+        }
+        catch (Exception)
+        {
+            await dbDataReader.DisposeAsync();
             throw;
         }
     }
@@ -3234,7 +3800,7 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         get;
     }
 
-    private void InitializeInsertIntoTileCommand(DbCommand dbCommand)
+    internal void InitializeInsertIntoTileCommand(DbCommand dbCommand)
     {
         dbCommand.CommandText = InsertIntoTileStatement;
         CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
@@ -3268,20 +3834,27 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         dbCommand.Parameters[FileTypeParamName].Value = tile.FileType;
     }
 
-    /// <summary>
-    /// Inserts a tiled dataset file into the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
-    /// <param name="tile">The tile identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <returns>The number of rows affected.</returns>
-    public virtual int InsertIntoTile(string cdbName, Tile tile, byte[] content)
+    /// <inheritdoc/>
+    public int InsertIntoTile(string cdbName, Tile tile, byte[] content)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
         using DbCommand insertIntoTileCommand = dbConnection.CreateCommand();
         InitializeInsertIntoTileCommand(insertIntoTileCommand);
         insertIntoTileCommand.Prepare();
 
+        return InsertIntoTile(insertIntoTileCommand, cdbName, tile, content);
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.InsertIntoTile(string, Tile, byte[])"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoTileCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual int InsertIntoTile(DbCommand insertIntoTileCommand,
+        string cdbName, Tile tile, byte[] content)
+    {
         insertIntoTileCommand.Parameters[CdbParamName].Value = cdbName;
         SetTileParameters(insertIntoTileCommand, tile);
         insertIntoTileCommand.Parameters[ContentParamName].Value = content;
@@ -3289,20 +3862,27 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         return insertIntoTileCommand.ExecuteNonQuery();
     }
 
-    /// <summary>
-    /// Inserts a tiled dataset file into the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
-    /// <param name="tile">The tile identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <returns>The number of rows affected.</returns>
-    public virtual int InsertIntoTile(string cdbName, Tile tile, Stream content)
+    /// <inheritdoc/>
+    public int InsertIntoTile(string cdbName, Tile tile, Stream content)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
         using DbCommand insertIntoTileCommand = dbConnection.CreateCommand();
         InitializeInsertIntoTileCommand(insertIntoTileCommand);
         insertIntoTileCommand.Prepare();
 
+        return InsertIntoTile(insertIntoTileCommand, cdbName, tile, content);
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.InsertIntoTile(string, Tile, Stream)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoTileCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual int InsertIntoTile(DbCommand insertIntoTileCommand,
+        string cdbName, Tile tile, Stream content)
+    {
         insertIntoTileCommand.Parameters[CdbParamName].Value = cdbName;
         SetTileParameters(insertIntoTileCommand, tile);
         insertIntoTileCommand.Parameters[ContentParamName].Value = content;
@@ -3310,48 +3890,64 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         return insertIntoTileCommand.ExecuteNonQuery();
     }
 
-    /// <summary>
-    /// Inserts a tiled dataset file into the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
-    /// <param name="tile">The tile identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The number of rows affected.</returns>
-    public virtual async Task<int> InsertIntoTileAsync(string cdbName, Tile tile, byte[] content, CancellationToken cancellationToken = default)
+    /// <inheritdoc/>
+    public async Task<int> InsertIntoTileAsync(string cdbName, Tile tile, byte[] content,
+        CancellationToken cancellationToken)
     {
         await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
         await using DbCommand insertIntoTileCommand = dbConnection.CreateCommand();
         InitializeInsertIntoTileCommand(insertIntoTileCommand);
         await insertIntoTileCommand.PrepareAsync(cancellationToken);
 
-        insertIntoTileCommand.Parameters[CdbParamName].Value = cdbName;
-        SetTileParameters(insertIntoTileCommand, tile);
-        insertIntoTileCommand.Parameters[ContentParamName].Value = content;
-
-        return await insertIntoTileCommand.ExecuteNonQueryAsync(cancellationToken);
+        return await InsertIntoTileAsync(insertIntoTileCommand, cdbName, tile, content, cancellationToken);
     }
 
-    /// <summary>
-    /// Inserts a tiled dataset file into the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
-    /// <param name="tile">The tile identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The number of rows affected.</returns>
-    public virtual async Task<int> InsertIntoTileAsync(string cdbName, Tile tile, Stream content, CancellationToken cancellationToken = default)
+    /// <inheritdoc cref="ISQLDataStore.InsertIntoTileAsync(string, Tile, byte[], CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoTileCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual Task<int> InsertIntoTileAsync(DbCommand insertIntoTileCommand,
+        string cdbName, Tile tile, byte[] content,
+        CancellationToken cancellationToken)
+    {
+        insertIntoTileCommand.Parameters[CdbParamName].Value = cdbName;
+        SetTileParameters(insertIntoTileCommand, tile);
+        insertIntoTileCommand.Parameters[ContentParamName].Value = content;
+
+        return insertIntoTileCommand.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<int> InsertIntoTileAsync(string cdbName, Tile tile, Stream content,
+        CancellationToken cancellationToken)
     {
         await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
         await using DbCommand insertIntoTileCommand = dbConnection.CreateCommand();
         InitializeInsertIntoTileCommand(insertIntoTileCommand);
         await insertIntoTileCommand.PrepareAsync(cancellationToken);
 
+        return await InsertIntoTileAsync(insertIntoTileCommand, cdbName, tile, content, cancellationToken);
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.InsertIntoTileAsync(string, Tile, Stream, CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoTileCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual Task<int> InsertIntoTileAsync(DbCommand insertIntoTileCommand,
+        string cdbName, Tile tile, Stream content,
+        CancellationToken cancellationToken)
+    {
         insertIntoTileCommand.Parameters[CdbParamName].Value = cdbName;
         SetTileParameters(insertIntoTileCommand, tile);
         insertIntoTileCommand.Parameters[ContentParamName].Value = content;
 
-        return await insertIntoTileCommand.ExecuteNonQueryAsync(cancellationToken);
+        return insertIntoTileCommand.ExecuteNonQueryAsync(cancellationToken);
     }
 
     #endregion
@@ -3385,24 +3981,15 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         get;
     }
 
-    private void InitializeSelectFromTileCommand(DbCommand dbCommand)
+    internal void InitializeSelectFromTileCommand(DbCommand dbCommand)
     {
         dbCommand.CommandText = SelectFromTileStatement;
         CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
         CreateAndAttachTileParameters(dbCommand);
     }
 
-    /// <summary>
-    /// Tries to find a tiled dataset file in the database.
-    /// If the file was found, runs <paramref name="fileFoundAction"/> on the file contents.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="tile">The tile identifier.</param>
-    /// <param name="fileFoundAction">The action to run if the file is found.
-    /// The stream will be automatically closed after the action returns or
-    /// throws an exception.</param>
-    /// <returns><see langword="true"/> if the file was found.</returns>
-    public virtual bool TrySelectFromTile(string cdbName, Tile tile,
+    /// <inheritdoc/>
+    public bool TrySelectFromTile(string cdbName, Tile tile,
         Action<Stream> fileFoundAction)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
@@ -3410,6 +3997,20 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         InitializeSelectFromTileCommand(selectFromTileCommand);
         selectFromTileCommand.Prepare();
 
+        return TrySelectFromTile(selectFromTileCommand, cdbName, tile, fileFoundAction);
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.TrySelectFromTile(string, Tile, Action{Stream})"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="selectFromTileCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual bool TrySelectFromTile(DbCommand selectFromTileCommand,
+        string cdbName, Tile tile,
+        Action<Stream> fileFoundAction)
+    {
         selectFromTileCommand.Parameters[CdbParamName].Value = cdbName;
         SetTileParameters(selectFromTileCommand, tile);
 
@@ -3427,18 +4028,8 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         return false;
     }
 
-    /// <summary>
-    /// Tries to find a tiled dataset file in the database.
-    /// If the file was found, runs <paramref name="fileFoundAsyncAction"/> on the file contents.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="tile">The tile identifier.</param>
-    /// <param name="fileFoundAsyncAction">The action to run if the file is found.
-    /// The stream will be automatically closed after the action returns or
-    /// throws an exception.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns><see langword="true"/> if the file was found.</returns>
-    public virtual async Task<bool> TrySelectFromTileAsync(string cdbName, Tile tile,
+    /// <inheritdoc/>
+    public async Task<bool> TrySelectFromTileAsync(string cdbName, Tile tile,
         Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
         CancellationToken cancellationToken)
     {
@@ -3447,6 +4038,21 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         InitializeSelectFromTileCommand(selectFromTileCommand);
         await selectFromTileCommand.PrepareAsync(cancellationToken);
 
+        return await TrySelectFromTileAsync(selectFromTileCommand, cdbName, tile, fileFoundAsyncAction, cancellationToken);
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.TrySelectFromTileAsync(string, Tile, Func{Stream, CancellationToken, Task}, CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="selectFromTileCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual async Task<bool> TrySelectFromTileAsync(DbCommand selectFromTileCommand,
+        string cdbName, Tile tile,
+        Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
+        CancellationToken cancellationToken)
+    {
         selectFromTileCommand.Parameters[CdbParamName].Value = cdbName;
         SetTileParameters(selectFromTileCommand, tile);
 
@@ -3464,52 +4070,33 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         return false;
     }
 
-    /// <summary>
-    /// Returns a tiled dataset file from the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="tile">The tile identifier.</param>
-    /// <returns>A stream containing the file contents, or <see langword="null"/> if the file was not found.</returns>
-    public virtual Stream? SelectFromTile(string cdbName, Tile tile)
+    /// <inheritdoc/>
+    public Stream? SelectFromTile(string cdbName, Tile tile)
     {
         DbConnection dbConnection = dbDataSource.OpenConnection();
         try
         {
-            DbCommand dbCommand = dbConnection.CreateCommand();
+            DbCommand selectFromTileCommand = dbConnection.CreateCommand();
             try
             {
-                InitializeSelectFromTileCommand(dbCommand);
-                dbCommand.Prepare();
+                InitializeSelectFromTileCommand(selectFromTileCommand);
+                selectFromTileCommand.Prepare();
 
-                dbCommand.Parameters[CdbParamName].Value = cdbName;
-                SetTileParameters(dbCommand, tile);
-
-                DbDataReader dbDataReader = dbCommand.ExecuteReader(
-                    CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow);
-                try
+                Stream? stream = SelectFromTile(selectFromTileCommand, cdbName, tile);
+                if (stream is not null)
                 {
-                    do
-                    {
-                        while (dbDataReader.Read())
-                        {
-                            Stream stream = dbDataReader.GetStream(ContentColumnName);
-                            return new WrappedStream(stream, dbDataReader, dbCommand, dbConnection);
-                        }
-                    } while (dbDataReader.NextResult());
-                    dbDataReader.Dispose();
-                    dbCommand.Dispose();
+                    return new WrappedStream(stream, selectFromTileCommand, dbConnection);
+                }
+                else
+                {
+                    selectFromTileCommand.Dispose();
                     dbConnection.Dispose();
                     return null;
-                }
-                catch (Exception)
-                {
-                    dbDataReader.Dispose();
-                    throw;
                 }
             }
             catch (Exception)
             {
-                dbCommand.Dispose();
+                selectFromTileCommand.Dispose();
                 throw;
             }
         }
@@ -3520,60 +4107,111 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         }
     }
 
-    /// <summary>
-    /// Returns a tiled dataset file from the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="tile">The tile identifier.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>A stream containing the file contents, or <see langword="null"/> if the file was not found.</returns>
-    public virtual async Task<Stream?> SelectFromTileAsync(string cdbName, Tile tile,
+    /// <inheritdoc cref="ISQLDataStore.SelectFromTile(string, Tile)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="selectFromTileCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual Stream? SelectFromTile(DbCommand selectFromTileCommand,
+        string cdbName, Tile tile)
+    {
+        selectFromTileCommand.Parameters[CdbParamName].Value = cdbName;
+        SetTileParameters(selectFromTileCommand, tile);
+
+        DbDataReader dbDataReader = selectFromTileCommand.ExecuteReader(
+            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow);
+        try
+        {
+            do
+            {
+                while (dbDataReader.Read())
+                {
+                    Stream stream = dbDataReader.GetStream(ContentColumnName);
+                    return new WrappedStream(stream, dbDataReader);
+                }
+            } while (dbDataReader.NextResult());
+            dbDataReader.Dispose();
+            return null;
+        }
+        catch (Exception)
+        {
+            dbDataReader.Dispose();
+            throw;
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task<Stream?> SelectFromTileAsync(string cdbName, Tile tile,
         CancellationToken cancellationToken)
     {
         DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
         try
         {
-            DbCommand dbCommand = dbConnection.CreateCommand();
+            DbCommand selectFromTileCommand = dbConnection.CreateCommand();
             try
             {
-                InitializeSelectFromTileCommand(dbCommand);
-                await dbCommand.PrepareAsync(cancellationToken);
+                InitializeSelectFromTileCommand(selectFromTileCommand);
+                await selectFromTileCommand.PrepareAsync(cancellationToken);
 
-                dbCommand.Parameters[CdbParamName].Value = cdbName;
-                SetTileParameters(dbCommand, tile);
-
-                DbDataReader dbDataReader = await dbCommand.ExecuteReaderAsync(
-                    CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow, cancellationToken);
-                try
+                Stream? stream = await SelectFromTileAsync(selectFromTileCommand, cdbName, tile, cancellationToken);
+                if (stream is not null)
                 {
-                    do
-                    {
-                        while (await dbDataReader.ReadAsync(cancellationToken))
-                        {
-                            Stream stream = dbDataReader.GetStream(ContentColumnName);
-                            return new WrappedStream(stream, dbDataReader, dbCommand, dbConnection);
-                        }
-                    } while (await dbDataReader.NextResultAsync(cancellationToken));
-                    await dbDataReader.DisposeAsync();
-                    await dbCommand.DisposeAsync();
+                    return new WrappedStream(stream, selectFromTileCommand, dbConnection);
+                }
+                else
+                {
+                    await selectFromTileCommand.DisposeAsync();
                     await dbConnection.DisposeAsync();
                     return null;
-                }
-                catch (Exception)
-                {
-                    await dbDataReader.DisposeAsync();
-                    throw;
                 }
             }
             catch (Exception)
             {
-                await dbCommand.DisposeAsync();
+                await selectFromTileCommand.DisposeAsync();
                 throw;
             }
         }
         catch (Exception)
         {
             await dbConnection.DisposeAsync();
+            throw;
+        }
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.SelectFromTileAsync(string, Tile, CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="selectFromTileCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual async Task<Stream?> SelectFromTileAsync(DbCommand selectFromTileCommand,
+        string cdbName, Tile tile,
+        CancellationToken cancellationToken)
+    {
+        selectFromTileCommand.Parameters[CdbParamName].Value = cdbName;
+        SetTileParameters(selectFromTileCommand, tile);
+
+        DbDataReader dbDataReader = await selectFromTileCommand.ExecuteReaderAsync(
+            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow, cancellationToken);
+        try
+        {
+            do
+            {
+                while (await dbDataReader.ReadAsync(cancellationToken))
+                {
+                    Stream stream = dbDataReader.GetStream(ContentColumnName);
+                    return new WrappedStream(stream, dbDataReader);
+                }
+            } while (await dbDataReader.NextResultAsync(cancellationToken));
+            await dbDataReader.DisposeAsync();
+            return null;
+        }
+        catch (Exception)
+        {
+            await dbDataReader.DisposeAsync();
             throw;
         }
     }
@@ -3623,7 +4261,7 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         get;
     }
 
-    private void InitializeInsertIntoTileArchivedFeatureCommand(DbCommand dbCommand)
+    internal void InitializeInsertIntoTileArchivedFeatureCommand(DbCommand dbCommand)
     {
         dbCommand.CommandText = InsertIntoTileArchivedFeatureStatement;
         CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
@@ -3667,20 +4305,27 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         dbCommand.Parameters[FileTypeParamName].Value = tileArchivedFeature.FileType;
     }
 
-    /// <summary>
-    /// Inserts an un-archived tiled dataset feature file into the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
-    /// <param name="tileArchivedFeature">The un-archived tiled dataset feature identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <returns>The number of rows affected.</returns>
-    public virtual int InsertIntoTileArchivedFeature(string cdbName, TileArchivedFeature tileArchivedFeature, byte[] content)
+    /// <inheritdoc/>
+    public int InsertIntoTileArchivedFeature(string cdbName, TileArchivedFeature tileArchivedFeature, byte[] content)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
         using DbCommand insertIntoTileArchivedFeatureCommand = dbConnection.CreateCommand();
         InitializeInsertIntoTileArchivedFeatureCommand(insertIntoTileArchivedFeatureCommand);
         insertIntoTileArchivedFeatureCommand.Prepare();
 
+        return InsertIntoTileArchivedFeature(insertIntoTileArchivedFeatureCommand, cdbName, tileArchivedFeature, content);
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.InsertIntoTileArchivedFeature(string, TileArchivedFeature, byte[])"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoTileArchivedFeatureCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual int InsertIntoTileArchivedFeature(DbCommand insertIntoTileArchivedFeatureCommand,
+        string cdbName, TileArchivedFeature tileArchivedFeature, byte[] content)
+    {
         insertIntoTileArchivedFeatureCommand.Parameters[CdbParamName].Value = cdbName;
         SetTileArchivedFeatureParameters(insertIntoTileArchivedFeatureCommand, tileArchivedFeature);
         insertIntoTileArchivedFeatureCommand.Parameters[ContentParamName].Value = content;
@@ -3688,20 +4333,27 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         return insertIntoTileArchivedFeatureCommand.ExecuteNonQuery();
     }
 
-    /// <summary>
-    /// Inserts an un-archived tiled dataset feature file into the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
-    /// <param name="tileArchivedFeature">The un-archived tiled dataset feature identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <returns>The number of rows affected.</returns>
-    public virtual int InsertIntoTileArchivedFeature(string cdbName, TileArchivedFeature tileArchivedFeature, Stream content)
+    /// <inheritdoc/>
+    public int InsertIntoTileArchivedFeature(string cdbName, TileArchivedFeature tileArchivedFeature, Stream content)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
         using DbCommand insertIntoTileArchivedFeatureCommand = dbConnection.CreateCommand();
         InitializeInsertIntoTileArchivedFeatureCommand(insertIntoTileArchivedFeatureCommand);
         insertIntoTileArchivedFeatureCommand.Prepare();
 
+        return InsertIntoTileArchivedFeature(insertIntoTileArchivedFeatureCommand, cdbName, tileArchivedFeature, content);
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.InsertIntoTileArchivedFeature(string, TileArchivedFeature, Stream)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoTileArchivedFeatureCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual int InsertIntoTileArchivedFeature(DbCommand insertIntoTileArchivedFeatureCommand,
+        string cdbName, TileArchivedFeature tileArchivedFeature, Stream content)
+    {
         insertIntoTileArchivedFeatureCommand.Parameters[CdbParamName].Value = cdbName;
         SetTileArchivedFeatureParameters(insertIntoTileArchivedFeatureCommand, tileArchivedFeature);
         insertIntoTileArchivedFeatureCommand.Parameters[ContentParamName].Value = content;
@@ -3709,48 +4361,66 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         return insertIntoTileArchivedFeatureCommand.ExecuteNonQuery();
     }
 
-    /// <summary>
-    /// Inserts an un-archived tiled dataset feature file into the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
-    /// <param name="tileArchivedFeature">The un-archived tiled dataset feature identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The number of rows affected.</returns>
-    public virtual async Task<int> InsertIntoTileArchivedFeatureAsync(string cdbName, TileArchivedFeature tileArchivedFeature, byte[] content, CancellationToken cancellationToken = default)
+    /// <inheritdoc/>
+    public async Task<int> InsertIntoTileArchivedFeatureAsync(string cdbName, TileArchivedFeature tileArchivedFeature, byte[] content,
+        CancellationToken cancellationToken)
     {
         await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
         await using DbCommand insertIntoTileArchivedFeatureCommand = dbConnection.CreateCommand();
         InitializeInsertIntoTileArchivedFeatureCommand(insertIntoTileArchivedFeatureCommand);
         await insertIntoTileArchivedFeatureCommand.PrepareAsync(cancellationToken);
 
-        insertIntoTileArchivedFeatureCommand.Parameters[CdbParamName].Value = cdbName;
-        SetTileArchivedFeatureParameters(insertIntoTileArchivedFeatureCommand, tileArchivedFeature);
-        insertIntoTileArchivedFeatureCommand.Parameters[ContentParamName].Value = content;
-
-        return await insertIntoTileArchivedFeatureCommand.ExecuteNonQueryAsync(cancellationToken);
+        return await InsertIntoTileArchivedFeatureAsync(insertIntoTileArchivedFeatureCommand, cdbName, tileArchivedFeature, content,
+            cancellationToken);
     }
 
-    /// <summary>
-    /// Inserts an un-archived tiled dataset feature file into the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
-    /// <param name="tileArchivedFeature">The un-archived tiled dataset feature identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The number of rows affected.</returns>
-    public virtual async Task<int> InsertIntoTileArchivedFeatureAsync(string cdbName, TileArchivedFeature tileArchivedFeature, Stream content, CancellationToken cancellationToken = default)
+    /// <inheritdoc cref="ISQLDataStore.InsertIntoTileArchivedFeatureAsync(string, TileArchivedFeature, byte[], CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoTileArchivedFeatureCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual Task<int> InsertIntoTileArchivedFeatureAsync(DbCommand insertIntoTileArchivedFeatureCommand,
+        string cdbName, TileArchivedFeature tileArchivedFeature, byte[] content,
+        CancellationToken cancellationToken)
+    {
+        insertIntoTileArchivedFeatureCommand.Parameters[CdbParamName].Value = cdbName;
+        SetTileArchivedFeatureParameters(insertIntoTileArchivedFeatureCommand, tileArchivedFeature);
+        insertIntoTileArchivedFeatureCommand.Parameters[ContentParamName].Value = content;
+
+        return insertIntoTileArchivedFeatureCommand.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<int> InsertIntoTileArchivedFeatureAsync(string cdbName, TileArchivedFeature tileArchivedFeature, Stream content,
+        CancellationToken cancellationToken)
     {
         await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
         await using DbCommand insertIntoTileArchivedFeatureCommand = dbConnection.CreateCommand();
         InitializeInsertIntoTileArchivedFeatureCommand(insertIntoTileArchivedFeatureCommand);
         await insertIntoTileArchivedFeatureCommand.PrepareAsync(cancellationToken);
 
+        return await InsertIntoTileArchivedFeatureAsync(insertIntoTileArchivedFeatureCommand, cdbName, tileArchivedFeature, content,
+            cancellationToken);
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.InsertIntoTileArchivedFeatureAsync(string, TileArchivedFeature, Stream, CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoTileArchivedFeatureCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual Task<int> InsertIntoTileArchivedFeatureAsync(DbCommand insertIntoTileArchivedFeatureCommand,
+        string cdbName, TileArchivedFeature tileArchivedFeature, Stream content,
+        CancellationToken cancellationToken)
+    {
         insertIntoTileArchivedFeatureCommand.Parameters[CdbParamName].Value = cdbName;
         SetTileArchivedFeatureParameters(insertIntoTileArchivedFeatureCommand, tileArchivedFeature);
         insertIntoTileArchivedFeatureCommand.Parameters[ContentParamName].Value = content;
 
-        return await insertIntoTileArchivedFeatureCommand.ExecuteNonQueryAsync(cancellationToken);
+        return insertIntoTileArchivedFeatureCommand.ExecuteNonQueryAsync(cancellationToken);
     }
 
     #endregion
@@ -3789,24 +4459,15 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         get;
     }
 
-    private void InitializeSelectFromTileArchivedFeatureCommand(DbCommand dbCommand)
+    internal void InitializeSelectFromTileArchivedFeatureCommand(DbCommand dbCommand)
     {
         dbCommand.CommandText = SelectFromTileArchivedFeatureStatement;
         CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
         CreateAndAttachTileArchivedFeatureParameters(dbCommand);
     }
 
-    /// <summary>
-    /// Tries to find an un-archived tiled dataset feature file in the database.
-    /// If the file was found, runs <paramref name="fileFoundAction"/> on the file contents.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="tileArchivedFeature">The tiled dataset feature identifier.</param>
-    /// <param name="fileFoundAction">The action to run if the file is found.
-    /// The stream will be automatically closed after the action returns or
-    /// throws an exception.</param>
-    /// <returns><see langword="true"/> if the file was found.</returns>
-    public virtual bool TrySelectFromTileArchivedFeature(string cdbName, TileArchivedFeature tileArchivedFeature,
+    /// <inheritdoc/>
+    public bool TrySelectFromTileArchivedFeature(string cdbName, TileArchivedFeature tileArchivedFeature,
         Action<Stream> fileFoundAction)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
@@ -3814,6 +4475,20 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         InitializeSelectFromTileArchivedFeatureCommand(selectFromTileArchivedFeatureCommand);
         selectFromTileArchivedFeatureCommand.Prepare();
 
+        return TrySelectFromTileArchivedFeature(selectFromTileArchivedFeatureCommand, cdbName, tileArchivedFeature, fileFoundAction);
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.TrySelectFromTileArchivedFeature(string, TileArchivedFeature, Action{Stream})"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="selectFromTileArchivedFeatureCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual bool TrySelectFromTileArchivedFeature(DbCommand selectFromTileArchivedFeatureCommand,
+        string cdbName, TileArchivedFeature tileArchivedFeature,
+        Action<Stream> fileFoundAction)
+    {
         selectFromTileArchivedFeatureCommand.Parameters[CdbParamName].Value = cdbName;
         SetTileArchivedFeatureParameters(selectFromTileArchivedFeatureCommand, tileArchivedFeature);
 
@@ -3831,18 +4506,8 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         return false;
     }
 
-    /// <summary>
-    /// Tries to find an un-archived tiled dataset feature file in the database.
-    /// If the file was found, runs <paramref name="fileFoundAsyncAction"/> on the file contents.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="tileArchivedFeature">The tiled dataset feature identifier.</param>
-    /// <param name="fileFoundAsyncAction">The action to run if the file is found.
-    /// The stream will be automatically closed after the action returns or
-    /// throws an exception.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns><see langword="true"/> if the file was found.</returns>
-    public virtual async Task<bool> TrySelectFromTileArchivedFeatureAsync(string cdbName, TileArchivedFeature tileArchivedFeature,
+    /// <inheritdoc/>
+    public async Task<bool> TrySelectFromTileArchivedFeatureAsync(string cdbName, TileArchivedFeature tileArchivedFeature,
         Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
         CancellationToken cancellationToken)
     {
@@ -3851,6 +4516,22 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         InitializeSelectFromTileArchivedFeatureCommand(selectFromTileArchivedFeatureCommand);
         await selectFromTileArchivedFeatureCommand.PrepareAsync(cancellationToken);
 
+        return await TrySelectFromTileArchivedFeatureAsync(selectFromTileArchivedFeatureCommand, cdbName, tileArchivedFeature,
+            fileFoundAsyncAction, cancellationToken);
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.TrySelectFromTileArchivedFeatureAsync(string, TileArchivedFeature, Func{Stream, CancellationToken, Task}, CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="selectFromTileArchivedFeatureCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual async Task<bool> TrySelectFromTileArchivedFeatureAsync(DbCommand selectFromTileArchivedFeatureCommand,
+        string cdbName, TileArchivedFeature tileArchivedFeature,
+        Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
+        CancellationToken cancellationToken)
+    {
         selectFromTileArchivedFeatureCommand.Parameters[CdbParamName].Value = cdbName;
         SetTileArchivedFeatureParameters(selectFromTileArchivedFeatureCommand, tileArchivedFeature);
 
@@ -3868,52 +4549,33 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         return false;
     }
 
-    /// <summary>
-    /// Returns an un-archived tiled dataset feature file from the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="tileArchivedFeature">The tiled dataset feature identifier.</param>
-    /// <returns>A stream containing the file contents, or <see langword="null"/> if the file was not found.</returns>
-    public virtual Stream? SelectFromTileArchivedFeature(string cdbName, TileArchivedFeature tileArchivedFeature)
+    /// <inheritdoc/>
+    public Stream? SelectFromTileArchivedFeature(string cdbName, TileArchivedFeature tileArchivedFeature)
     {
         DbConnection dbConnection = dbDataSource.OpenConnection();
         try
         {
-            DbCommand dbCommand = dbConnection.CreateCommand();
+            DbCommand selectFromTileArchivedFeatureCommand = dbConnection.CreateCommand();
             try
             {
-                InitializeSelectFromTileArchivedFeatureCommand(dbCommand);
-                dbCommand.Prepare();
+                InitializeSelectFromTileArchivedFeatureCommand(selectFromTileArchivedFeatureCommand);
+                selectFromTileArchivedFeatureCommand.Prepare();
 
-                dbCommand.Parameters[CdbParamName].Value = cdbName;
-                SetTileArchivedFeatureParameters(dbCommand, tileArchivedFeature);
-
-                DbDataReader dbDataReader = dbCommand.ExecuteReader(
-                    CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow);
-                try
+                Stream? stream = SelectFromTileArchivedFeature(selectFromTileArchivedFeatureCommand, cdbName, tileArchivedFeature);
+                if (stream is not null)
                 {
-                    do
-                    {
-                        while (dbDataReader.Read())
-                        {
-                            Stream stream = dbDataReader.GetStream(ContentColumnName);
-                            return new WrappedStream(stream, dbDataReader, dbCommand, dbConnection);
-                        }
-                    } while (dbDataReader.NextResult());
-                    dbDataReader.Dispose();
-                    dbCommand.Dispose();
+                    return new WrappedStream(stream, selectFromTileArchivedFeatureCommand, dbConnection);
+                }
+                else
+                {
+                    selectFromTileArchivedFeatureCommand.Dispose();
                     dbConnection.Dispose();
                     return null;
-                }
-                catch (Exception)
-                {
-                    dbDataReader.Dispose();
-                    throw;
                 }
             }
             catch (Exception)
             {
-                dbCommand.Dispose();
+                selectFromTileArchivedFeatureCommand.Dispose();
                 throw;
             }
         }
@@ -3924,60 +4586,111 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         }
     }
 
-    /// <summary>
-    /// Returns an un-archived tiled dataset feature file from the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="tileArchivedFeature">The tiled dataset feature identifier.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>A stream containing the file contents, or <see langword="null"/> if the file was not found.</returns>
-    public virtual async Task<Stream?> SelectFromTileArchivedFeatureAsync(string cdbName, TileArchivedFeature tileArchivedFeature,
+    /// <inheritdoc cref="ISQLDataStore.SelectFromTileArchivedFeature(string, TileArchivedFeature)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="selectFromTileArchivedFeatureCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual Stream? SelectFromTileArchivedFeature(DbCommand selectFromTileArchivedFeatureCommand,
+        string cdbName, TileArchivedFeature tileArchivedFeature)
+    {
+        selectFromTileArchivedFeatureCommand.Parameters[CdbParamName].Value = cdbName;
+        SetTileArchivedFeatureParameters(selectFromTileArchivedFeatureCommand, tileArchivedFeature);
+
+        DbDataReader dbDataReader = selectFromTileArchivedFeatureCommand.ExecuteReader(
+            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow);
+        try
+        {
+            do
+            {
+                while (dbDataReader.Read())
+                {
+                    Stream stream = dbDataReader.GetStream(ContentColumnName);
+                    return new WrappedStream(stream, dbDataReader);
+                }
+            } while (dbDataReader.NextResult());
+            dbDataReader.Dispose();
+            return null;
+        }
+        catch (Exception)
+        {
+            dbDataReader.Dispose();
+            throw;
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task<Stream?> SelectFromTileArchivedFeatureAsync(string cdbName, TileArchivedFeature tileArchivedFeature,
         CancellationToken cancellationToken)
     {
         DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
         try
         {
-            DbCommand dbCommand = dbConnection.CreateCommand();
+            DbCommand selectFromTileArchivedFeatureCommand = dbConnection.CreateCommand();
             try
             {
-                InitializeSelectFromTileArchivedFeatureCommand(dbCommand);
-                await dbCommand.PrepareAsync(cancellationToken);
+                InitializeSelectFromTileArchivedFeatureCommand(selectFromTileArchivedFeatureCommand);
+                await selectFromTileArchivedFeatureCommand.PrepareAsync(cancellationToken);
 
-                dbCommand.Parameters[CdbParamName].Value = cdbName;
-                SetTileArchivedFeatureParameters(dbCommand, tileArchivedFeature);
-
-                DbDataReader dbDataReader = await dbCommand.ExecuteReaderAsync(
-                    CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow, cancellationToken);
-                try
+                Stream? stream = await SelectFromTileArchivedFeatureAsync(selectFromTileArchivedFeatureCommand, cdbName, tileArchivedFeature, cancellationToken);
+                if (stream is not null)
                 {
-                    do
-                    {
-                        while (await dbDataReader.ReadAsync(cancellationToken))
-                        {
-                            Stream stream = dbDataReader.GetStream(ContentColumnName);
-                            return new WrappedStream(stream, dbDataReader, dbCommand, dbConnection);
-                        }
-                    } while (await dbDataReader.NextResultAsync(cancellationToken));
-                    await dbDataReader.DisposeAsync();
-                    await dbCommand.DisposeAsync();
+                    return new WrappedStream(stream, selectFromTileArchivedFeatureCommand, dbConnection);
+                }
+                else
+                {
+                    await selectFromTileArchivedFeatureCommand.DisposeAsync();
                     await dbConnection.DisposeAsync();
                     return null;
-                }
-                catch (Exception)
-                {
-                    await dbDataReader.DisposeAsync();
-                    throw;
                 }
             }
             catch (Exception)
             {
-                await dbCommand.DisposeAsync();
+                await selectFromTileArchivedFeatureCommand.DisposeAsync();
                 throw;
             }
         }
         catch (Exception)
         {
             await dbConnection.DisposeAsync();
+            throw;
+        }
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.SelectFromTileArchivedFeatureAsync(string, TileArchivedFeature, CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="selectFromTileArchivedFeatureCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual async Task<Stream?> SelectFromTileArchivedFeatureAsync(DbCommand selectFromTileArchivedFeatureCommand,
+        string cdbName, TileArchivedFeature tileArchivedFeature,
+        CancellationToken cancellationToken)
+    {
+        selectFromTileArchivedFeatureCommand.Parameters[CdbParamName].Value = cdbName;
+        SetTileArchivedFeatureParameters(selectFromTileArchivedFeatureCommand, tileArchivedFeature);
+
+        DbDataReader dbDataReader = await selectFromTileArchivedFeatureCommand.ExecuteReaderAsync(
+            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow, cancellationToken);
+        try
+        {
+            do
+            {
+                while (await dbDataReader.ReadAsync(cancellationToken))
+                {
+                    Stream stream = dbDataReader.GetStream(ContentColumnName);
+                    return new WrappedStream(stream, dbDataReader);
+                }
+            } while (await dbDataReader.NextResultAsync(cancellationToken));
+            await dbDataReader.DisposeAsync();
+            return null;
+        }
+        catch (Exception)
+        {
+            await dbDataReader.DisposeAsync();
             throw;
         }
     }
@@ -4023,7 +4736,7 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         get;
     }
 
-    private void InitializeInsertIntoTileArchivedTextureCommand(DbCommand dbCommand)
+    internal void InitializeInsertIntoTileArchivedTextureCommand(DbCommand dbCommand)
     {
         dbCommand.CommandText = InsertIntoTileArchivedTextureStatement;
         CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
@@ -4059,20 +4772,27 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         dbCommand.Parameters[FileTypeParamName].Value = tileArchivedTexture.FileType;
     }
 
-    /// <summary>
-    /// Inserts an un-archived tiled dataset texture file into the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
-    /// <param name="tileArchivedTexture">The un-archived tiled dataset texture identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <returns>The number of rows affected.</returns>
-    public virtual int InsertIntoTileArchivedTexture(string cdbName, TileArchivedTexture tileArchivedTexture, byte[] content)
+    /// <inheritdoc/>
+    public int InsertIntoTileArchivedTexture(string cdbName, TileArchivedTexture tileArchivedTexture, byte[] content)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
         using DbCommand insertIntoTileArchivedTextureCommand = dbConnection.CreateCommand();
         InitializeInsertIntoTileArchivedTextureCommand(insertIntoTileArchivedTextureCommand);
         insertIntoTileArchivedTextureCommand.Prepare();
 
+        return InsertIntoTileArchivedTexture(insertIntoTileArchivedTextureCommand, cdbName, tileArchivedTexture, content);
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.InsertIntoTileArchivedTextureAsync(string, TileArchivedTexture, byte[], CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoTileArchivedTextureCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual int InsertIntoTileArchivedTexture(DbCommand insertIntoTileArchivedTextureCommand,
+        string cdbName, TileArchivedTexture tileArchivedTexture, byte[] content)
+    {
         insertIntoTileArchivedTextureCommand.Parameters[CdbParamName].Value = cdbName;
         SetTileArchivedTextureParameters(insertIntoTileArchivedTextureCommand, tileArchivedTexture);
         insertIntoTileArchivedTextureCommand.Parameters[ContentParamName].Value = content;
@@ -4080,20 +4800,27 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         return insertIntoTileArchivedTextureCommand.ExecuteNonQuery();
     }
 
-    /// <summary>
-    /// Inserts an un-archived tiled dataset texture file into the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
-    /// <param name="tileArchivedTexture">The un-archived tiled dataset texture identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <returns>The number of rows affected.</returns>
-    public virtual int InsertIntoTileArchivedTexture(string cdbName, TileArchivedTexture tileArchivedTexture, Stream content)
+    /// <inheritdoc/>
+    public int InsertIntoTileArchivedTexture(string cdbName, TileArchivedTexture tileArchivedTexture, Stream content)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
         using DbCommand insertIntoTileArchivedTextureCommand = dbConnection.CreateCommand();
         InitializeInsertIntoTileArchivedTextureCommand(insertIntoTileArchivedTextureCommand);
         insertIntoTileArchivedTextureCommand.Prepare();
 
+        return InsertIntoTileArchivedTexture(insertIntoTileArchivedTextureCommand, cdbName, tileArchivedTexture, content);
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.InsertIntoTileArchivedTextureAsync(string, TileArchivedTexture, Stream, CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoTileArchivedTextureCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual int InsertIntoTileArchivedTexture(DbCommand insertIntoTileArchivedTextureCommand,
+        string cdbName, TileArchivedTexture tileArchivedTexture, Stream content)
+    {
         insertIntoTileArchivedTextureCommand.Parameters[CdbParamName].Value = cdbName;
         SetTileArchivedTextureParameters(insertIntoTileArchivedTextureCommand, tileArchivedTexture);
         insertIntoTileArchivedTextureCommand.Parameters[ContentParamName].Value = content;
@@ -4101,48 +4828,66 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         return insertIntoTileArchivedTextureCommand.ExecuteNonQuery();
     }
 
-    /// <summary>
-    /// Inserts an un-archived tiled dataset texture file into the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
-    /// <param name="tileArchivedTexture">The un-archived tiled dataset texture identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The number of rows affected.</returns>
-    public virtual async Task<int> InsertIntoTileArchivedTextureAsync(string cdbName, TileArchivedTexture tileArchivedTexture, byte[] content, CancellationToken cancellationToken = default)
+    /// <inheritdoc/>
+    public async Task<int> InsertIntoTileArchivedTextureAsync(string cdbName, TileArchivedTexture tileArchivedTexture, byte[] content,
+        CancellationToken cancellationToken)
     {
         await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
         await using DbCommand insertIntoTileArchivedTextureCommand = dbConnection.CreateCommand();
         InitializeInsertIntoTileArchivedTextureCommand(insertIntoTileArchivedTextureCommand);
         await insertIntoTileArchivedTextureCommand.PrepareAsync(cancellationToken);
 
-        insertIntoTileArchivedTextureCommand.Parameters[CdbParamName].Value = cdbName;
-        SetTileArchivedTextureParameters(insertIntoTileArchivedTextureCommand, tileArchivedTexture);
-        insertIntoTileArchivedTextureCommand.Parameters[ContentParamName].Value = content;
-
-        return await insertIntoTileArchivedTextureCommand.ExecuteNonQueryAsync(cancellationToken);
+        return await InsertIntoTileArchivedTextureAsync(insertIntoTileArchivedTextureCommand, cdbName, tileArchivedTexture, content,
+            cancellationToken);
     }
 
-    /// <summary>
-    /// Inserts an un-archived tiled dataset texture file into the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
-    /// <param name="tileArchivedTexture">The un-archived tiled dataset texture identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The number of rows affected.</returns>
-    public virtual async Task<int> InsertIntoTileArchivedTextureAsync(string cdbName, TileArchivedTexture tileArchivedTexture, Stream content, CancellationToken cancellationToken = default)
+    /// <inheritdoc cref="ISQLDataStore.InsertIntoTileArchivedTextureAsync(string, TileArchivedTexture, byte[], CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoTileArchivedTextureCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual Task<int> InsertIntoTileArchivedTextureAsync(DbCommand insertIntoTileArchivedTextureCommand,
+        string cdbName, TileArchivedTexture tileArchivedTexture, byte[] content,
+        CancellationToken cancellationToken)
+    {
+        insertIntoTileArchivedTextureCommand.Parameters[CdbParamName].Value = cdbName;
+        SetTileArchivedTextureParameters(insertIntoTileArchivedTextureCommand, tileArchivedTexture);
+        insertIntoTileArchivedTextureCommand.Parameters[ContentParamName].Value = content;
+
+        return insertIntoTileArchivedTextureCommand.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<int> InsertIntoTileArchivedTextureAsync(string cdbName, TileArchivedTexture tileArchivedTexture, Stream content,
+        CancellationToken cancellationToken)
     {
         await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
         await using DbCommand insertIntoTileArchivedTextureCommand = dbConnection.CreateCommand();
         InitializeInsertIntoTileArchivedTextureCommand(insertIntoTileArchivedTextureCommand);
         await insertIntoTileArchivedTextureCommand.PrepareAsync(cancellationToken);
 
+        return await InsertIntoTileArchivedTextureAsync(insertIntoTileArchivedTextureCommand, cdbName, tileArchivedTexture, content,
+            cancellationToken);
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.InsertIntoTileArchivedTextureAsync(string, TileArchivedTexture, Stream, CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoTileArchivedTextureCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual Task<int> InsertIntoTileArchivedTextureAsync(DbCommand insertIntoTileArchivedTextureCommand,
+        string cdbName, TileArchivedTexture tileArchivedTexture, Stream content,
+        CancellationToken cancellationToken)
+    {
         insertIntoTileArchivedTextureCommand.Parameters[CdbParamName].Value = cdbName;
         SetTileArchivedTextureParameters(insertIntoTileArchivedTextureCommand, tileArchivedTexture);
         insertIntoTileArchivedTextureCommand.Parameters[ContentParamName].Value = content;
 
-        return await insertIntoTileArchivedTextureCommand.ExecuteNonQueryAsync(cancellationToken);
+        return insertIntoTileArchivedTextureCommand.ExecuteNonQueryAsync(cancellationToken);
     }
 
     #endregion
@@ -4177,24 +4922,15 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         get;
     }
 
-    private void InitializeSelectFromTileArchivedTextureCommand(DbCommand dbCommand)
+    internal void InitializeSelectFromTileArchivedTextureCommand(DbCommand dbCommand)
     {
         dbCommand.CommandText = SelectFromTileArchivedTextureStatement;
         CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
         CreateAndAttachTileArchivedTextureParameters(dbCommand);
     }
 
-    /// <summary>
-    /// Tries to find an un-archived tiled dataset texture file in the database.
-    /// If the file was found, runs <paramref name="fileFoundAction"/> on the file contents.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="tileArchivedTexture">The tiled dataset texture identifier.</param>
-    /// <param name="fileFoundAction">The action to run if the file is found.
-    /// The stream will be automatically closed after the action returns or
-    /// throws an exception.</param>
-    /// <returns><see langword="true"/> if the file was found.</returns>
-    public virtual bool TrySelectFromTileArchivedTexture(string cdbName, TileArchivedTexture tileArchivedTexture,
+    /// <inheritdoc/>
+    public bool TrySelectFromTileArchivedTexture(string cdbName, TileArchivedTexture tileArchivedTexture,
         Action<Stream> fileFoundAction)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
@@ -4202,6 +4938,20 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         InitializeSelectFromTileArchivedTextureCommand(selectFromTileArchivedTextureCommand);
         selectFromTileArchivedTextureCommand.Prepare();
 
+        return TrySelectFromTileArchivedTexture(selectFromTileArchivedTextureCommand, cdbName, tileArchivedTexture, fileFoundAction);
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.TrySelectFromTileArchivedTexture(string, TileArchivedTexture, Action{Stream})"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="selectFromTileArchivedTextureCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual bool TrySelectFromTileArchivedTexture(DbCommand selectFromTileArchivedTextureCommand,
+        string cdbName, TileArchivedTexture tileArchivedTexture,
+        Action<Stream> fileFoundAction)
+    {
         selectFromTileArchivedTextureCommand.Parameters[CdbParamName].Value = cdbName;
         SetTileArchivedTextureParameters(selectFromTileArchivedTextureCommand, tileArchivedTexture);
 
@@ -4219,18 +4969,8 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         return false;
     }
 
-    /// <summary>
-    /// Tries to find an un-archived tiled dataset texture file in the database.
-    /// If the file was found, runs <paramref name="fileFoundAsyncAction"/> on the file contents.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="tileArchivedTexture">The tiled dataset texture identifier.</param>
-    /// <param name="fileFoundAsyncAction">The action to run if the file is found.
-    /// The stream will be automatically closed after the action returns or
-    /// throws an exception.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns><see langword="true"/> if the file was found.</returns>
-    public virtual async Task<bool> TrySelectFromTileArchivedTextureAsync(string cdbName, TileArchivedTexture tileArchivedTexture,
+    /// <inheritdoc/>
+    public async Task<bool> TrySelectFromTileArchivedTextureAsync(string cdbName, TileArchivedTexture tileArchivedTexture,
         Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
         CancellationToken cancellationToken)
     {
@@ -4239,6 +4979,22 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         InitializeSelectFromTileArchivedTextureCommand(selectFromTileArchivedTextureCommand);
         await selectFromTileArchivedTextureCommand.PrepareAsync(cancellationToken);
 
+        return await TrySelectFromTileArchivedTextureAsync(selectFromTileArchivedTextureCommand, cdbName, tileArchivedTexture,
+            fileFoundAsyncAction, cancellationToken);
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.TrySelectFromTileArchivedTextureAsync(string, TileArchivedTexture, Func{Stream, CancellationToken, Task}, CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="selectFromTileArchivedTextureCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual async Task<bool> TrySelectFromTileArchivedTextureAsync(DbCommand selectFromTileArchivedTextureCommand,
+        string cdbName, TileArchivedTexture tileArchivedTexture,
+        Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
+        CancellationToken cancellationToken)
+    {
         selectFromTileArchivedTextureCommand.Parameters[CdbParamName].Value = cdbName;
         SetTileArchivedTextureParameters(selectFromTileArchivedTextureCommand, tileArchivedTexture);
 
@@ -4256,52 +5012,33 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         return false;
     }
 
-    /// <summary>
-    /// Returns an un-archived tiled dataset texture file from the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="tileArchivedTexture">The tiled dataset texture identifier.</param>
-    /// <returns>A stream containing the file contents, or <see langword="null"/> if the file was not found.</returns>
-    public virtual Stream? SelectFromTileArchivedTexture(string cdbName, TileArchivedTexture tileArchivedTexture)
+    /// <inheritdoc/>
+    public Stream? SelectFromTileArchivedTexture(string cdbName, TileArchivedTexture tileArchivedTexture)
     {
         DbConnection dbConnection = dbDataSource.OpenConnection();
         try
         {
-            DbCommand dbCommand = dbConnection.CreateCommand();
+            DbCommand selectFromTileArchivedTextureCommand = dbConnection.CreateCommand();
             try
             {
-                InitializeSelectFromTileArchivedTextureCommand(dbCommand);
-                dbCommand.Prepare();
+                InitializeSelectFromTileArchivedTextureCommand(selectFromTileArchivedTextureCommand);
+                selectFromTileArchivedTextureCommand.Prepare();
 
-                dbCommand.Parameters[CdbParamName].Value = cdbName;
-                SetTileArchivedTextureParameters(dbCommand, tileArchivedTexture);
-
-                DbDataReader dbDataReader = dbCommand.ExecuteReader(
-                    CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow);
-                try
+                Stream? stream = SelectFromTileArchivedTexture(selectFromTileArchivedTextureCommand, cdbName, tileArchivedTexture);
+                if (stream is not null)
                 {
-                    do
-                    {
-                        while (dbDataReader.Read())
-                        {
-                            Stream stream = dbDataReader.GetStream(ContentColumnName);
-                            return new WrappedStream(stream, dbDataReader, dbCommand, dbConnection);
-                        }
-                    } while (dbDataReader.NextResult());
-                    dbDataReader.Dispose();
-                    dbCommand.Dispose();
+                    return new WrappedStream(stream, selectFromTileArchivedTextureCommand, dbConnection);
+                }
+                else
+                {
+                    selectFromTileArchivedTextureCommand.Dispose();
                     dbConnection.Dispose();
                     return null;
-                }
-                catch (Exception)
-                {
-                    dbDataReader.Dispose();
-                    throw;
                 }
             }
             catch (Exception)
             {
-                dbCommand.Dispose();
+                selectFromTileArchivedTextureCommand.Dispose();
                 throw;
             }
         }
@@ -4312,60 +5049,111 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         }
     }
 
-    /// <summary>
-    /// Returns an un-archived tiled dataset texture file from the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="tileArchivedTexture">The tiled dataset texture identifier.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>A stream containing the file contents, or <see langword="null"/> if the file was not found.</returns>
-    public virtual async Task<Stream?> SelectFromTileArchivedTextureAsync(string cdbName, TileArchivedTexture tileArchivedTexture,
+    /// <inheritdoc cref="ISQLDataStore.SelectFromTileArchivedTexture(string, TileArchivedTexture)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="selectFromTileArchivedTextureCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual Stream? SelectFromTileArchivedTexture(DbCommand selectFromTileArchivedTextureCommand,
+        string cdbName, TileArchivedTexture tileArchivedTexture)
+    {
+        selectFromTileArchivedTextureCommand.Parameters[CdbParamName].Value = cdbName;
+        SetTileArchivedTextureParameters(selectFromTileArchivedTextureCommand, tileArchivedTexture);
+
+        DbDataReader dbDataReader = selectFromTileArchivedTextureCommand.ExecuteReader(
+            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow);
+        try
+        {
+            do
+            {
+                while (dbDataReader.Read())
+                {
+                    Stream stream = dbDataReader.GetStream(ContentColumnName);
+                    return new WrappedStream(stream, dbDataReader);
+                }
+            } while (dbDataReader.NextResult());
+            dbDataReader.Dispose();
+            return null;
+        }
+        catch (Exception)
+        {
+            dbDataReader.Dispose();
+            throw;
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task<Stream?> SelectFromTileArchivedTextureAsync(string cdbName, TileArchivedTexture tileArchivedTexture,
         CancellationToken cancellationToken)
     {
         DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
         try
         {
-            DbCommand dbCommand = dbConnection.CreateCommand();
+            DbCommand selectFromTileArchivedTextureCommand = dbConnection.CreateCommand();
             try
             {
-                InitializeSelectFromTileArchivedTextureCommand(dbCommand);
-                await dbCommand.PrepareAsync(cancellationToken);
+                InitializeSelectFromTileArchivedTextureCommand(selectFromTileArchivedTextureCommand);
+                await selectFromTileArchivedTextureCommand.PrepareAsync(cancellationToken);
 
-                dbCommand.Parameters[CdbParamName].Value = cdbName;
-                SetTileArchivedTextureParameters(dbCommand, tileArchivedTexture);
-
-                DbDataReader dbDataReader = await dbCommand.ExecuteReaderAsync(
-                    CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow, cancellationToken);
-                try
+                Stream? stream = await SelectFromTileArchivedTextureAsync(selectFromTileArchivedTextureCommand, cdbName, tileArchivedTexture, cancellationToken);
+                if (stream is not null)
                 {
-                    do
-                    {
-                        while (await dbDataReader.ReadAsync(cancellationToken))
-                        {
-                            Stream stream = dbDataReader.GetStream(ContentColumnName);
-                            return new WrappedStream(stream, dbDataReader, dbCommand, dbConnection);
-                        }
-                    } while (await dbDataReader.NextResultAsync(cancellationToken));
-                    await dbDataReader.DisposeAsync();
-                    await dbCommand.DisposeAsync();
+                    return new WrappedStream(stream, selectFromTileArchivedTextureCommand, dbConnection);
+                }
+                else
+                {
+                    await selectFromTileArchivedTextureCommand.DisposeAsync();
                     await dbConnection.DisposeAsync();
                     return null;
-                }
-                catch (Exception)
-                {
-                    await dbDataReader.DisposeAsync();
-                    throw;
                 }
             }
             catch (Exception)
             {
-                await dbCommand.DisposeAsync();
+                await selectFromTileArchivedTextureCommand.DisposeAsync();
                 throw;
             }
         }
         catch (Exception)
         {
             await dbConnection.DisposeAsync();
+            throw;
+        }
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.SelectFromTileArchivedTextureAsync(string, TileArchivedTexture, CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="selectFromTileArchivedTextureCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual async Task<Stream?> SelectFromTileArchivedTextureAsync(DbCommand selectFromTileArchivedTextureCommand,
+        string cdbName, TileArchivedTexture tileArchivedTexture,
+        CancellationToken cancellationToken)
+    {
+        selectFromTileArchivedTextureCommand.Parameters[CdbParamName].Value = cdbName;
+        SetTileArchivedTextureParameters(selectFromTileArchivedTextureCommand, tileArchivedTexture);
+
+        DbDataReader dbDataReader = await selectFromTileArchivedTextureCommand.ExecuteReaderAsync(
+            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow, cancellationToken);
+        try
+        {
+            do
+            {
+                while (await dbDataReader.ReadAsync(cancellationToken))
+                {
+                    Stream stream = dbDataReader.GetStream(ContentColumnName);
+                    return new WrappedStream(stream, dbDataReader);
+                }
+            } while (await dbDataReader.NextResultAsync(cancellationToken));
+            await dbDataReader.DisposeAsync();
+            return null;
+        }
+        catch (Exception)
+        {
+            await dbDataReader.DisposeAsync();
             throw;
         }
     }
@@ -4405,7 +5193,7 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         get;
     }
 
-    private void InitializeInsertIntoNavigationCommand(DbCommand dbCommand)
+    internal void InitializeInsertIntoNavigationCommand(DbCommand dbCommand)
     {
         dbCommand.CommandText = InsertIntoNavigationStatement;
         CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
@@ -4429,20 +5217,27 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         dbCommand.Parameters[FileTypeParamName].Value = navigation.FileType;
     }
 
-    /// <summary>
-    /// Inserts a navigation file into the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
-    /// <param name="navigation">The navigation identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <returns>The number of rows affected.</returns>
-    public virtual int InsertIntoNavigation(string cdbName, Navigation navigation, byte[] content)
+    /// <inheritdoc/>
+    public int InsertIntoNavigation(string cdbName, Navigation navigation, byte[] content)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
         using DbCommand insertIntoNavigationCommand = dbConnection.CreateCommand();
         InitializeInsertIntoNavigationCommand(insertIntoNavigationCommand);
         insertIntoNavigationCommand.Prepare();
 
+        return InsertIntoNavigation(insertIntoNavigationCommand, cdbName, navigation, content);
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.InsertIntoNavigation(string, Navigation, byte[])"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoNavigationCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual int InsertIntoNavigation(DbCommand insertIntoNavigationCommand,
+        string cdbName, Navigation navigation, byte[] content)
+    {
         insertIntoNavigationCommand.Parameters[CdbParamName].Value = cdbName;
         SetNavigationParameters(insertIntoNavigationCommand, navigation);
         insertIntoNavigationCommand.Parameters[ContentParamName].Value = content;
@@ -4450,20 +5245,28 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         return insertIntoNavigationCommand.ExecuteNonQuery();
     }
 
-    /// <summary>
-    /// Inserts a navigation file into the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
-    /// <param name="navigation">The navigation identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <returns>The number of rows affected.</returns>
-    public virtual int InsertIntoNavigation(string cdbName, Navigation navigation, Stream content)
+
+    /// <inheritdoc/>
+    public int InsertIntoNavigation(string cdbName, Navigation navigation, Stream content)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
         using DbCommand insertIntoNavigationCommand = dbConnection.CreateCommand();
         InitializeInsertIntoNavigationCommand(insertIntoNavigationCommand);
         insertIntoNavigationCommand.Prepare();
 
+        return InsertIntoNavigation(insertIntoNavigationCommand, cdbName, navigation, content);
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.InsertIntoNavigation(string, Navigation, Stream)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoNavigationCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual int InsertIntoNavigation(DbCommand insertIntoNavigationCommand, 
+        string cdbName, Navigation navigation, Stream content)
+    {
         insertIntoNavigationCommand.Parameters[CdbParamName].Value = cdbName;
         SetNavigationParameters(insertIntoNavigationCommand, navigation);
         insertIntoNavigationCommand.Parameters[ContentParamName].Value = content;
@@ -4471,48 +5274,64 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         return insertIntoNavigationCommand.ExecuteNonQuery();
     }
 
-    /// <summary>
-    /// Inserts a navigation file into the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
-    /// <param name="navigation">The navigation identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The number of rows affected.</returns>
-    public virtual async Task<int> InsertIntoNavigationAsync(string cdbName, Navigation navigation, byte[] content, CancellationToken cancellationToken = default)
+    /// <inheritdoc/>
+    public async Task<int> InsertIntoNavigationAsync(string cdbName, Navigation navigation, byte[] content,
+        CancellationToken cancellationToken)
     {
         await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
         await using DbCommand insertIntoNavigationCommand = dbConnection.CreateCommand();
         InitializeInsertIntoNavigationCommand(insertIntoNavigationCommand);
         await insertIntoNavigationCommand.PrepareAsync(cancellationToken);
 
-        insertIntoNavigationCommand.Parameters[CdbParamName].Value = cdbName;
-        SetNavigationParameters(insertIntoNavigationCommand, navigation);
-        insertIntoNavigationCommand.Parameters[ContentParamName].Value = content;
-
-        return await insertIntoNavigationCommand.ExecuteNonQueryAsync(cancellationToken);
+        return await InsertIntoNavigationAsync(insertIntoNavigationCommand, cdbName, navigation, content, cancellationToken);
     }
 
-    /// <summary>
-    /// Inserts a navigation file into the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store to insert the file into.</param>
-    /// <param name="navigation">The navigation identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The number of rows affected.</returns>
-    public virtual async Task<int> InsertIntoNavigationAsync(string cdbName, Navigation navigation, Stream content, CancellationToken cancellationToken = default)
+    /// <inheritdoc cref="ISQLDataStore.InsertIntoNavigationAsync(string, Navigation, byte[], CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoNavigationCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual Task<int> InsertIntoNavigationAsync(DbCommand insertIntoNavigationCommand,
+        string cdbName, Navigation navigation, byte[] content,
+        CancellationToken cancellationToken)
+    {
+        insertIntoNavigationCommand.Parameters[CdbParamName].Value = cdbName;
+        SetNavigationParameters(insertIntoNavigationCommand, navigation);
+        insertIntoNavigationCommand.Parameters[ContentParamName].Value = content;
+
+        return insertIntoNavigationCommand.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<int> InsertIntoNavigationAsync(string cdbName, Navigation navigation, Stream content,
+        CancellationToken cancellationToken)
     {
         await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
         await using DbCommand insertIntoNavigationCommand = dbConnection.CreateCommand();
         InitializeInsertIntoNavigationCommand(insertIntoNavigationCommand);
         await insertIntoNavigationCommand.PrepareAsync(cancellationToken);
 
+        return await InsertIntoNavigationAsync(insertIntoNavigationCommand, cdbName, navigation, content, cancellationToken);
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.InsertIntoNavigationAsync(string, Navigation, Stream, CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoNavigationCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual Task<int> InsertIntoNavigationAsync(DbCommand insertIntoNavigationCommand,
+        string cdbName, Navigation navigation, Stream content,
+        CancellationToken cancellationToken)
+    {
         insertIntoNavigationCommand.Parameters[CdbParamName].Value = cdbName;
         SetNavigationParameters(insertIntoNavigationCommand, navigation);
         insertIntoNavigationCommand.Parameters[ContentParamName].Value = content;
 
-        return await insertIntoNavigationCommand.ExecuteNonQueryAsync(cancellationToken);
+        return insertIntoNavigationCommand.ExecuteNonQueryAsync(cancellationToken);
     }
 
     #endregion
@@ -4541,24 +5360,15 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         get;
     }
 
-    private void InitializeSelectFromNavigationCommand(DbCommand dbCommand)
+    internal void InitializeSelectFromNavigationCommand(DbCommand dbCommand)
     {
         dbCommand.CommandText = SelectFromNavigationStatement;
         CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
         CreateAndAttachNavigationParameters(dbCommand);
     }
 
-    /// <summary>
-    /// Tries to find a navigation file in the database.
-    /// If the file was found, runs <paramref name="fileFoundAction"/> on the file contents.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="navigation">The navigation identifier.</param>
-    /// <param name="fileFoundAction">The action to run if the file is found.
-    /// The stream will be automatically closed after the action returns or
-    /// throws an exception.</param>
-    /// <returns><see langword="true"/> if the file was found.</returns>
-    public virtual bool TrySelectFromNavigation(string cdbName, Navigation navigation,
+    /// <inheritdoc/>
+    public bool TrySelectFromNavigation(string cdbName, Navigation navigation,
         Action<Stream> fileFoundAction)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
@@ -4566,6 +5376,20 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         InitializeSelectFromNavigationCommand(selectFromNavigationCommand);
         selectFromNavigationCommand.Prepare();
 
+        return TrySelectFromNavigation(selectFromNavigationCommand, cdbName, navigation, fileFoundAction);
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.SelectFromNavigation(string, Navigation)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="selectFromNavigationCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual bool TrySelectFromNavigation(DbCommand selectFromNavigationCommand,
+        string cdbName, Navigation navigation,
+        Action<Stream> fileFoundAction)
+    {
         selectFromNavigationCommand.Parameters[CdbParamName].Value = cdbName;
         SetNavigationParameters(selectFromNavigationCommand, navigation);
 
@@ -4583,18 +5407,8 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         return false;
     }
 
-    /// <summary>
-    /// Tries to find a navigation file in the database.
-    /// If the file was found, runs <paramref name="fileFoundAsyncAction"/> on the file contents.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="navigation">The navigation identifier.</param>
-    /// <param name="fileFoundAsyncAction">The action to run if the file is found.
-    /// The stream will be automatically closed after the action returns or
-    /// throws an exception.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns><see langword="true"/> if the file was found.</returns>
-    public virtual async Task<bool> TrySelectFromNavigationAsync(string cdbName, Navigation navigation,
+    /// <inheritdoc/>
+    public async Task<bool> TrySelectFromNavigationAsync(string cdbName, Navigation navigation,
         Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
         CancellationToken cancellationToken)
     {
@@ -4603,6 +5417,21 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         InitializeSelectFromNavigationCommand(selectFromNavigationCommand);
         await selectFromNavigationCommand.PrepareAsync(cancellationToken);
 
+        return await TrySelectFromNavigationAsync(selectFromNavigationCommand, cdbName, navigation, fileFoundAsyncAction, cancellationToken);
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.TrySelectFromNavigationAsync(string, Navigation, Func{Stream, CancellationToken, Task}, CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="selectFromNavigationCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual async Task<bool> TrySelectFromNavigationAsync(DbCommand selectFromNavigationCommand,
+        string cdbName, Navigation navigation,
+        Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
+        CancellationToken cancellationToken)
+    {
         selectFromNavigationCommand.Parameters[CdbParamName].Value = cdbName;
         SetNavigationParameters(selectFromNavigationCommand, navigation);
 
@@ -4620,52 +5449,33 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         return false;
     }
 
-    /// <summary>
-    /// Returns a navigation file from the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="navigation">The navigation identifier.</param>
-    /// <returns>A stream containing the file contents, or <see langword="null"/> if the file was not found.</returns>
-    public virtual Stream? SelectFromNavigation(string cdbName, Navigation navigation)
+    /// <inheritdoc/>
+    public Stream? SelectFromNavigation(string cdbName, Navigation navigation)
     {
         DbConnection dbConnection = dbDataSource.OpenConnection();
         try
         {
-            DbCommand dbCommand = dbConnection.CreateCommand();
+            DbCommand selectFromNavigationCommand = dbConnection.CreateCommand();
             try
             {
-                InitializeSelectFromNavigationCommand(dbCommand);
-                dbCommand.Prepare();
+                InitializeSelectFromNavigationCommand(selectFromNavigationCommand);
+                selectFromNavigationCommand.Prepare();
 
-                dbCommand.Parameters[CdbParamName].Value = cdbName;
-                SetNavigationParameters(dbCommand, navigation);
-
-                DbDataReader dbDataReader = dbCommand.ExecuteReader(
-                    CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow);
-                try
+                Stream? stream = SelectFromNavigation(selectFromNavigationCommand, cdbName, navigation);
+                if (stream is not null)
                 {
-                    do
-                    {
-                        while (dbDataReader.Read())
-                        {
-                            Stream stream = dbDataReader.GetStream(ContentColumnName);
-                            return new WrappedStream(stream, dbDataReader, dbCommand, dbConnection);
-                        }
-                    } while (dbDataReader.NextResult());
-                    dbDataReader.Dispose();
-                    dbCommand.Dispose();
+                    return new WrappedStream(stream, selectFromNavigationCommand, dbConnection);
+                }
+                else
+                {
+                    selectFromNavigationCommand.Dispose();
                     dbConnection.Dispose();
                     return null;
-                }
-                catch (Exception)
-                {
-                    dbDataReader.Dispose();
-                    throw;
                 }
             }
             catch (Exception)
             {
-                dbCommand.Dispose();
+                selectFromNavigationCommand.Dispose();
                 throw;
             }
         }
@@ -4676,60 +5486,111 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
         }
     }
 
-    /// <summary>
-    /// Returns a navigation file from the database.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="navigation">The navigation identifier.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>A stream containing the file contents, or <see langword="null"/> if the file was not found.</returns>
-    public virtual async Task<Stream?> SelectFromNavigationAsync(string cdbName, Navigation navigation,
+    /// <inheritdoc cref="ISQLDataStore.SelectFromNavigation(string, Navigation)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="selectFromNavigationCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual Stream? SelectFromNavigation(DbCommand selectFromNavigationCommand,
+        string cdbName, Navigation navigation)
+    {
+        selectFromNavigationCommand.Parameters[CdbParamName].Value = cdbName;
+        SetNavigationParameters(selectFromNavigationCommand, navigation);
+
+        DbDataReader dbDataReader = selectFromNavigationCommand.ExecuteReader(
+            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow);
+        try
+        {
+            do
+            {
+                while (dbDataReader.Read())
+                {
+                    Stream stream = dbDataReader.GetStream(ContentColumnName);
+                    return new WrappedStream(stream, dbDataReader);
+                }
+            } while (dbDataReader.NextResult());
+            dbDataReader.Dispose();
+            return null;
+        }
+        catch (Exception)
+        {
+            dbDataReader.Dispose();
+            throw;
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task<Stream?> SelectFromNavigationAsync(string cdbName, Navigation navigation,
         CancellationToken cancellationToken)
     {
         DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
         try
         {
-            DbCommand dbCommand = dbConnection.CreateCommand();
+            DbCommand selectFromNavigationCommand = dbConnection.CreateCommand();
             try
             {
-                InitializeSelectFromNavigationCommand(dbCommand);
-                await dbCommand.PrepareAsync(cancellationToken);
+                InitializeSelectFromNavigationCommand(selectFromNavigationCommand);
+                await selectFromNavigationCommand.PrepareAsync(cancellationToken);
 
-                dbCommand.Parameters[CdbParamName].Value = cdbName;
-                SetNavigationParameters(dbCommand, navigation);
-
-                DbDataReader dbDataReader = await dbCommand.ExecuteReaderAsync(
-                    CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow, cancellationToken);
-                try
+                Stream? stream = await SelectFromNavigationAsync(selectFromNavigationCommand, cdbName, navigation, cancellationToken);
+                if (stream is not null)
                 {
-                    do
-                    {
-                        while (await dbDataReader.ReadAsync(cancellationToken))
-                        {
-                            Stream stream = dbDataReader.GetStream(ContentColumnName);
-                            return new WrappedStream(stream, dbDataReader, dbCommand, dbConnection);
-                        }
-                    } while (await dbDataReader.NextResultAsync(cancellationToken));
-                    await dbDataReader.DisposeAsync();
-                    await dbCommand.DisposeAsync();
+                    return new WrappedStream(stream, selectFromNavigationCommand, dbConnection);
+                }
+                else
+                {
+                    await selectFromNavigationCommand.DisposeAsync();
                     await dbConnection.DisposeAsync();
                     return null;
-                }
-                catch (Exception)
-                {
-                    await dbDataReader.DisposeAsync();
-                    throw;
                 }
             }
             catch (Exception)
             {
-                await dbCommand.DisposeAsync();
+                await selectFromNavigationCommand.DisposeAsync();
                 throw;
             }
         }
         catch (Exception)
         {
             await dbConnection.DisposeAsync();
+            throw;
+        }
+    }
+
+    /// <inheritdoc cref="ISQLDataStore.SelectFromNavigationAsync(string, Navigation, CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="selectFromNavigationCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual async Task<Stream?> SelectFromNavigationAsync(DbCommand selectFromNavigationCommand,
+        string cdbName, Navigation navigation,
+        CancellationToken cancellationToken)
+    {
+        selectFromNavigationCommand.Parameters[CdbParamName].Value = cdbName;
+        SetNavigationParameters(selectFromNavigationCommand, navigation);
+
+        DbDataReader dbDataReader = await selectFromNavigationCommand.ExecuteReaderAsync(
+            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow, cancellationToken);
+        try
+        {
+            do
+            {
+                while (await dbDataReader.ReadAsync(cancellationToken))
+                {
+                    Stream stream = dbDataReader.GetStream(ContentColumnName);
+                    return new WrappedStream(stream, dbDataReader);
+                }
+            } while (await dbDataReader.NextResultAsync(cancellationToken));
+            await dbDataReader.DisposeAsync();
+            return null;
+        }
+        catch (Exception)
+        {
+            await dbDataReader.DisposeAsync();
             throw;
         }
     }
@@ -4876,8 +5737,9 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
     /// unmanaged resources.
     /// </summary>
     /// <seealso href="https://learn.microsoft.com/en-us/dotnet/standard/garbage-collection/implementing-disposeasync"/>
-    protected virtual async ValueTask DisposeAsyncCore()
+    protected virtual ValueTask DisposeAsyncCore()
     {
+        return ValueTask.CompletedTask;
     }
 
     /// <inheritdoc/>
@@ -4896,3 +5758,5 @@ public abstract class SQLDataStore : IDisposable, IAsyncDisposable
     #endregion
 
 }
+
+#pragma warning restore CS1573 // Parameter has no matching param tag in the XML comment (but other parameters do)

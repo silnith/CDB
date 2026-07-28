@@ -12,14 +12,14 @@ namespace Silnith.CDB.SQL;
 /// </summary>
 public class SQLCDB : ICDB
 {
-    private readonly SQLDataStore sqlDataStore;
+    private readonly ISQLDataStore sqlDataStore;
 
     /// <summary>
     /// Creates a new CDB data store that reads from the specified SQL database.
     /// </summary>
     /// <param name="sqlDataStore">An SQL data store implementation for a specific database.</param>
     /// <param name="options">Configurable settings.</param>
-    public SQLCDB(SQLDataStore sqlDataStore, IOptions<SQLCDBSettings> options)
+    public SQLCDB(ISQLDataStore sqlDataStore, IOptions<SQLCDBSettings> options)
     {
         this.sqlDataStore = sqlDataStore;
         Name = options.Value.Name;
