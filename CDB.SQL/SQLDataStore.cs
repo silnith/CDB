@@ -144,6 +144,24 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     /// <summary>
+    /// The name of the SQL parameter for a Tile latitude.
+    /// The value must be of type <see cref="DbType.Int32"/>.
+    /// </summary>
+    protected abstract string LatitudeParamName
+    {
+        get;
+    }
+
+    /// <summary>
+    /// The name of the SQL parameter for a Tile longitude.
+    /// The value must be of type <see cref="DbType.Int32"/>.
+    /// </summary>
+    protected abstract string LongitudeParamName
+    {
+        get;
+    }
+
+    /// <summary>
     /// The name of the SQL parameter for the dataset.
     /// The value must be of type <see cref="DbType.Int32"/>.
     /// </summary>
@@ -180,6 +198,158 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     /// <summary>
+    /// The name of the SQL parameter for a Tile UREF.
+    /// The value must be of type <see cref="DbType.Int32"/>.
+    /// </summary>
+    protected abstract string UpParamName
+    {
+        get;
+    }
+
+    /// <summary>
+    /// The name of the SQL parameter for a Tile RREF.
+    /// The value must be of type <see cref="DbType.Int32"/>.
+    /// </summary>
+    protected abstract string RightParamName
+    {
+        get;
+    }
+
+    /// <summary>
+    /// The name of the SQL parameter for the metadata name.
+    /// The value must be of type <see cref="DbType.String"/>.
+    /// </summary>
+    protected abstract string MetadataNameParamName
+    {
+        get;
+    }
+
+    /// <summary>
+    /// The name of the SQL parameter for the texture name.
+    /// The value must be of type <see cref="DbType.String"/>.
+    /// </summary>
+    protected abstract string TextureNameParamName
+    {
+        get;
+    }
+
+    #region Feature Code Parameters
+
+    /// <summary>
+    /// The name of the SQL parameter for the Feature Code category.
+    /// The value must be of type <see cref="DbType.String"/>.
+    /// </summary>
+    protected abstract string FeatureCategoryParamName
+    {
+        get;
+    }
+
+    /// <summary>
+    /// The name of the SQL parameter for the Feature Code subcategory.
+    /// The value must be of type <see cref="DbType.String"/>.
+    /// </summary>
+    protected abstract string FeatureSubcategoryParamName
+    {
+        get;
+    }
+
+    /// <summary>
+    /// The name of the SQL parameter for the Feature Code type.
+    /// The value must be of type <see cref="DbType.Int32"/>.
+    /// </summary>
+    protected abstract string FeatureTypeParamName
+    {
+        get;
+    }
+
+    /// <summary>
+    /// The name of the SQL parameter for the Feature Code subcode.
+    /// The value must be of type <see cref="DbType.Int32"/>.
+    /// </summary>
+    protected abstract string FeatureSubcodeParamName
+    {
+        get;
+    }
+
+    #endregion
+
+    /// <summary>
+    /// The name of the SQL parameter for the geotypical model name.
+    /// The value must be of type <see cref="DbType.String"/>.
+    /// </summary>
+    protected abstract string ModelNameParamName
+    {
+        get;
+    }
+
+    #region DIS Code Parameters
+
+    /// <summary>
+    /// The name of the SQL parameter for the DIS Code component "kind".
+    /// The value must be of type <see cref="DbType.Int32"/>.
+    /// </summary>
+    protected abstract string DISKindParamName
+    {
+        get;
+    }
+
+    /// <summary>
+    /// The name of the SQL parameter for the DIS Code component "domain".
+    /// The value must be of type <see cref="DbType.Int32"/>.
+    /// </summary>
+    protected abstract string DISDomainParamName
+    {
+        get;
+    }
+
+    /// <summary>
+    /// The name of the SQL parameter for the DIS Code component "country".
+    /// The value must be of type <see cref="DbType.Int32"/>.
+    /// </summary>
+    protected abstract string DISCountryParamName
+    {
+        get;
+    }
+
+    /// <summary>
+    /// The name of the SQL parameter for the DIS Code component "category".
+    /// The value must be of type <see cref="DbType.Int32"/>.
+    /// </summary>
+    protected abstract string DISCategoryParamName
+    {
+        get;
+    }
+
+    /// <summary>
+    /// The name of the SQL parameter for the DIS Code component "subcategory".
+    /// The value must be of type <see cref="DbType.Int32"/>.
+    /// </summary>
+    protected abstract string DISSubcategoryParamName
+    {
+        get;
+    }
+
+    /// <summary>
+    /// The name of the SQL parameter for the DIS Code component "specific".
+    /// The value must be of type <see cref="DbType.Int32"/>.
+    /// </summary>
+    protected abstract string DISSpecificParamName
+    {
+        get;
+    }
+
+    /// <summary>
+    /// The name of the SQL parameter for the DIS Code component "extra".
+    /// The value must be of type <see cref="DbType.Int32"/>.
+    /// </summary>
+    protected abstract string DISExtraParamName
+    {
+        get;
+    }
+
+    #endregion
+
+    /// <summary>
     /// The name of the SQL parameter for the file type.
     /// The value must be of type <see cref="DbType.String"/>.
     /// </summary>
@@ -198,19 +368,6 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     /// <summary>
-    /// The name of the column (in most tables) that contains the file contents.
-    /// The type is <see cref="DbType.Binary"/>.
-    /// </summary>
-    protected abstract string ContentColumnName
-    {
-        get;
-    }
-
-    #endregion
-
-    #region CDB
-
-    /// <summary>
     /// The name of the column in the CDB table that contains the CDB name.
     /// The type is <see cref="DbType.String"/>.
     /// </summary>
@@ -223,6 +380,19 @@ public abstract class SQLDataStore : ISQLDataStore
     {
         get;
     }
+
+    /// <summary>
+    /// The name of the column (in most tables) that contains the file contents.
+    /// The type is <see cref="DbType.Binary"/>.
+    /// </summary>
+    protected abstract string ContentColumnName
+    {
+        get;
+    }
+
+    #endregion
+
+    #region CDB
 
     /// <summary>
     /// The SQL DDL statement that creates the CDB table with one column for
@@ -416,15 +586,6 @@ public abstract class SQLDataStore : ISQLDataStore
     /// The SQL DDL statement to create the Metadata table.
     /// </summary>
     protected abstract string CreateTableMetadataStatement
-    {
-        get;
-    }
-
-    /// <summary>
-    /// The name of the SQL parameter for the metadata name.
-    /// The value must be of type <see cref="DbType.String"/>.
-    /// </summary>
-    protected abstract string MetadataNameParamName
     {
         get;
     }
@@ -851,15 +1012,6 @@ public abstract class SQLDataStore : ISQLDataStore
     #endregion
 
     #region Texture
-
-    /// <summary>
-    /// The name of the SQL parameter for the texture name.
-    /// The value must be of type <see cref="DbType.String"/>.
-    /// </summary>
-    protected abstract string TextureNameParamName
-    {
-        get;
-    }
 
     /// <summary>
     /// The SQL DDL statement to create the Texture table.
@@ -1752,55 +1904,6 @@ public abstract class SQLDataStore : ISQLDataStore
     #endregion
 
     #region Geotypical Model
-
-    #region Feature Code Parameters
-
-    /// <summary>
-    /// The name of the SQL parameter for the Feature Code category.
-    /// The value must be of type <see cref="DbType.String"/>.
-    /// </summary>
-    protected abstract string FeatureCategoryParamName
-    {
-        get;
-    }
-
-    /// <summary>
-    /// The name of the SQL parameter for the Feature Code subcategory.
-    /// The value must be of type <see cref="DbType.String"/>.
-    /// </summary>
-    protected abstract string FeatureSubcategoryParamName
-    {
-        get;
-    }
-
-    /// <summary>
-    /// The name of the SQL parameter for the Feature Code type.
-    /// The value must be of type <see cref="DbType.Int32"/>.
-    /// </summary>
-    protected abstract string FeatureTypeParamName
-    {
-        get;
-    }
-
-    /// <summary>
-    /// The name of the SQL parameter for the Feature Code subcode.
-    /// The value must be of type <see cref="DbType.Int32"/>.
-    /// </summary>
-    protected abstract string FeatureSubcodeParamName
-    {
-        get;
-    }
-
-    #endregion
-
-    /// <summary>
-    /// The name of the SQL parameter for the geotypical model name.
-    /// The value must be of type <see cref="DbType.String"/>.
-    /// </summary>
-    protected abstract string ModelNameParamName
-    {
-        get;
-    }
 
     /// <summary>
     /// The SQL DDL statement to create the Geotypical Model table.
@@ -2724,73 +2827,6 @@ public abstract class SQLDataStore : ISQLDataStore
     #endregion
 
     #region Moving Model
-
-    #region DIS Code Parameters
-
-    /// <summary>
-    /// The name of the SQL parameter for the DIS Code component "kind".
-    /// The value must be of type <see cref="DbType.Int32"/>.
-    /// </summary>
-    protected abstract string DISKindParamName
-    {
-        get;
-    }
-
-    /// <summary>
-    /// The name of the SQL parameter for the DIS Code component "domain".
-    /// The value must be of type <see cref="DbType.Int32"/>.
-    /// </summary>
-    protected abstract string DISDomainParamName
-    {
-        get;
-    }
-
-    /// <summary>
-    /// The name of the SQL parameter for the DIS Code component "country".
-    /// The value must be of type <see cref="DbType.Int32"/>.
-    /// </summary>
-    protected abstract string DISCountryParamName
-    {
-        get;
-    }
-
-    /// <summary>
-    /// The name of the SQL parameter for the DIS Code component "category".
-    /// The value must be of type <see cref="DbType.Int32"/>.
-    /// </summary>
-    protected abstract string DISCategoryParamName
-    {
-        get;
-    }
-
-    /// <summary>
-    /// The name of the SQL parameter for the DIS Code component "subcategory".
-    /// The value must be of type <see cref="DbType.Int32"/>.
-    /// </summary>
-    protected abstract string DISSubcategoryParamName
-    {
-        get;
-    }
-
-    /// <summary>
-    /// The name of the SQL parameter for the DIS Code component "specific".
-    /// The value must be of type <see cref="DbType.Int32"/>.
-    /// </summary>
-    protected abstract string DISSpecificParamName
-    {
-        get;
-    }
-
-    /// <summary>
-    /// The name of the SQL parameter for the DIS Code component "extra".
-    /// The value must be of type <see cref="DbType.Int32"/>.
-    /// </summary>
-    protected abstract string DISExtraParamName
-    {
-        get;
-    }
-
-    #endregion
 
     /// <summary>
     /// The SQL DDL statement to create the Moving Model table.
@@ -3739,42 +3775,6 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     #region Insert
-
-    /// <summary>
-    /// The name of the SQL parameter for a Tile latitude.
-    /// The value must be of type <see cref="DbType.Int32"/>.
-    /// </summary>
-    protected abstract string LatitudeParamName
-    {
-        get;
-    }
-
-    /// <summary>
-    /// The name of the SQL parameter for a Tile longitude.
-    /// The value must be of type <see cref="DbType.Int32"/>.
-    /// </summary>
-    protected abstract string LongitudeParamName
-    {
-        get;
-    }
-
-    /// <summary>
-    /// The name of the SQL parameter for a Tile UREF.
-    /// The value must be of type <see cref="DbType.Int32"/>.
-    /// </summary>
-    protected abstract string UpParamName
-    {
-        get;
-    }
-
-    /// <summary>
-    /// The name of the SQL parameter for a Tile RREF.
-    /// The value must be of type <see cref="DbType.Int32"/>.
-    /// </summary>
-    protected abstract string RightParamName
-    {
-        get;
-    }
 
     /// <summary>
     /// The SQL statement to insert a row into the Tile table.
