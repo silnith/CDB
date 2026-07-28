@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text.RegularExpressions;
 
@@ -26,24 +27,23 @@ public class LevelOfDetailDirectoryWalker : VisitorBase
     }
 
     /// <summary>
-    /// Walks a directory tree matching that described in the CDB specification
+    /// Enumerates a directory tree matching that described in the CDB specification
     /// volume 1, Section 3.6.2.4. Directory Level 4 (LOD Directory).
     /// </summary>
     /// <remarks>
     /// <para>
-    /// This walks a directory hierarchy conforming to the pattern <c>/LC/</c> or <c>/L00/</c>.
+    /// This enumerates a directory hierarchy conforming to the pattern <c>/LC/</c> or <c>/L00/</c>.
     /// </para>
     /// </remarks>
     /// <param name="dir">The directory containing child directories of the form <c>/LC/</c> or <c>/L00/</c>.</param>
-    /// <param name="processLevelOfDetailDirectory">The action to take for every leaf directory in the directory hierarchy.</param>
-    public void WalkTiledDatasetDirectories(DirectoryInfo dir,
-        Action<LevelOfDetail?, DirectoryInfo> processLevelOfDetailDirectory)
+    /// <returns>An enumeration of all the level of detail directories.</returns>
+    public IEnumerable<(LevelOfDetail?, DirectoryInfo)> EnumerateTiledDatasetDirectories(DirectoryInfo dir)
     {
         foreach (DirectoryInfo lodDir in dir.EnumerateDirectories("*", enumerationOptions))
         {
             if (LevelOfDetail.TiledDatasetCoarsePattern.Match(lodDir.Name).Success)
             {
-                processLevelOfDetailDirectory(null, lodDir);
+                yield return (null, lodDir);
             }
             else
             {
@@ -51,7 +51,7 @@ public class LevelOfDetailDirectoryWalker : VisitorBase
                 if (lodMatch.Success)
                 {
                     LevelOfDetail levelOfDetail = LevelOfDetail.FromTiledDatasetDirectoryMatch(lodMatch);
-                    processLevelOfDetailDirectory(levelOfDetail, lodDir);
+                    yield return (levelOfDetail, lodDir);
                 }
                 else
                 {
@@ -64,18 +64,17 @@ public class LevelOfDetailDirectoryWalker : VisitorBase
     }
 
     /// <summary>
-    /// Walks a directory tree matching that described in the CDB specification
+    /// Enumerates a directory tree matching that described in the CDB specification
     /// volume 1, Section 3.4.1.2.
     /// </summary>
     /// <remarks>
     /// <para>
-    /// This walks a directory hierarchy conforming to the pattern <c>/LC00/</c> or <c>/L00/</c>.
+    /// This enumerates a directory hierarchy conforming to the pattern <c>/LC00/</c> or <c>/L00/</c>.
     /// </para>
     /// </remarks>
     /// <param name="dir">The directory containing child directories of the form <c>/LC00/</c> or <c>/L00/</c>.</param>
-    /// <param name="processLevelOfDetailDirectory">The action to take for every leaf directory in the directory hierarchy.</param>
-    public void WalkModelGeometryDirectories(DirectoryInfo dir,
-        Action<LevelOfDetail, DirectoryInfo> processLevelOfDetailDirectory)
+    /// <returns>An enumeration of all the level of detail directories.</returns>
+    public IEnumerable<(LevelOfDetail, DirectoryInfo)> EnumerateModelGeometryDirectories(DirectoryInfo dir)
     {
         foreach (DirectoryInfo lodDir in dir.EnumerateDirectories("*", enumerationOptions))
         {
@@ -88,7 +87,7 @@ public class LevelOfDetailDirectoryWalker : VisitorBase
             }
             LevelOfDetail levelOfDetail = LevelOfDetail.FromModelGeometryDirectoryMatch(lodMatch);
 
-            processLevelOfDetailDirectory(levelOfDetail, lodDir);
+            yield return (levelOfDetail, lodDir);
         }
     }
 }

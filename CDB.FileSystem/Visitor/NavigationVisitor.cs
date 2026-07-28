@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text.RegularExpressions;
 
@@ -24,7 +25,7 @@ public class NavigationVisitor : VisitorBase
     }
 
     /// <summary>
-    /// Walks the <c>Navigation</c> directory and visits all recognized files.
+    /// Enumerates all recognized files in a CDB <c>Navigation</c> directory.
     /// </summary>
     /// <remarks>
     /// <para>
@@ -33,18 +34,24 @@ public class NavigationVisitor : VisitorBase
     /// </para>
     /// </remarks>
     /// <param name="cdbDir">The CDB root directory.</param>
-    /// <param name="processNavigationFile">The action to take for every navigation file.</param>
-    public void VisitNavigationDatasets(DirectoryInfo cdbDir,
-        Action<Navigation, FileInfo> processNavigationFile)
+    /// <returns>An enumeration of all recognized files.</returns>
+    public IEnumerable<(ICDBIdentifier, Stream)> EnumerateFiles(DirectoryInfo cdbDir)
     {
         DirectoryInfo navigationDir = new(Path.Combine(cdbDir.FullName, "Navigation"));
         if (!navigationDir.Exists)
         {
             logger.LogTrace("{Directory} does not exist.  Skipping.",
                 navigationDir);
-            return;
+            yield break;
         }
 
+        FileStreamOptions options = new()
+        {
+            Mode = FileMode.Open,
+            Access = FileAccess.Read,
+            Share = FileShare.Read,
+            Options = FileOptions.SequentialScan | FileOptions.Asynchronous,
+        };
         foreach (DirectoryInfo datasetDir in navigationDir.EnumerateDirectories("*", enumerationOptions))
         {
             Match datasetMatch = Dataset.DirectoryPattern.Match(datasetDir.Name);
@@ -79,7 +86,8 @@ public class NavigationVisitor : VisitorBase
                         datasetFromDirectory, navigation.Dataset);
                 }
 
-                processNavigationFile(navigation, file);
+                using FileStream fileStream = new(file.FullName, options);
+                yield return (navigation, fileStream);
             }
         }
     }

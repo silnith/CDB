@@ -1,5 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
-using System;
+using System.Collections.Generic;
 using System.IO;
 
 namespace Silnith.CDB.FileSystem.Visitor;
@@ -41,7 +41,7 @@ public class CdbVisitor : VisitorBase
     }
 
     /// <summary>
-    /// Walks the CDB and visits all recognized files.
+    /// Enumerates all recognized files in a CDB.
     /// </summary>
     /// <remarks>
     /// <para>
@@ -49,48 +49,35 @@ public class CdbVisitor : VisitorBase
     /// Section 3.1. Top Level CDB Model/Structure Description
     /// </para>
     /// </remarks>
-    /// <param name="cdbDir">The root directory of the CDB data store.</param>
-    /// <param name="processMetadataFile">The action to take for each metadata file.</param>
-    /// <param name="processTextureFile">The action to take for each texture file.</param>
-    /// <param name="processTextureLodFile">The action to take for each texture level of detail file.</param>
-    /// <param name="processGeotypicalModelFile">The action to take for each geotypical model file.</param>
-    /// <param name="processGeotypicalModelLodFile">The action to take for each geotypical model level of detail file.</param>
-    /// <param name="processMovingModelFile">The action to take for each moving model file.</param>
-    /// <param name="processMovingModelLodFile">The action to take for each moving model level of detail file.</param>
-    /// <param name="processTiledDatasetFile">The action to take for each tiled dataset file.</param>
-    /// <param name="processNavigationFile">The action to take for each navigation file.</param>
-    public void WalkDataStore(DirectoryInfo cdbDir,
-        Action<Metadata, FileInfo> processMetadataFile,
-        Action<Texture, FileInfo> processTextureFile,
-        Action<TextureLod, FileInfo> processTextureLodFile,
-        Action<GeotypicalModel, FileInfo> processGeotypicalModelFile,
-        Action<GeotypicalModelLod, FileInfo> processGeotypicalModelLodFile,
-        Action<MovingModel, FileInfo> processMovingModelFile,
-        Action<MovingModelLod, FileInfo> processMovingModelLodFile,
-        Action<Tile, FileInfo> processTiledDatasetFile,
-        Action<Navigation, FileInfo> processNavigationFile)
+    /// <param name="cdbDir">The CDB root directory.</param>
+    /// <returns>An enumeration of all recognized files.</returns>
+    public IEnumerable<(ICDBIdentifier, Stream)> EnumerateFiles(DirectoryInfo cdbDir)
     {
         logger.LogTrace("Walking Metadata for {CDB}", cdbDir);
-        metadataVisitor.VisitMetadata(cdbDir,
-            processMetadataFile);
+        foreach ((ICDBIdentifier, Stream) tuple in metadataVisitor.EnumerateFiles(cdbDir))
+        {
+            yield return tuple;
+        }
         logger.LogTrace("Walking GTModel for {CDB}", cdbDir);
-        geotypicalModelVisitor.VisitGeotypicalModels(cdbDir,
-            processGeotypicalModelFile,
-            processGeotypicalModelLodFile,
-            processTextureFile,
-            processTextureLodFile);
+        foreach ((ICDBIdentifier, Stream) tuple in geotypicalModelVisitor.EnumerateFiles(cdbDir))
+        {
+            yield return tuple;
+        }
         logger.LogTrace("Walking MModel for {CDB}", cdbDir);
-        movingModelVisitor.VisitMovingModels(cdbDir,
-            processMovingModelFile,
-            processMovingModelLodFile,
-            processTextureFile,
-            processTextureLodFile);
+        foreach ((ICDBIdentifier, Stream) tuple in movingModelVisitor.EnumerateFiles(cdbDir))
+        {
+            yield return tuple;
+        }
         logger.LogTrace("Walking Tiles for {CDB}", cdbDir);
-        tiledDatasetVisitor.VisitTiles(cdbDir,
-            processTiledDatasetFile);
+        foreach ((ICDBIdentifier, Stream) tuple in tiledDatasetVisitor.EnumerateFiles(cdbDir))
+        {
+            yield return tuple;
+        }
         logger.LogTrace("Walking Navigation for {CDB}", cdbDir);
-        navigationVisitor.VisitNavigationDatasets(cdbDir,
-            processNavigationFile);
+        foreach ((ICDBIdentifier, Stream) tuple in navigationVisitor.EnumerateFiles(cdbDir))
+        {
+            yield return tuple;
+        }
         logger.LogTrace("Finished walking CDB data store {CDB}", cdbDir);
     }
 }

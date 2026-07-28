@@ -70,26 +70,26 @@ public class GeotypicalModelVisitor : VisitorBase
     }
 
     /// <summary>
-    ///  Walks the <c>GTModel</c> directory and visits all recognized files.
+    /// Enumerates all recognized files in a CDB <c>GTModel</c> directory.
     /// </summary>
     /// <param name="cdbDir">The CDB root directory.</param>
-    /// <param name="processGeotypicalModelFile">The action to take for every geotypical model file .</param>
-    /// <param name="processGeotypicalModelLodFile">The action to take for every geotypical model level of detail file.</param>
-    /// <param name="processTextureFile">The action to take for every texture file.</param>
-    /// <param name="procesTextureLodFile">The action to take for every texture level of detail file.</param>
-    public void VisitGeotypicalModels(DirectoryInfo cdbDir,
-        Action<GeotypicalModel, FileInfo> processGeotypicalModelFile,
-        Action<GeotypicalModelLod, FileInfo> processGeotypicalModelLodFile,
-        Action<Texture, FileInfo> processTextureFile,
-        Action<TextureLod, FileInfo> procesTextureLodFile)
+    /// <returns>An enumeration of all recognized files.</returns>
+    public IEnumerable<(ICDBIdentifier, Stream)> EnumerateFiles(DirectoryInfo cdbDir)
     {
         DirectoryInfo gtModelDir = new(Path.Combine(cdbDir.FullName, "GTModel"));
         if (!gtModelDir.Exists)
         {
             logger.LogTrace("{Directory} does not exist.  Skipping.", gtModelDir);
-            return;
+            yield break;
         }
 
+        FileStreamOptions options = new()
+        {
+            Mode = FileMode.Open,
+            Access = FileAccess.Read,
+            Share = FileShare.Read,
+            Options = FileOptions.SequentialScan | FileOptions.Asynchronous,
+        };
         foreach (DirectoryInfo datasetDir in gtModelDir.EnumerateDirectories("*", enumerationOptions))
         {
             Match datasetMatch = Dataset.DirectoryPattern.Match(datasetDir.Name);
@@ -104,7 +104,7 @@ public class GeotypicalModelVisitor : VisitorBase
             // See 3.4.1. GTModel Directory Structure 1: Geometry and Descriptor
             // See 3.4.3. GTModel Directory Structure 3: Interior Geometry and Descriptor
             // See 3.4.5. GTModel Directory Structure 5: Signature
-            featureCodeDirectoryWalker.WalkDirectories(datasetDir, (featureCode, featureDir) =>
+            foreach ((FeatureCode featureCode, DirectoryInfo featureDir) in featureCodeDirectoryWalker.EnumerateDirectories(datasetDir))
             {
                 // See 3.4.1.1. GTModelGeometry Entry File Naming Convention
                 // See 3.4.1.3. GTModelDescriptor Naming Convention
@@ -141,10 +141,11 @@ public class GeotypicalModelVisitor : VisitorBase
                             featureCode, geotypicalModel.FeatureCode);
                     }
 
-                    processGeotypicalModelFile(geotypicalModel, file);
+                    using FileStream fileStream = new(file.FullName, options);
+                    yield return (geotypicalModel, fileStream);
                 }
 
-                levelOfDetailDirectoryWalker.WalkModelGeometryDirectories(featureDir, (lod, lodDir) =>
+                foreach ((LevelOfDetail lod, DirectoryInfo lodDir) in levelOfDetailDirectoryWalker.EnumerateModelGeometryDirectories(featureDir))
                 {
                     // See 3.4.1.2. GTModelGeometry Level of Detail Naming Convention
                     // See 3.4.3.1. GTModelInteriorGeometry Naming Convention
@@ -185,13 +186,14 @@ public class GeotypicalModelVisitor : VisitorBase
                                 lod, geotypicalModelLod.LevelOfDetail);
                         }
 
-                        processGeotypicalModelLodFile(geotypicalModelLod, file);
+                        using FileStream fileStream = new(file.FullName, options);
+                        yield return (geotypicalModelLod, fileStream);
                     }
-                });
-            });
+                }
+            }
             // See 3.4.2. GTModel Directory Structure 2: Texture, Material, and CMT
             // See 3.4.4. GTModel Directory Structure 4: Interior Texture, Material, and CMT
-            textureDirectoryWalker.WalkDirectories(datasetDir, (textureName, textureDir) =>
+            foreach ((string textureName, DirectoryInfo textureDir) in textureDirectoryWalker.EnumerateDirectories(datasetDir))
             {
                 foreach (FileInfo file in textureDir.EnumerateFiles("*", enumerationOptions))
                 {
@@ -227,7 +229,8 @@ public class GeotypicalModelVisitor : VisitorBase
                                 textureName, textureLod.Name);
                         }
 
-                        procesTextureLodFile(textureLod, file);
+                        using FileStream fileStream = new(file.FullName, options);
+                        yield return (textureLod, fileStream);
                     }
                     else
                     {
@@ -266,7 +269,8 @@ public class GeotypicalModelVisitor : VisitorBase
                                     textureName, texture.Name);
                             }
 
-                            processTextureFile(texture, file);
+                            using FileStream fileStream = new(file.FullName, options);
+                            yield return (texture, fileStream);
                         }
                         else
                         {
@@ -276,7 +280,7 @@ public class GeotypicalModelVisitor : VisitorBase
                         }
                     }
                 }
-            });
+            }
         }
     }
 }

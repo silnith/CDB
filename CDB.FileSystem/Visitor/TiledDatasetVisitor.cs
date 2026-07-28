@@ -1,7 +1,9 @@
 ﻿using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.IO.Compression;
 using System.Text.RegularExpressions;
 
 namespace Silnith.CDB.FileSystem.Visitor;
@@ -48,7 +50,7 @@ public class TiledDatasetVisitor : VisitorBase
     }
 
     /// <summary>
-    /// Walks the <c>Tiles</c> directory and visits all recognized files.
+    /// Enumerates all recognized files in a CDB <c>Tiles</c> directory.
     /// </summary>
     /// <remarks>
     /// <para>
@@ -57,18 +59,24 @@ public class TiledDatasetVisitor : VisitorBase
     /// </para>
     /// </remarks>
     /// <param name="cdbDir">The CDB root directory.</param>
-    /// <param name="processTiledDatasetFile">The action to take for every tiled dataset file.</param>
-    public void VisitTiles(DirectoryInfo cdbDir,
-        Action<Tile, FileInfo> processTiledDatasetFile)
+    /// <returns>An enumeration of all recognized files.</returns>
+    public IEnumerable<(ICDBIdentifier, Stream)> EnumerateFiles(DirectoryInfo cdbDir)
     {
         DirectoryInfo tilesDir = new(Path.Combine(cdbDir.FullName, "Tiles"));
         if (!tilesDir.Exists)
         {
             logger.LogTrace("{Directory} does not exist.  Skipping.",
                 tilesDir);
-            return;
+            yield break;
         }
 
+        FileStreamOptions options = new()
+        {
+            Mode = FileMode.Open,
+            Access = FileAccess.Read,
+            Share = FileShare.Read,
+            Options = FileOptions.SequentialScan | FileOptions.Asynchronous,
+        };
         foreach (DirectoryInfo latitudeDir in tilesDir.EnumerateDirectories("*", enumerationOptions))
         {
             Match latitudeMatch = Latitude.TiledDatasetDirectoryPattern.Match(latitudeDir.Name);
@@ -102,7 +110,7 @@ public class TiledDatasetVisitor : VisitorBase
                     }
                     Dataset datasetFromDirectory = Dataset.FromDirectoryMatch(datasetMatch);
 
-                    levelOfDetailDirectoryWalker.WalkTiledDatasetDirectories(datasetDir, (levelOfDetailFromDirectory, lodDir) =>
+                    foreach ((LevelOfDetail? levelOfDetailFromDirectory, DirectoryInfo lodDir) in levelOfDetailDirectoryWalker.EnumerateTiledDatasetDirectories(datasetDir))
                     {
                         foreach (DirectoryInfo upDir in lodDir.EnumerateDirectories("*", enumerationOptions))
                         {
@@ -149,10 +157,48 @@ public class TiledDatasetVisitor : VisitorBase
                                     logger.LogError("Up value from directory level 5 {DirectoryUref} does not match file {FileUref}", upFromDirectory, tile.Up);
                                 }
 
-                                processTiledDatasetFile(tile, file);
+                                using FileStream fileStream = new(file.FullName, options);
+                                yield return (tile, fileStream);
+
+                                if (CultureInfo.InvariantCulture.CompareInfo.Compare(tile.FileType, "zip", CompareOptions.IgnoreCase) == 0)
+                                {
+                                    using ZipArchive zipArchive = ZipFile.OpenRead(file.FullName);
+                                    foreach (var entry in zipArchive.Entries)
+                                    {
+                                        /*
+                                         * Unfortunately, file names that match the "feature code" pattern
+                                         * can also match the "texture name" pattern, because it just groups
+                                         * everything after the known stuff as the name of a texture.
+                                         * Therefore, order is crucial here.
+                                         */
+                                        Match featureMatch = TileArchivedFeature.ArchivedFilenamePattern.Match(entry.Name);
+                                        if (featureMatch.Success)
+                                        {
+                                            TileArchivedFeature tileArchivedFeature = TileArchivedFeature.FromArchivedFilenameMatch(featureMatch);
+
+                                            using Stream stream = entry.Open();
+                                            yield return (tileArchivedFeature, stream);
+                                        }
+                                        else
+                                        {
+                                            Match textureMatch = TileArchivedTexture.ArchivedFilenamePattern.Match(entry.Name);
+                                            if (textureMatch.Success)
+                                            {
+                                                TileArchivedTexture tileArchivedTexture = TileArchivedTexture.FromArchivedFilenameMatch(textureMatch);
+
+                                                using Stream stream = entry.Open();
+                                                yield return (tileArchivedTexture, stream);
+                                            }
+                                            else
+                                            {
+                                                // Unrecognized file, ignore it.
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
-                    });
+                    }
                 }
             }
         }

@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text.RegularExpressions;
 
@@ -26,18 +27,17 @@ public class FeatureCodeDirectoryWalker : VisitorBase
     }
 
     /// <summary>
-    /// Walks a directory tree matching that described in the CDB specification
+    /// Enumerates a directory tree matching that described in the CDB specification
     /// volume 1, Section 3.3.8.1. Feature Classification.
     /// </summary>
     /// <remarks>
     /// <para>
-    /// This walks a directory hierarchy conforming to the pattern <c>/A_Category/B_Subcategory/999_Type/</c>.
+    /// This enumerates a directory hierarchy conforming to the pattern <c>/A_Category/B_Subcategory/999_Type/</c>.
     /// </para>
     /// </remarks>
     /// <param name="dir">The directory containing child directories of the form <c>/A_Category/B_Subcategory/999_Type/</c>.</param>
-    /// <param name="processFeatureCodeDirectory">The action to take for every leaf directory in the directory hierarchy.</param>
-    public void WalkDirectories(DirectoryInfo dir,
-        Action<FeatureCode, DirectoryInfo> processFeatureCodeDirectory)
+    /// <returns>An enumeration of all the leaf directories.</returns>
+    public IEnumerable<(FeatureCode, DirectoryInfo)> EnumerateDirectories(DirectoryInfo dir)
     {
         foreach (DirectoryInfo categoryDirectory in dir.EnumerateDirectories("*", enumerationOptions))
         {
@@ -80,7 +80,7 @@ public class FeatureCodeDirectoryWalker : VisitorBase
                         subcategoryDirectoryMatch.Groups["name"].Value,
                         typeDirectoryMatch.Groups["name"].Value);
 
-                    processFeatureCodeDirectory(featureCode, typeDirectory);
+                    yield return (featureCode, typeDirectory);
                 }
             }
         }

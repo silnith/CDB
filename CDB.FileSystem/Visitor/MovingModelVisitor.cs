@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text.RegularExpressions;
 
@@ -48,7 +49,7 @@ public class MovingModelVisitor : VisitorBase
     }
 
     /// <summary>
-    /// Walks the <c>MModel</c> directory and visits all recognized files.
+    /// Enumerates all recognized files in a CDB <c>MModel</c> directory.
     /// </summary>
     /// <remarks>
     /// <para>
@@ -57,24 +58,24 @@ public class MovingModelVisitor : VisitorBase
     /// </para>
     /// </remarks>
     /// <param name="cdbDir">The CDB root directory.</param>
-    /// <param name="processMovingModelFile">The action to take for every moving model file.</param>
-    /// <param name="processMovingModelLodFile">The action to take for every moving model level of detail file.</param>
-    /// <param name="processTextureFile">The action to take for every texture file.</param>
-    /// <param name="processTextureLodFile">The action to take for every texture level of detail file.</param>
-    public void VisitMovingModels(DirectoryInfo cdbDir,
-        Action<MovingModel, FileInfo> processMovingModelFile,
-        Action<MovingModelLod, FileInfo> processMovingModelLodFile,
-        Action<Texture, FileInfo> processTextureFile,
-        Action<TextureLod, FileInfo> processTextureLodFile)
+    /// <returns>An enumeration of all recognized files.</returns>
+    public IEnumerable<(ICDBIdentifier, Stream)> EnumerateFiles(DirectoryInfo cdbDir)
     {
         DirectoryInfo mModelDir = new(Path.Combine(cdbDir.FullName, "MModel"));
         if (!mModelDir.Exists)
         {
             logger.LogTrace("{Directory} does not exist.  Skipping.",
                 mModelDir);
-            return;
+            yield break;
         }
 
+        FileStreamOptions options = new()
+        {
+            Mode = FileMode.Open,
+            Access = FileAccess.Read,
+            Share = FileShare.Read,
+            Options = FileOptions.SequentialScan | FileOptions.Asynchronous,
+        };
         foreach (DirectoryInfo datasetDir in mModelDir.EnumerateDirectories("*", enumerationOptions))
         {
             Match datasetMatch = Dataset.DirectoryPattern.Match(datasetDir.Name);
@@ -87,7 +88,7 @@ public class MovingModelVisitor : VisitorBase
             Dataset datasetFromDirectory = Dataset.FromDirectoryMatch(datasetMatch);
 
             // See 3.5.1. MModel Directory Structure 1: Geometry and Descriptor
-            disEntityDirectoryWalker.WalkDirectories(datasetDir, (disEntityType, entityDir) =>
+            foreach ((DISEntity disEntityType, DirectoryInfo entityDir) in disEntityDirectoryWalker.EnumerateDirectories(datasetDir))
             {
                 // See 3.5.1.1. MModelGeometry Naming Convention
                 // See 3.5.1.2. MModelDescriptor Naming Convention
@@ -120,11 +121,12 @@ public class MovingModelVisitor : VisitorBase
                             disEntityType, movingModel.MMDC);
                     }
 
-                    processMovingModelFile(movingModel, file);
+                    using FileStream fileStream = new(file.FullName, options);
+                    yield return (movingModel, fileStream);
                 }
 
                 // See 3.5.3. MModel Directory Structure 3: Signature
-                levelOfDetailDirectoryWalker.WalkModelGeometryDirectories(entityDir, (lod, lodDir) =>
+                foreach ((LevelOfDetail lod, DirectoryInfo lodDir) in levelOfDetailDirectoryWalker.EnumerateModelGeometryDirectories(entityDir))
                 {
                     foreach (FileInfo file in lodDir.EnumerateFiles("*", enumerationOptions))
                     {
@@ -154,12 +156,13 @@ public class MovingModelVisitor : VisitorBase
                                 lod, movingModelLod.LevelOfDetail);
                         }
 
-                        processMovingModelLodFile(movingModelLod, file);
+                        using FileStream fileStream = new(file.FullName, options);
+                        yield return (movingModelLod, fileStream);
                     }
-                });
-            });
+                }
+            }
             // See 3.5.2. MModel Directory Structure 2: Texture, Material, and CMT
-            textureDirectoryWalker.WalkDirectories(datasetDir, (textureName, textureDir) =>
+            foreach ((string textureName, DirectoryInfo textureDir) in textureDirectoryWalker.EnumerateDirectories(datasetDir))
             {
                 foreach (FileInfo file in textureDir.EnumerateFiles("*", enumerationOptions))
                 {
@@ -188,7 +191,8 @@ public class MovingModelVisitor : VisitorBase
                                 textureName, textureLod.Name);
                         }
 
-                        processTextureLodFile(textureLod, file);
+                        using FileStream fileStream = new(file.FullName, options);
+                        yield return (textureLod, fileStream);
                     }
                     else
                     {
@@ -216,7 +220,8 @@ public class MovingModelVisitor : VisitorBase
                                     textureName, texture.Name);
                             }
 
-                            processTextureFile(texture, file);
+                            using FileStream fileStream = new(file.FullName, options);
+                            yield return (texture, fileStream);
                         }
                         else
                         {
@@ -226,7 +231,7 @@ public class MovingModelVisitor : VisitorBase
                         }
                     }
                 }
-            });
+            }
         }
     }
 }

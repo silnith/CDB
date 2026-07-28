@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Options;
 using Silnith.CDB.FileSystem.Visitor;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Threading;
@@ -372,50 +373,37 @@ public class FileSystemCDB : ICDB
     }
 
     /// <summary>
-    /// Walks every file in the CDB and executes an action on the file based on
-    /// the type of data stored in the file.
+    /// Enumerates all recognized files in a CDB.
     /// </summary>
-    public void WalkAllFiles(
-        Action<Metadata, FileInfo> processMetadataFile,
-        Action<Texture, FileInfo> processTextureFile,
-        Action<TextureLod, FileInfo> processTextureLodFile,
-        Action<GeotypicalModel, FileInfo> processGeotypicalModelFile,
-        Action<GeotypicalModelLod, FileInfo> processGeotypicalModelLodFile,
-        Action<MovingModel, FileInfo> processMovingModelFile,
-        Action<MovingModelLod, FileInfo> processMovingModelLodFile,
-        Action<Tile, FileInfo> processTiledDatasetFile,
-        Action<TileArchivedFeature, FileInfo> processTileArchivedFeatureFile,
-        Action<TileArchivedTexture, FileInfo> processTileArchivedTextureFile,
-        Action<Navigation, FileInfo> processNavigationFile)
+    /// <returns>An enumeration of all recognized files.</returns>
+    public IEnumerable<(ICDBIdentifier, Stream)> EnumerateFiles()
     {
-        // Metadata
+        logger.LogTrace("Walking Metadata for {CDB}", CdbRoot);
+        foreach ((ICDBIdentifier, Stream) tuple in metadataVisitor.EnumerateFiles(CdbRoot))
         {
-            metadataVisitor.VisitMetadata(CdbRoot, processMetadataFile);
+            yield return tuple;
         }
-        // GTModel
+        logger.LogTrace("Walking GTModel for {CDB}", CdbRoot);
+        foreach ((ICDBIdentifier, Stream) tuple in gtModelVisitor.EnumerateFiles(CdbRoot))
         {
-            gtModelVisitor.VisitGeotypicalModels(CdbRoot,
-                processGeotypicalModelFile,
-                processGeotypicalModelLodFile,
-                processTextureFile,
-                processTextureLodFile);
+            yield return tuple;
         }
-        // MModel
+        logger.LogTrace("Walking MModel for {CDB}", CdbRoot);
+        foreach ((ICDBIdentifier, Stream) tuple in movingModelVisitor.EnumerateFiles(CdbRoot))
         {
-            movingModelVisitor.VisitMovingModels(CdbRoot,
-                processMovingModelFile,
-                processMovingModelLodFile,
-                processTextureFile,
-                processTextureLodFile);
+            yield return tuple;
         }
-        // Tiles
+        logger.LogTrace("Walking Tiles for {CDB}", CdbRoot);
+        foreach ((ICDBIdentifier, Stream) tuple in tiledDatasetVisitor.EnumerateFiles(CdbRoot))
         {
-            tiledDatasetVisitor.VisitTiles(CdbRoot, processTiledDatasetFile);
+            yield return tuple;
         }
-        // Navigation
+        logger.LogTrace("Walking Navigation for {CDB}", CdbRoot);
+        foreach ((ICDBIdentifier, Stream) tuple in navigationVisitor.EnumerateFiles(CdbRoot))
         {
-            navigationVisitor.VisitNavigationDatasets(CdbRoot, processNavigationFile);
+            yield return tuple;
         }
+        logger.LogTrace("Finished walking CDB data store {CDB}", CdbRoot);
     }
 
     #region Dispose Pattern
@@ -460,8 +448,9 @@ public class FileSystemCDB : ICDB
     /// unmanaged resources.
     /// </summary>
     /// <seealso href="https://learn.microsoft.com/en-us/dotnet/standard/garbage-collection/implementing-disposeasync"/>
-    protected virtual async ValueTask DisposeAsyncCore()
+    protected virtual ValueTask DisposeAsyncCore()
     {
+        return ValueTask.CompletedTask;
     }
 
     /// <inheritdoc/>

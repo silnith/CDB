@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Text.RegularExpressions;
@@ -27,18 +28,17 @@ public class DISEntityDirectoryWalker : VisitorBase
     }
 
     /// <summary>
-    /// Walks a directory tree matching that described in the CDB specification
+    /// Enumerates a directory tree matching that described in the CDB specification
     /// volume 1, Section 3.3.8.3. DIS Entity Type.
     /// </summary>
     /// <remarks>
     /// <para>
-    /// This walks a directory hierarchy conforming to the pattern <c>/1_Kind/2_Domain/3_Country/4_Category/1_2_3_4_5_6_7/</c>.
+    /// This enumerates a directory hierarchy conforming to the pattern <c>/1_Kind/2_Domain/3_Country/4_Category/1_2_3_4_5_6_7/</c>.
     /// </para>
     /// </remarks>
     /// <param name="dir">The root directory containing child directories of the form <c>/1_Kind/2_Domain/3_Country/4_Category/1_2_3_4_5_6_7/</c>.</param>
-    /// <param name="processDISEntityDirectory">The action to take for every leaf directory in the directory hierarchy.</param>
-    public void WalkDirectories(DirectoryInfo dir,
-        Action<DISEntity, DirectoryInfo> processDISEntityDirectory)
+    /// <returns>An enumeration of all the leaf directories.</returns>
+    public IEnumerable<(DISEntity, DirectoryInfo)> EnumerateDirectories(DirectoryInfo dir)
     {
         foreach (DirectoryInfo kindDir in dir.EnumerateDirectories("*", enumerationOptions))
         {
@@ -121,9 +121,9 @@ public class DISEntityDirectoryWalker : VisitorBase
                                     categoryFromDirectory, disEntity.Category);
                             }
 
-                            logger.LogTrace("Visiting directory {DISDirectory} for {DISEntity}", disDirectory, disEntity);
+                            logger.LogTrace("Yielding directory {DISDirectory} for {DISEntity}", disDirectory, disEntity);
 
-                            processDISEntityDirectory(disEntity, disDirectory);
+                            yield return (disEntity, disDirectory);
                         }
                     }
                 }

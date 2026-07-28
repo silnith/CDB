@@ -9,10 +9,7 @@ using Silnith.CDB.SQL.SQLite;
 using Silnith.CDB.XML;
 using System;
 using System.Data.Common;
-using System.Globalization;
 using System.IO;
-using System.IO.Compression;
-using System.Text.RegularExpressions;
 
 namespace Silnith.CDB.Importer;
 
@@ -86,129 +83,22 @@ internal class Program
         string cdbName = sqlCDB.Name;
         FileSystemCDB fileSystemCDB = host.Services.GetRequiredService<FileSystemCDB>();
 
+        CDBInformation sqlCDBInformation = new();
+        sqlCDBInformation.Initialize(sqlCDB);
+
+        CDBInformation fileSystemCDBInformation = new();
+        fileSystemCDBInformation.Initialize(fileSystemCDB);
+
         DateTimeOffset start = DateTimeOffset.UtcNow;
 
+        sqlDataStore.InsertIntoCDB(cdbName);
+        foreach ((ICDBIdentifier id, Stream stream) in fileSystemCDB.EnumerateFiles())
         {
-            FileStreamOptions fileStreamOptions = new()
-            {
-                Access = FileAccess.Read,
-                Mode = FileMode.Open,
-                Share = FileShare.Read,
-                Options = FileOptions.SequentialScan | FileOptions.Asynchronous,
-            };
-            void metadataAction(Metadata metadata, FileInfo file)
-            {
-                logger.LogInformation("Inserting Metadata {File}", file);
-                using FileStream fileStream = new(file.FullName, fileStreamOptions);
-                int rowsAffected = sqlDataStore.InsertIntoMetadata(cdbName, metadata, fileStream);
-            }
-            void geotypicalModelAction(GeotypicalModel geotypicalModel, FileInfo file)
-            {
-                logger.LogInformation("Inserting Geotypical Model {File}", file);
-                using FileStream fileStream = new(file.FullName, fileStreamOptions);
-                int rowsAffected = sqlDataStore.InsertIntoGeotypicalModel(cdbName, geotypicalModel, fileStream);
-            }
-            void geotypicalModelLodAction(GeotypicalModelLod geotypicalModelLod, FileInfo file)
-            {
-                logger.LogInformation("Inserting Geotypical Model LOD {File}", file);
-                using FileStream fileStream = new(file.FullName, fileStreamOptions);
-                int rowsAffected = sqlDataStore.InsertIntoGeotypicalModelLod(cdbName, geotypicalModelLod, fileStream);
-            }
-            void textureAction(Texture texture, FileInfo file)
-            {
-                logger.LogInformation("Inserting Texture {File}", file);
-                using FileStream fileStream = new(file.FullName, fileStreamOptions);
-                int rowsAffected = sqlDataStore.InsertIntoTexture(cdbName, texture, fileStream);
-            }
-            void textureLodAction(TextureLod textureLod, FileInfo file)
-            {
-                logger.LogInformation("Inserting Texture LOD {File}", file);
-                using FileStream fileStream = new(file.FullName, fileStreamOptions);
-                int rowsAffected = sqlDataStore.InsertIntoTextureLod(cdbName, textureLod, fileStream);
-            }
-            void movingModelAction(MovingModel movingModel, FileInfo file)
-            {
-                logger.LogInformation("Inserting Moving Model {File}", file);
-                using FileStream fileStream = new(file.FullName, fileStreamOptions);
-                int rowsAffected = sqlDataStore.InsertIntoMovingModel(cdbName, movingModel, fileStream);
-            }
-            void movingModelLodAction(MovingModelLod movingModelLod, FileInfo file)
-            {
-                logger.LogInformation("Inserting Moving Model LOD {File}", file);
-                using FileStream fileStream = new(file.FullName, fileStreamOptions);
-                int rowsAffected = sqlDataStore.InsertIntoMovingModelLod(cdbName, movingModelLod, fileStream);
-            }
-            void tileAction(Tile tile, FileInfo file)
-            {
-                logger.LogInformation("Inserting Tile {File}", file);
-                using FileStream fileStream = new(file.FullName, fileStreamOptions);
-                int rowsAffected = sqlDataStore.InsertIntoTile(cdbName, tile, fileStream);
-
-                if (CultureInfo.InvariantCulture.CompareInfo.Compare(tile.FileType, "zip", CompareOptions.IgnoreCase) == 0)
-                {
-                    using ZipArchive zipArchive = ZipFile.OpenRead(file.FullName);
-                    foreach (var entry in zipArchive.Entries)
-                    {
-                        /*
-                         * Unfortunately, file names that match the "feature code" pattern
-                         * can also match the "texture name" pattern, because it just groups
-                         * everything after the known stuff as the name of a texture.
-                         * Therefore, order is crucial here.
-                         */
-                        Match featureMatch = TileArchivedFeature.ArchivedFilenamePattern.Match(entry.Name);
-                        if (featureMatch.Success)
-                        {
-                            TileArchivedFeature tileArchivedFeature = TileArchivedFeature.FromArchivedFilenameMatch(featureMatch);
-
-                            using Stream content = entry.Open();
-                            sqlDataStore.InsertIntoTileArchivedFeature(cdbName, tileArchivedFeature, content);
-                        }
-                        else
-                        {
-                            Match textureMatch = TileArchivedTexture.ArchivedFilenamePattern.Match(entry.Name);
-                            if (textureMatch.Success)
-                            {
-                                TileArchivedTexture tileArchivedTexture = TileArchivedTexture.FromArchivedFilenameMatch(textureMatch);
-
-                                using Stream content = entry.Open();
-                                sqlDataStore.InsertIntoTileArchivedTexture(cdbName, tileArchivedTexture, content);
-                            }
-                            else
-                            {
-                                // Unrecognized file, ignore it.
-                            }
-                        }
-                    }
-                }
-            }
-            void navigationAction(Navigation navigation, FileInfo file)
-            {
-                logger.LogInformation("Inserting Navigation {File}", file);
-                using FileStream fileStream = new(file.FullName, fileStreamOptions);
-                int rowsAffected = sqlDataStore.InsertIntoNavigation(cdbName, navigation, fileStream);
-            }
-
-            sqlDataStore.InsertIntoCDB(cdbName);
-
-            fileSystemCDB.WalkAllFiles(
-                metadataAction,
-                textureAction,
-                textureLodAction,
-                geotypicalModelAction,
-                geotypicalModelLodAction,
-                movingModelAction,
-                movingModelLodAction,
-                tileAction,
-                null,
-                null,
-                navigationAction);
+            //id.WriteToCDB(sqlCDB, stream);
         }
 
         DateTimeOffset end = DateTimeOffset.UtcNow;
 
         Console.WriteLine("Import time: {0}", end - start);
-
-        CDBInformation sqlCDBInformation = new();
-        sqlCDBInformation.Initialize(sqlCDB);
     }
 }

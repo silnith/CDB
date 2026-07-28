@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Text.RegularExpressions;
@@ -36,10 +37,8 @@ public class TextureDirectoryWalker : VisitorBase
     /// </para>
     /// </remarks>
     /// <param name="dir">The root directory containing child directories of the form <c>/H/O/house/</c>.</param>
-    /// <param name="processTextureDirectory">The action to take for every leaf directory in the directory hierarchy.
-    /// The first parameter is the texture name from the directory hierarchy.</param>
-    public void WalkDirectories(DirectoryInfo dir,
-        Action<string, DirectoryInfo> processTextureDirectory)
+    /// <returns>An enumeration of all the leaf directories.</returns>
+    public IEnumerable<(string, DirectoryInfo)> EnumerateDirectories(DirectoryInfo dir)
     {
         foreach (DirectoryInfo level1Dir in dir.EnumerateDirectories("*", enumerationOptions))
         {
@@ -74,7 +73,7 @@ public class TextureDirectoryWalker : VisitorBase
                             textureName, level1Prefix + level2Prefix);
                     }
 
-                    processTextureDirectory(textureName, textureDir);
+                    yield return (textureName, textureDir);
                 }
             }
         }

@@ -49,20 +49,26 @@ public class MetadataVisitor : VisitorBase
     }
 
     /// <summary>
-    /// Walks the <c>Metadata</c> directory and visits all files.
+    /// Enumerates all recognized files in a CDB <c>Metadata</c> directory.
     /// </summary>
     /// <param name="cdbDir">The CDB root directory.</param>
-    /// <param name="processMetadataFile">The action to take for every metadata file.</param>
-    public void VisitMetadata(DirectoryInfo cdbDir,
-        Action<Metadata, FileInfo> processMetadataFile)
+    /// <returns>An enumeration of all recognized files.</returns>
+    public IEnumerable<(ICDBIdentifier, Stream)> EnumerateFiles(DirectoryInfo cdbDir)
     {
         DirectoryInfo metadataDir = new(Path.Combine(cdbDir.FullName, "Metadata"));
         if (!metadataDir.Exists)
         {
             logger.LogTrace("{Directory} does not exist.  Skipping.", metadataDir);
-            return;
+            yield break;
         }
 
+        FileStreamOptions options = new()
+        {
+            Mode = FileMode.Open,
+            Access = FileAccess.Read,
+            Share = FileShare.Read,
+            Options = FileOptions.SequentialScan | FileOptions.Asynchronous,
+        };
         // No reason to enumerate child directories, just files.
         foreach (var file in metadataDir.EnumerateFiles("*", enumerationOptions))
         {
@@ -70,7 +76,8 @@ public class MetadataVisitor : VisitorBase
             string extension = file.Extension.Substring(1);
             Metadata metadata = new(name, extension);
 
-            processMetadataFile(metadata, file);
+            using FileStream fileStream = new(file.FullName, options);
+            yield return (metadata, fileStream);
         }
     }
 }
