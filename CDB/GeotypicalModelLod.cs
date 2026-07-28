@@ -92,6 +92,18 @@ public record GeotypicalModelLod(
     }
 
     /// <inheritdoc/>
+    public void WriteToCDB(ICDB cdb, Stream stream)
+    {
+        cdb.WriteGeotypicalModelLevelOfDetail(this, stream);
+    }
+
+    /// <inheritdoc/>
+    public Task WriteToCDBAsync(ICDB cdb, Stream stream, CancellationToken cancellationToken)
+    {
+        return cdb.WriteGeotypicalModelLevelOfDetailAsync(this, stream, cancellationToken);
+    }
+
+    /// <inheritdoc/>
     /// <remarks>
     /// <para>
     /// This will be of the form <c>GTModel/000_Dataset/A_Category/B_Subcategory/999_Type/L00</c>.

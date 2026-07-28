@@ -100,6 +100,18 @@ public record TileArchivedTexture(
     }
 
     /// <inheritdoc/>
+    public void WriteToCDB(ICDB cdb, Stream stream)
+    {
+        cdb.WriteTileTexture(this, stream);
+    }
+
+    /// <inheritdoc/>
+    public Task WriteToCDBAsync(ICDB cdb, Stream stream, CancellationToken cancellationToken)
+    {
+        return cdb.WriteTileTextureAsync(this, stream, cancellationToken);
+    }
+
+    /// <inheritdoc/>
     /// <remarks>
     /// <para>
     /// This will be a <see cref="Tile"/> matching all the common members of this, with the file type <c>zip</c>.

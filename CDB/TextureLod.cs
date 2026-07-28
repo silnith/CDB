@@ -80,6 +80,18 @@ public record TextureLod(
     }
 
     /// <inheritdoc/>
+    public void WriteToCDB(ICDB cdb, Stream stream)
+    {
+        cdb.WriteTextureLevelOfDetail(this, stream);
+    }
+
+    /// <inheritdoc/>
+    public Task WriteToCDBAsync(ICDB cdb, Stream stream, CancellationToken cancellationToken)
+    {
+        return cdb.WriteTextureLevelOfDetailAsync(this, stream, cancellationToken);
+    }
+
+    /// <inheritdoc/>
     /// <remarks>
     /// <para>
     /// This will be of the form <c>*Model/000_Dataset/A/B/Abacus</c>.

@@ -24,6 +24,18 @@ public record Metadata(string Name, string FileType) : ICDBFileIdentifier
     }
 
     /// <inheritdoc/>
+    public void WriteToCDB(ICDB cdb, Stream stream)
+    {
+        cdb.WriteMetadata(this, stream);
+    }
+
+    /// <inheritdoc/>
+    public Task WriteToCDBAsync(ICDB cdb, Stream stream, CancellationToken cancellationToken)
+    {
+        return cdb.WriteMetadataAsync(this, stream, cancellationToken);
+    }
+
+    /// <inheritdoc/>
     public string RelativePath => "Metadata";
 
     /// <inheritdoc/>

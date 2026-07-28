@@ -94,7 +94,7 @@ internal class Program
         sqlDataStore.InsertIntoCDB(cdbName);
         foreach ((ICDBIdentifier id, Stream stream) in fileSystemCDB.EnumerateFiles())
         {
-            //id.WriteToCDB(sqlCDB, stream);
+            id.WriteToCDB(sqlCDB, stream);
         }
 
         DateTimeOffset end = DateTimeOffset.UtcNow;

@@ -110,6 +110,18 @@ public record TileArchivedFeature(Latitude LatitudeValue,
     }
 
     /// <inheritdoc/>
+    public void WriteToCDB(ICDB cdb, Stream stream)
+    {
+        cdb.WriteTileFeature(this, stream);
+    }
+
+    /// <inheritdoc/>
+    public Task WriteToCDBAsync(ICDB cdb, Stream stream, CancellationToken cancellationToken)
+    {
+        return cdb.WriteTileFeatureAsync(this, stream, cancellationToken);
+    }
+
+    /// <inheritdoc/>
     /// <remarks>
     /// <para>
     /// This will be a <see cref="Tile"/> matching all the common members of this, with the file type <c>zip</c>.

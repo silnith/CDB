@@ -83,6 +83,18 @@ public record MovingModel(
     }
 
     /// <inheritdoc/>
+    public void WriteToCDB(ICDB cdb, Stream stream)
+    {
+        cdb.WriteMovingModel(this, stream);
+    }
+
+    /// <inheritdoc/>
+    public Task WriteToCDBAsync(ICDB cdb, Stream stream, CancellationToken cancellationToken)
+    {
+        return cdb.WriteMovingModelAsync(this, stream, cancellationToken);
+    }
+
+    /// <inheritdoc/>
     /// <remarks>
     /// <para>
     /// This will be of the form <c>MModel/000_Dataset/1_Kind/2_Domain/3_Country/4_Category/1_2_3_4_5_6_7</c>.
