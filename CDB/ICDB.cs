@@ -243,4 +243,187 @@ public interface ICDB : IDisposable, IAsyncDisposable
         Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
         CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Writes the contents of a stream to the data store.
+    /// </summary>
+    /// <param name="metadata">The identifier for the file to write.</param>
+    /// <param name="content">The new file contents.</param>
+    public void WriteMetadata(Metadata metadata, Stream content);
+
+    /// <summary>
+    /// Writes the contents of a stream to the data store.
+    /// </summary>
+    /// <param name="metadata">The identifier for the file to write.</param>
+    /// <param name="content">The new file contents.</param>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    public Task WriteMetadataAsync(Metadata metadata, Stream content, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Writes the contents of a stream to the data store.
+    /// </summary>
+    /// <param name="texture">The identifier for the file to write.</param>
+    /// <param name="content">The new file contents.</param>
+    public void WriteTexture(Texture texture, Stream content);
+
+    /// <summary>
+    /// Writes the contents of a stream to the data store.
+    /// </summary>
+    /// <param name="texture">The identifier for the file to write.</param>
+    /// <param name="content">The new file contents.</param>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    public Task WriteTextureAsync(Texture texture, Stream content, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns a stream of the file contents, or <see langword="null"/>.
+    /// </summary>
+    /// <param name="textureLod">The identifier for the file to read.</param>
+    /// <param name="content">The new file contents.</param>
+    /// <returns>A stream of the file contents, or <see langword="null"/>.</returns>
+    public void WriteTextureLevelOfDetail(TextureLod textureLod, Stream content);
+
+    /// <summary>
+    /// Returns a stream of the file contents, or <see langword="null"/>.
+    /// </summary>
+    /// <param name="textureLod">The identifier for the file to read.</param>
+    /// <param name="content">The new file contents.</param>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    /// <returns>A stream of the file contents, or <see langword="null"/>.</returns>
+    public Task WriteTextureLevelOfDetailAsync(TextureLod textureLod, Stream content, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns a stream of the file contents, or <see langword="null"/>.
+    /// </summary>
+    /// <param name="geotypicalModel">The identifier for the file to read.</param>
+    /// <param name="content">The new file contents.</param>
+    /// <returns>A stream of the file contents, or <see langword="null"/>.</returns>
+    public void WriteGeotypicalModel(GeotypicalModel geotypicalModel, Stream content);
+
+    /// <summary>
+    /// Returns a stream of the file contents, or <see langword="null"/>.
+    /// </summary>
+    /// <param name="geotypicalModel">The identifier for the file to read.</param>
+    /// <param name="content">The new file contents.</param>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    /// <returns>A stream of the file contents, or <see langword="null"/>.</returns>
+    public Task WriteGeotypicalModelAsync(GeotypicalModel geotypicalModel, Stream content, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns a stream of the file contents, or <see langword="null"/>.
+    /// </summary>
+    /// <param name="geotypicalModelLod">The identifier for the file to read.</param>
+    /// <param name="content">The new file contents.</param>
+    /// <returns>A stream of the file contents, or <see langword="null"/>.</returns>
+    public void WriteGeotypicalModelLevelOfDetail(GeotypicalModelLod geotypicalModelLod, Stream content);
+
+    /// <summary>
+    /// Returns a stream of the file contents, or <see langword="null"/>.
+    /// </summary>
+    /// <param name="geotypicalModelLod">The identifier for the file to read.</param>
+    /// <param name="content">The new file contents.</param>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    /// <returns>A stream of the file contents, or <see langword="null"/>.</returns>
+    public Task WriteGeotypicalModelLevelOfDetailAsync(GeotypicalModelLod geotypicalModelLod, Stream content, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns a stream of the file contents, or <see langword="null"/>.
+    /// </summary>
+    /// <param name="movingModel">The identifier for the file to read.</param>
+    /// <param name="content">The new file contents.</param>
+    /// <returns>A stream of the file contents, or <see langword="null"/>.</returns>
+    public void WriteMovingModel(MovingModel movingModel, Stream content);
+
+    /// <summary>
+    /// Returns a stream of the file contents, or <see langword="null"/>.
+    /// </summary>
+    /// <param name="movingModel">The identifier for the file to read.</param>
+    /// <param name="content">The new file contents.</param>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    /// <returns>A stream of the file contents, or <see langword="null"/>.</returns>
+    public Task WriteMovingModelAsync(MovingModel movingModel, Stream content, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns a stream of the file contents, or <see langword="null"/>.
+    /// </summary>
+    /// <param name="movingModelLod">The identifier for the file to read.</param>
+    /// <param name="content">The new file contents.</param>
+    /// <returns>A stream of the file contents, or <see langword="null"/>.</returns>
+    public void WriteMovingModelLevelOfDetail(MovingModelLod movingModelLod, Stream content);
+
+    /// <summary>
+    /// Returns a stream of the file contents, or <see langword="null"/>.
+    /// </summary>
+    /// <param name="movingModelLod">The identifier for the file to read.</param>
+    /// <param name="content">The new file contents.</param>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    /// <returns>A stream of the file contents, or <see langword="null"/>.</returns>
+    public Task WriteMovingModelLevelOfDetailAsync(MovingModelLod movingModelLod, Stream content, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns a stream of the file contents, or <see langword="null"/>.
+    /// </summary>
+    /// <param name="tile">The identifier for the file to read.</param>
+    /// <param name="content">The new file contents.</param>
+    /// <returns>A stream of the file contents, or <see langword="null"/>.</returns>
+    public void WriteTile(Tile tile, Stream content);
+
+    /// <summary>
+    /// Returns a stream of the file contents, or <see langword="null"/>.
+    /// </summary>
+    /// <param name="tile">The identifier for the file to read.</param>
+    /// <param name="content">The new file contents.</param>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    /// <returns>A stream of the file contents, or <see langword="null"/>.</returns>
+    public Task WriteTileAsync(Tile tile, Stream content, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns a stream of the file contents, or <see langword="null"/>.
+    /// </summary>
+    /// <param name="tileFeature">The identifier for the file to read.</param>
+    /// <param name="content">The new file contents.</param>
+    /// <returns>A stream of the file contents, or <see langword="null"/>.</returns>
+    public void WriteTileFeature(TileArchivedFeature tileFeature, Stream content);
+
+    /// <summary>
+    /// Returns a stream of the file contents, or <see langword="null"/>.
+    /// </summary>
+    /// <param name="tileFeature">The identifier for the file to read.</param>
+    /// <param name="content">The new file contents.</param>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    /// <returns>A stream of the file contents, or <see langword="null"/>.</returns>
+    public Task WriteTileFeatureAsync(TileArchivedFeature tileFeature, Stream content, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns a stream of the file contents, or <see langword="null"/>.
+    /// </summary>
+    /// <param name="tileTexture">The identifier for the file to read.</param>
+    /// <param name="content">The new file contents.</param>
+    /// <returns>A stream of the file contents, or <see langword="null"/>.</returns>
+    public void WriteTileTexture(TileArchivedTexture tileTexture, Stream content);
+
+    /// <summary>
+    /// Returns a stream of the file contents, or <see langword="null"/>.
+    /// </summary>
+    /// <param name="tileTexture">The identifier for the file to read.</param>
+    /// <param name="content">The new file contents.</param>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    /// <returns>A stream of the file contents, or <see langword="null"/>.</returns>
+    public Task WriteTileTextureAsync(TileArchivedTexture tileTexture, Stream content, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns a stream of the file contents, or <see langword="null"/>.
+    /// </summary>
+    /// <param name="navigation">The identifier for the file to read.</param>
+    /// <param name="content">The new file contents.</param>
+    /// <returns>A stream of the file contents, or <see langword="null"/>.</returns>
+    public void WriteNavigation(Navigation navigation, Stream content);
+
+    /// <summary>
+    /// Returns a stream of the file contents, or <see langword="null"/>.
+    /// </summary>
+    /// <param name="navigation">The identifier for the file to read.</param>
+    /// <param name="content">The new file contents.</param>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    /// <returns>A stream of the file contents, or <see langword="null"/>.</returns>
+    public Task WriteNavigationAsync(Navigation navigation, Stream content, CancellationToken cancellationToken = default);
+
 }

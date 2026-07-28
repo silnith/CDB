@@ -440,6 +440,138 @@ public class SQLCDB : ICDB
         return Task.FromResult(false);
     }
 
+    /// <inheritdoc/>
+    public void WriteMetadata(Metadata metadata, Stream content)
+    {
+        sqlDataStore.InsertIntoMetadata(Name, metadata, content);
+    }
+
+    /// <inheritdoc/>
+    public Task WriteMetadataAsync(Metadata metadata, Stream content, CancellationToken cancellationToken)
+    {
+        return sqlDataStore.InsertIntoMetadataAsync(Name, metadata, content, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public void WriteTexture(Texture texture, Stream content)
+    {
+        sqlDataStore.InsertIntoTexture(Name, texture, content);
+    }
+
+    /// <inheritdoc/>
+    public Task WriteTextureAsync(Texture texture, Stream content, CancellationToken cancellationToken)
+    {
+        return sqlDataStore.InsertIntoTextureAsync(Name, texture, content, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public void WriteTextureLevelOfDetail(TextureLod textureLod, Stream content)
+    {
+        sqlDataStore.InsertIntoTextureLod(Name, textureLod, content);
+    }
+
+    /// <inheritdoc/>
+    public Task WriteTextureLevelOfDetailAsync(TextureLod textureLod, Stream content, CancellationToken cancellationToken)
+    {
+        return sqlDataStore.InsertIntoTextureLodAsync(Name, textureLod, content, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public void WriteGeotypicalModel(GeotypicalModel geotypicalModel, Stream content)
+    {
+        sqlDataStore.InsertIntoGeotypicalModel(Name, geotypicalModel, content);
+    }
+
+    /// <inheritdoc/>
+    public Task WriteGeotypicalModelAsync(GeotypicalModel geotypicalModel, Stream content, CancellationToken cancellationToken)
+    {
+        return sqlDataStore.InsertIntoGeotypicalModelAsync(Name, geotypicalModel, content, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public void WriteGeotypicalModelLevelOfDetail(GeotypicalModelLod geotypicalModelLod, Stream content)
+    {
+        sqlDataStore.InsertIntoGeotypicalModelLod(Name, geotypicalModelLod, content);
+    }
+
+    /// <inheritdoc/>
+    public Task WriteGeotypicalModelLevelOfDetailAsync(GeotypicalModelLod geotypicalModelLod, Stream content, CancellationToken cancellationToken)
+    {
+        return sqlDataStore.InsertIntoGeotypicalModelLodAsync(Name, geotypicalModelLod, content, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public void WriteMovingModel(MovingModel movingModel, Stream content)
+    {
+        sqlDataStore.InsertIntoMovingModel(Name, movingModel, content);
+    }
+
+    /// <inheritdoc/>
+    public Task WriteMovingModelAsync(MovingModel movingModel, Stream content, CancellationToken cancellationToken)
+    {
+        return sqlDataStore.InsertIntoMovingModelAsync(Name, movingModel, content, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public void WriteMovingModelLevelOfDetail(MovingModelLod movingModelLod, Stream content)
+    {
+        sqlDataStore.InsertIntoMovingModelLod(Name, movingModelLod, content);
+    }
+
+    /// <inheritdoc/>
+    public Task WriteMovingModelLevelOfDetailAsync(MovingModelLod movingModelLod, Stream content, CancellationToken cancellationToken)
+    {
+        return sqlDataStore.InsertIntoMovingModelLodAsync(Name, movingModelLod, content, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public void WriteTile(Tile tile, Stream content)
+    {
+        sqlDataStore.InsertIntoTile(Name, tile, content);
+    }
+
+    /// <inheritdoc/>
+    public Task WriteTileAsync(Tile tile, Stream content, CancellationToken cancellationToken)
+    {
+        return sqlDataStore.InsertIntoTileAsync(Name, tile, content, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public void WriteTileFeature(TileArchivedFeature tileFeature, Stream content)
+    {
+        sqlDataStore.InsertIntoTileArchivedFeature(Name, tileFeature, content);
+    }
+
+    /// <inheritdoc/>
+    public Task WriteTileFeatureAsync(TileArchivedFeature tileFeature, Stream content, CancellationToken cancellationToken)
+    {
+        return sqlDataStore.InsertIntoTileArchivedFeatureAsync(Name, tileFeature, content, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public void WriteTileTexture(TileArchivedTexture tileTexture, Stream content)
+    {
+        sqlDataStore.InsertIntoTileArchivedTexture(Name, tileTexture, content);
+    }
+
+    /// <inheritdoc/>
+    public Task WriteTileTextureAsync(TileArchivedTexture tileTexture, Stream content, CancellationToken cancellationToken)
+    {
+        return sqlDataStore.InsertIntoTileArchivedTextureAsync(Name, tileTexture, content, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public void WriteNavigation(Navigation navigation, Stream content)
+    {
+        sqlDataStore.InsertIntoNavigation(Name, navigation, content);
+    }
+
+    /// <inheritdoc/>
+    public Task WriteNavigationAsync(Navigation navigation, Stream content, CancellationToken cancellationToken)
+    {
+        return sqlDataStore.InsertIntoNavigationAsync(Name, navigation, content, cancellationToken);
+    }
+
     #region Dispose Pattern
 
     private bool disposedValue;

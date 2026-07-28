@@ -372,6 +372,202 @@ public class FileSystemCDB : ICDB
         }
     }
 
+    private void WriteFile(ICDBFileIdentifier identifier, Stream content)
+    {
+        string fullPath = Path.Combine(CdbRoot.FullName, identifier.RelativePath, identifier.Filename);
+        logger.LogTrace("Writing: {File}", new FileInfo(fullPath));
+        _ = Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
+        FileStreamOptions options = new()
+        {
+            Mode = FileMode.Create,
+            Access = FileAccess.Write,
+            Share = FileShare.None,
+            PreallocationSize = content.Length,
+            Options = FileOptions.SequentialScan | FileOptions.Asynchronous,
+        };
+        using FileStream fileStream = new(fullPath, options);
+        content.CopyTo(fileStream);
+    }
+
+    private async Task WriteFileAsync(ICDBFileIdentifier identifier, Stream content, CancellationToken cancellationToken)
+    {
+        string fullPath = Path.Combine(CdbRoot.FullName, identifier.RelativePath, identifier.Filename);
+        logger.LogTrace("Writing: {File}", new FileInfo(fullPath));
+        _ = Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
+        FileStreamOptions options = new()
+        {
+            Mode = FileMode.Create,
+            Access = FileAccess.Write,
+            Share = FileShare.None,
+            PreallocationSize = content.Length,
+            Options = FileOptions.SequentialScan | FileOptions.Asynchronous,
+        };
+        await using FileStream fileStream = new(fullPath, options);
+        await content.CopyToAsync(fileStream, cancellationToken);
+    }
+
+    private void WriteArchivedFileEntry(ICDBArchivedIdentifier archivedIdentifier, Stream content)
+    {
+        ICDBFileIdentifier archiveIdentifier = archivedIdentifier.ArchiveIdentifier;
+        string fullPath = Path.Combine(CdbRoot.FullName, archiveIdentifier.RelativePath, archiveIdentifier.Filename);
+        logger.LogTrace("Opening archive: {File}", new FileInfo(fullPath));
+        _ = Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
+        using ZipArchive zipArchive = ZipFile.Open(fullPath, ZipArchiveMode.Update);
+        ZipArchiveEntry zipArchiveEntry = zipArchive.GetEntry(archivedIdentifier.EntryName)
+            ?? zipArchive.CreateEntry(archivedIdentifier.EntryName);
+        logger.LogTrace("Writing entry: {Entry}", archivedIdentifier.EntryName);
+        using Stream stream = zipArchiveEntry.Open();
+        stream.SetLength(0);
+        content.CopyTo(stream);
+    }
+
+    private async Task WriteArchivedFileEntryAsync(ICDBArchivedIdentifier archivedIdentifier, Stream content, CancellationToken cancellationToken)
+    {
+        ICDBFileIdentifier archiveIdentifier = archivedIdentifier.ArchiveIdentifier;
+        string fullPath = Path.Combine(CdbRoot.FullName, archiveIdentifier.RelativePath, archiveIdentifier.Filename);
+        logger.LogTrace("Opening archive: {File}", new FileInfo(fullPath));
+        _ = Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
+        using ZipArchive zipArchive = ZipFile.Open(fullPath, ZipArchiveMode.Update);
+        ZipArchiveEntry zipArchiveEntry = zipArchive.GetEntry(archivedIdentifier.EntryName)
+            ?? zipArchive.CreateEntry(archivedIdentifier.EntryName);
+        logger.LogTrace("Writing entry: {Entry}", archivedIdentifier.EntryName);
+        await using Stream stream = zipArchiveEntry.Open();
+        stream.SetLength(0);
+        await content.CopyToAsync(stream, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public void WriteMetadata(Metadata metadata, Stream content)
+    {
+        WriteFile(metadata, content);
+    }
+
+    /// <inheritdoc/>
+    public Task WriteMetadataAsync(Metadata metadata, Stream content, CancellationToken cancellationToken)
+    {
+        return WriteFileAsync(metadata, content, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public void WriteTexture(Texture texture, Stream content)
+    {
+        WriteFile(texture, content);
+    }
+
+    /// <inheritdoc/>
+    public Task WriteTextureAsync(Texture texture, Stream content, CancellationToken cancellationToken)
+    {
+        return WriteFileAsync(texture, content, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public void WriteTextureLevelOfDetail(TextureLod textureLod, Stream content)
+    {
+        WriteFile(textureLod, content);
+    }
+
+    /// <inheritdoc/>
+    public Task WriteTextureLevelOfDetailAsync(TextureLod textureLod, Stream content, CancellationToken cancellationToken)
+    {
+        return WriteFileAsync(textureLod, content, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public void WriteGeotypicalModel(GeotypicalModel geotypicalModel, Stream content)
+    {
+        WriteFile(geotypicalModel, content);
+    }
+
+    /// <inheritdoc/>
+    public Task WriteGeotypicalModelAsync(GeotypicalModel geotypicalModel, Stream content, CancellationToken cancellationToken)
+    {
+        return WriteFileAsync(geotypicalModel, content, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public void WriteGeotypicalModelLevelOfDetail(GeotypicalModelLod geotypicalModelLod, Stream content)
+    {
+        WriteFile(geotypicalModelLod, content);
+    }
+
+    /// <inheritdoc/>
+    public Task WriteGeotypicalModelLevelOfDetailAsync(GeotypicalModelLod geotypicalModelLod, Stream content, CancellationToken cancellationToken)
+    {
+        return WriteFileAsync(geotypicalModelLod, content, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public void WriteMovingModel(MovingModel movingModel, Stream content)
+    {
+        WriteFile(movingModel, content);
+    }
+
+    /// <inheritdoc/>
+    public Task WriteMovingModelAsync(MovingModel movingModel, Stream content, CancellationToken cancellationToken)
+    {
+        return WriteFileAsync(movingModel, content, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public void WriteMovingModelLevelOfDetail(MovingModelLod movingModelLod, Stream content)
+    {
+        WriteFile(movingModelLod, content);
+    }
+
+    /// <inheritdoc/>
+    public Task WriteMovingModelLevelOfDetailAsync(MovingModelLod movingModelLod, Stream content, CancellationToken cancellationToken)
+    {
+        return WriteFileAsync(movingModelLod, content, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public void WriteTile(Tile tile, Stream content)
+    {
+        WriteFile(tile, content);
+    }
+
+    /// <inheritdoc/>
+    public Task WriteTileAsync(Tile tile, Stream content, CancellationToken cancellationToken)
+    {
+        return WriteFileAsync(tile, content, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public void WriteTileFeature(TileArchivedFeature tileFeature, Stream content)
+    {
+        WriteArchivedFileEntry(tileFeature, content);
+    }
+
+    /// <inheritdoc/>
+    public Task WriteTileFeatureAsync(TileArchivedFeature tileFeature, Stream content, CancellationToken cancellationToken)
+    {
+        return WriteArchivedFileEntryAsync(tileFeature, content, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public void WriteTileTexture(TileArchivedTexture tileTexture, Stream content)
+    {
+        WriteArchivedFileEntry(tileTexture, content);
+    }
+
+    /// <inheritdoc/>
+    public Task WriteTileTextureAsync(TileArchivedTexture tileTexture, Stream content, CancellationToken cancellationToken)
+    {
+        return WriteArchivedFileEntryAsync(tileTexture, content, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public void WriteNavigation(Navigation navigation, Stream content)
+    {
+        WriteFile(navigation, content);
+    }
+
+    /// <inheritdoc/>
+    public Task WriteNavigationAsync(Navigation navigation, Stream content, CancellationToken cancellationToken)
+    {
+        return WriteFileAsync(navigation, content, cancellationToken);
+    }
+
     /// <summary>
     /// Enumerates all recognized files in a CDB.
     /// </summary>
