@@ -10,6 +10,19 @@ namespace Silnith.CDB;
 public interface ICDBIdentifier
 {
     /// <summary>
+    /// The file type.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// All CDB identifiers have a file type.
+    /// </para>
+    /// </remarks>
+    public string FileType
+    {
+        get;
+    }
+
+    /// <summary>
     /// Reads the file for this identifier from the provided CDB.
     /// </summary>
     /// <param name="cdb">The CDB to read this file from.</param>

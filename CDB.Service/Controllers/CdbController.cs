@@ -26,21 +26,16 @@ public class CdbController : ControllerBase
         const string Message = $"{nameof(Get)}({{FileNameAndPath}})";
         using var _ = logger.BeginScope(Message, fileNameAndPath);
 
-        using MemoryStream memoryStream = new();
-        if (dataStore.TryReadFile(fileNameAndPath, stream =>
-        {
-            stream.CopyTo(memoryStream);
-        }))
-        {
-            byte[] content = memoryStream.ToArray();
-            logger.LogDebug("File found.  {Size}", content.LongLength);
+        ICDBIdentifier? cdbIdentifier = IdentifierFactory.ParseIdentifier(fileNameAndPath);
 
+        if (cdbIdentifier is not null)
+        {
             string filename = Path.GetFileName(fileNameAndPath);
             // application/gml+xml
             // application/gltf-buffer
             // application/geo+json
             // image/tiff; application=geotiff
-            string contentType = Path.GetExtension(fileNameAndPath).ToLowerInvariant() switch
+            string contentType = cdbIdentifier.FileType.ToLowerInvariant() switch
             {
                 ".bmp" => "image/bmp",
                 ".dbf" => "application/vnd.dbf",
@@ -62,13 +57,16 @@ public class CdbController : ControllerBase
                 ".zip" => MediaTypeNames.Application.Zip,
                 _ => MediaTypeNames.Application.Octet,
             };
-            return File(content, contentType, filename);
+            Stream? stream = cdbIdentifier.ReadFromCDB(dataStore);
+            if (stream is not null)
+            {
+                logger.LogDebug("File found.  {Size}", stream.Length);
+                return File(stream, contentType, filename);
+            }
         }
-        else
-        {
-            logger.LogDebug("File not found.");
 
-            return NotFound();
-        }
+        logger.LogDebug("File not found.");
+
+        return NotFound();
     }
 }
