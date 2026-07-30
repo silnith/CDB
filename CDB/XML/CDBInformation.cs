@@ -1,4 +1,5 @@
-﻿using System.Xml.Serialization;
+﻿using System.IO;
+using System.Xml.Serialization;
 
 namespace Silnith.CDB.XML;
 
@@ -8,76 +9,117 @@ public class CDBInformation
     {
         XmlSerializerFactory xmlSerializerFactory = new();
 
-        dataStore.TryReadFile("Metadata/CDB_Attributes.xml", stream =>
         {
-            XmlSerializer xmlSerializer = xmlSerializerFactory.CreateSerializer(typeof(Metadata.VectorAttributes.Element));
-            _ = xmlSerializer.Deserialize(stream) as Metadata.VectorAttributes.Element;
-        });
-        dataStore.TryReadFile("Metadata/Configuration.xml", stream =>
+            using Stream? stream = new Silnith.CDB.Metadata("CDB_Attributes", "xml").ReadFromCDB(dataStore);
+            if (stream is not null)
+            {
+                XmlSerializer xmlSerializer = xmlSerializerFactory.CreateSerializer(typeof(Metadata.VectorAttributes.Element));
+                _ = xmlSerializer.Deserialize(stream) as Metadata.VectorAttributes.Element;
+            }
+        }
         {
-            XmlSerializer xmlSerializer = xmlSerializerFactory.CreateSerializer(typeof(Metadata.Configuration.Element));
-            _ = xmlSerializer.Deserialize(stream) as Metadata.Configuration.Element;
-        });
-        dataStore.TryReadFile("Metadata/Datasets.xml", stream =>
+            using Stream? stream = new Silnith.CDB.Metadata("Configuration", "xml").ReadFromCDB(dataStore);
+            if (stream is not null)
+            {
+                XmlSerializer xmlSerializer = xmlSerializerFactory.CreateSerializer(typeof(Metadata.Configuration.Element));
+                _ = xmlSerializer.Deserialize(stream) as Metadata.Configuration.Element;
+            }
+        }
         {
-            XmlSerializer xmlSerializer = xmlSerializerFactory.CreateSerializer(typeof(Metadata.Datasets.Element));
-            _ = xmlSerializer.Deserialize(stream) as Metadata.Datasets.Element;
-        });
-        dataStore.TryReadFile("Metadata/Defaults.xml", stream =>
+            using Stream? stream = new Silnith.CDB.Metadata("Datasets", "xml").ReadFromCDB(dataStore);
+            if (stream is not null)
+            {
+                XmlSerializer xmlSerializer = xmlSerializerFactory.CreateSerializer(typeof(Metadata.Datasets.Element));
+                _ = xmlSerializer.Deserialize(stream) as Metadata.Datasets.Element;
+            }
+        }
         {
-            XmlSerializer xmlSerializer = xmlSerializerFactory.CreateSerializer(typeof(Metadata.Defaults.Element));
-            _ = xmlSerializer.Deserialize(stream) as Metadata.Defaults.Element;
-        });
-        dataStore.TryReadFile("Metadata/DIS_Country_Codes.xml", stream =>
+            using Stream? stream = new Silnith.CDB.Metadata("Defaults", "xml").ReadFromCDB(dataStore);
+            if (stream is not null)
+            {
+                XmlSerializer xmlSerializer = xmlSerializerFactory.CreateSerializer(typeof(Metadata.Defaults.Element));
+                _ = xmlSerializer.Deserialize(stream) as Metadata.Defaults.Element;
+            }
+        }
         {
-            XmlSerializer xmlSerializer = xmlSerializerFactory.CreateSerializer(typeof(Metadata.DISCountryCodes.Element));
-            _ = xmlSerializer.Deserialize(stream) as Metadata.DISCountryCodes.Element;
-        });
-        dataStore.TryReadFile("Metadata/Feature_Data_Dictionary.xml", stream =>
+            using Stream? stream = new Silnith.CDB.Metadata("DIS_Country_Codes", "xml").ReadFromCDB(dataStore);
+            if (stream is not null)
+            {
+                XmlSerializer xmlSerializer = xmlSerializerFactory.CreateSerializer(typeof(Metadata.DISCountryCodes.Element));
+                _ = xmlSerializer.Deserialize(stream) as Metadata.DISCountryCodes.Element;
+            }
+        }
         {
-            XmlSerializer xmlSerializer = xmlSerializerFactory.CreateSerializer(typeof(Metadata.FeatureDataDictionary.Element));
-            _ = xmlSerializer.Deserialize(stream) as Metadata.FeatureDataDictionary.Element;
-        });
-        dataStore.TryReadFile("Metadata/Geomatics_Attributes.xml", stream =>
+            using Stream? stream = new Silnith.CDB.Metadata("Feature_Data_Dictionary", "xml").ReadFromCDB(dataStore);
+            if (stream is not null)
+            {
+                XmlSerializer xmlSerializer = xmlSerializerFactory.CreateSerializer(typeof(Metadata.FeatureDataDictionary.Element));
+                _ = xmlSerializer.Deserialize(stream) as Metadata.FeatureDataDictionary.Element;
+            }
+        }
         {
-            XmlSerializer xmlSerializer = xmlSerializerFactory.CreateSerializer(typeof(Metadata.VectorAttributes.Element));
-            _ = xmlSerializer.Deserialize(stream) as Metadata.VectorAttributes.Element;
-        });
-        dataStore.TryReadFile("Metadata/Lights.xml", stream =>
+            using Stream? stream = new Silnith.CDB.Metadata("Geomatics_Attributes", "xml").ReadFromCDB(dataStore);
+            if (stream is not null)
+            {
+                XmlSerializer xmlSerializer = xmlSerializerFactory.CreateSerializer(typeof(Metadata.VectorAttributes.Element));
+                _ = xmlSerializer.Deserialize(stream) as Metadata.VectorAttributes.Element;
+            }
+        }
         {
-            XmlSerializer xmlSerializer = xmlSerializerFactory.CreateSerializer(typeof(Metadata.Lights.Element));
-            _ = xmlSerializer.Deserialize(stream) as Metadata.Lights.Element;
-        });
-        //dataStore.TryReadFile("Metadata/Lights_xxx.xml", stream =>
-        //{
-        //    XmlSerializer xmlSerializer = xmlSerializerFactory.CreateSerializer(typeof(Metadata.LightsTuning.Element));
-        //    _ = xmlSerializer.Deserialize(stream) as Metadata.LightsTuning.Element;
-        //});
-        dataStore.TryReadFile("Metadata/Materials.xml", stream =>
+            using Stream? stream = new Silnith.CDB.Metadata("Lights", "xml").ReadFromCDB(dataStore);
+            if (stream is not null)
+            {
+                XmlSerializer xmlSerializer = xmlSerializerFactory.CreateSerializer(typeof(Metadata.Lights.Element));
+                _ = xmlSerializer.Deserialize(stream) as Metadata.Lights.Element;
+            }
+        }
         {
-            XmlSerializer xmlSerializer = xmlSerializerFactory.CreateSerializer(typeof(Metadata.BaseMaterialTable.Element));
-            _ = xmlSerializer.Deserialize(stream) as Metadata.BaseMaterialTable.Element;
-        });
-        dataStore.TryReadFile("Metadata/Model_Components.xml", stream =>
+            using Stream? stream = new Silnith.CDB.Metadata("Lights_xxx", "xml").ReadFromCDB(dataStore);
+            if (stream is not null)
+            {
+                XmlSerializer xmlSerializer = xmlSerializerFactory.CreateSerializer(typeof(Metadata.Lights.Element));
+                _ = xmlSerializer.Deserialize(stream) as Metadata.Lights.Element;
+            }
+        }
         {
-            XmlSerializer xmlSerializer = xmlSerializerFactory.CreateSerializer(typeof(Metadata.ModelComponents.Element));
-            _ = xmlSerializer.Deserialize(stream) as Metadata.ModelComponents.Element;
-        });
-        dataStore.TryReadFile("Metadata/Moving_Model_Codes.xml", stream =>
+            using Stream? stream = new Silnith.CDB.Metadata("Materials", "xml").ReadFromCDB(dataStore);
+            if (stream is not null)
+            {
+                XmlSerializer xmlSerializer = xmlSerializerFactory.CreateSerializer(typeof(Metadata.BaseMaterialTable.Element));
+                _ = xmlSerializer.Deserialize(stream) as Metadata.BaseMaterialTable.Element;
+            }
+        }
         {
-            XmlSerializer xmlSerializer = xmlSerializerFactory.CreateSerializer(typeof(Metadata.MovingModelCodes.Element));
-            _ = xmlSerializer.Deserialize(stream) as Metadata.MovingModelCodes.Element;
-        });
-        dataStore.TryReadFile("Metadata/Vendor_Attributes.xml", stream =>
+            using Stream? stream = new Silnith.CDB.Metadata("Model_Components", "xml").ReadFromCDB(dataStore);
+            if (stream is not null)
+            {
+                XmlSerializer xmlSerializer = xmlSerializerFactory.CreateSerializer(typeof(Metadata.ModelComponents.Element));
+                _ = xmlSerializer.Deserialize(stream) as Metadata.ModelComponents.Element;
+            }
+        }
         {
-            XmlSerializer xmlSerializer = xmlSerializerFactory.CreateSerializer(typeof(Metadata.VectorAttributes.Element));
-            _ = xmlSerializer.Deserialize(stream) as Metadata.VectorAttributes.Element;
-        });
-        dataStore.TryReadFile("Metadata/Version.xml", stream =>
+            using Stream? stream = new Silnith.CDB.Metadata("Moving_Model_Codes", "xml").ReadFromCDB(dataStore);
+            if (stream is not null)
+            {
+                XmlSerializer xmlSerializer = xmlSerializerFactory.CreateSerializer(typeof(Metadata.MovingModelCodes.Element));
+                _ = xmlSerializer.Deserialize(stream) as Metadata.MovingModelCodes.Element;
+            }
+        }
         {
-            XmlSerializer xmlSerializer = xmlSerializerFactory.CreateSerializer(typeof(Metadata.Version.Element));
-            _ = xmlSerializer.Deserialize(stream) as Metadata.Version.Element;
-        });
-
+            using Stream? stream = new Silnith.CDB.Metadata("Vendor_Attributes", "xml").ReadFromCDB(dataStore);
+            if (stream is not null)
+            {
+                XmlSerializer xmlSerializer = xmlSerializerFactory.CreateSerializer(typeof(Metadata.VectorAttributes.Element));
+                _ = xmlSerializer.Deserialize(stream) as Metadata.VectorAttributes.Element;
+            }
+        }
+        {
+            using Stream? stream = new Silnith.CDB.Metadata("Version", "xml").ReadFromCDB(dataStore);
+            if (stream is not null)
+            {
+                XmlSerializer xmlSerializer = xmlSerializerFactory.CreateSerializer(typeof(Metadata.Version.Element));
+                _ = xmlSerializer.Deserialize(stream) as Metadata.Version.Element;
+            }
+        }
     }
 }

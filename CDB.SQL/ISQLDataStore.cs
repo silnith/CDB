@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -122,34 +121,6 @@ public interface ISQLDataStore : IDisposable, IAsyncDisposable
     #region Select
 
     /// <summary>
-    /// Tries to find a metadata file in the database.
-    /// If the file was found, runs <paramref name="fileFoundAction"/> on the file contents.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="metadata">The metadata identifier.</param>
-    /// <param name="fileFoundAction">The action to run if the file is found.
-    /// The stream will be automatically closed after the action returns or
-    /// throws an exception.</param>
-    /// <returns><see langword="true"/> if the file was found.</returns>
-    public bool TrySelectFromMetadata(string cdbName, Metadata metadata,
-        Action<Stream> fileFoundAction);
-
-    /// <summary>
-    /// Tries to find a metadata file in the database.
-    /// If the file was found, runs <paramref name="fileFoundAsyncAction"/> on the file contents.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="metadata">The metadata identifier.</param>
-    /// <param name="fileFoundAsyncAction">The action to run if the file is found.
-    /// The stream will be automatically closed after the action returns or
-    /// throws an exception.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns><see langword="true"/> if the file was found.</returns>
-    public Task<bool> TrySelectFromMetadataAsync(string cdbName, Metadata metadata,
-        Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
-        CancellationToken cancellationToken = default);
-
-    /// <summary>
     /// Returns a metadata file from the database.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store.</param>
@@ -218,34 +189,6 @@ public interface ISQLDataStore : IDisposable, IAsyncDisposable
     #endregion
 
     #region Select
-
-    /// <summary>
-    /// Tries to find a texture file in the database.
-    /// If the file was found, runs <paramref name="fileFoundAction"/> on the file contents.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="texture">The texture identifier.</param>
-    /// <param name="fileFoundAction">The action to run if the file is found.
-    /// The stream will be automatically closed after the action returns or
-    /// throws an exception.</param>
-    /// <returns><see langword="true"/> if the file was found.</returns>
-    public bool TrySelectFromTexture(string cdbName, Texture texture,
-        Action<Stream> fileFoundAction);
-
-    /// <summary>
-    /// Tries to find a texture file in the database.
-    /// If the file was found, runs <paramref name="fileFoundAsyncAction"/> on the file contents.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="texture">The texture identifier.</param>
-    /// <param name="fileFoundAsyncAction">The action to run if the file is found.
-    /// The stream will be automatically closed after the action returns or
-    /// throws an exception.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns><see langword="true"/> if the file was found.</returns>
-    public Task<bool> TrySelectFromTextureAsync(string cdbName, Texture texture,
-        Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
-        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Returns a texture file from the database.
@@ -318,34 +261,6 @@ public interface ISQLDataStore : IDisposable, IAsyncDisposable
     #region Select
 
     /// <summary>
-    /// Tries to find a texture mipmap file in the database.
-    /// If the file was found, runs <paramref name="fileFoundAction"/> on the file contents.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="textureLod">The texture mipmap identifier.</param>
-    /// <param name="fileFoundAction">The action to run if the file is found.
-    /// The stream will be automatically closed after the action returns or
-    /// throws an exception.</param>
-    /// <returns><see langword="true"/> if the file was found.</returns>
-    public bool TrySelectFromTextureLod(string cdbName, TextureLod textureLod,
-        Action<Stream> fileFoundAction);
-
-    /// <summary>
-    /// Tries to find a texture mipmap file in the database.
-    /// If the file was found, runs <paramref name="fileFoundAsyncAction"/> on the file contents.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="textureLod">The texture mipmap identifier.</param>
-    /// <param name="fileFoundAsyncAction">The action to run if the file is found.
-    /// The stream will be automatically closed after the action returns or
-    /// throws an exception.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns><see langword="true"/> if the file was found.</returns>
-    public Task<bool> TrySelectFromTextureLodAsync(string cdbName, TextureLod textureLod,
-        Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
-        CancellationToken cancellationToken = default);
-
-    /// <summary>
     /// Returns a texture level of detail file from the database.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store.</param>
@@ -414,34 +329,6 @@ public interface ISQLDataStore : IDisposable, IAsyncDisposable
     #endregion
 
     #region Select
-
-    /// <summary>
-    /// Tries to find a geotypical model file in the database.
-    /// If the file was found, runs <paramref name="fileFoundAction"/> on the file contents.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="geotypicalModel">The geotypical model identifier.</param>
-    /// <param name="fileFoundAction">The action to run if the file is found.
-    /// The stream will be automatically closed after the action returns or
-    /// throws an exception.</param>
-    /// <returns><see langword="true"/> if the file was found.</returns>
-    public bool TrySelectFromGeotypicalModel(string cdbName, GeotypicalModel geotypicalModel,
-        Action<Stream> fileFoundAction);
-
-    /// <summary>
-    /// Tries to find a geotypical model file in the database.
-    /// If the file was found, runs <paramref name="fileFoundAsyncAction"/> on the file contents.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="geotypicalModel">The geotypical model identifier.</param>
-    /// <param name="fileFoundAsyncAction">The action to run if the file is found.
-    /// The stream will be automatically closed after the action returns or
-    /// throws an exception.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns><see langword="true"/> if the file was found.</returns>
-    public Task<bool> TrySelectFromGeotypicalModelAsync(string cdbName, GeotypicalModel geotypicalModel,
-        Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
-        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Returns a geotypical model file from the database.
@@ -514,34 +401,6 @@ public interface ISQLDataStore : IDisposable, IAsyncDisposable
     #region Select
 
     /// <summary>
-    /// Tries to find a geotypical model level of detail file in the database.
-    /// If the file was found, runs <paramref name="fileFoundAction"/> on the file contents.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="geotypicalModelLod">The geotypical model level of detail identifier.</param>
-    /// <param name="fileFoundAction">The action to run if the file is found.
-    /// The stream will be automatically closed after the action returns or
-    /// throws an exception.</param>
-    /// <returns><see langword="true"/> if the file was found.</returns>
-    public bool TrySelectFromGeotypicalModelLod(string cdbName, GeotypicalModelLod geotypicalModelLod,
-        Action<Stream> fileFoundAction);
-
-    /// <summary>
-    /// Tries to find a geotypical model level of detail file in the database.
-    /// If the file was found, runs <paramref name="fileFoundAsyncAction"/> on the file contents.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="geotypicalModelLod">The geotypical model level of detail identifier.</param>
-    /// <param name="fileFoundAsyncAction">The action to run if the file is found.
-    /// The stream will be automatically closed after the action returns or
-    /// throws an exception.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns><see langword="true"/> if the file was found.</returns>
-    public Task<bool> TrySelectFromGeotypicalModelLodAsync(string cdbName, GeotypicalModelLod geotypicalModelLod,
-        Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
-        CancellationToken cancellationToken = default);
-
-    /// <summary>
     /// Returns a geotypical model level of detail file from the database.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store.</param>
@@ -610,34 +469,6 @@ public interface ISQLDataStore : IDisposable, IAsyncDisposable
     #endregion
 
     #region Select
-
-    /// <summary>
-    /// Tries to find a moving model file in the database.
-    /// If the file was found, runs <paramref name="fileFoundAction"/> on the file contents.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="movingModel">The moving model identifier.</param>
-    /// <param name="fileFoundAction">The action to run if the file is found.
-    /// The stream will be automatically closed after the action returns or
-    /// throws an exception.</param>
-    /// <returns><see langword="true"/> if the file was found.</returns>
-    public bool TrySelectFromMovingModel(string cdbName, MovingModel movingModel,
-        Action<Stream> fileFoundAction);
-
-    /// <summary>
-    /// Tries to find a moving model file in the database.
-    /// If the file was found, runs <paramref name="fileFoundAsyncAction"/> on the file contents.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="movingModel">The moving model identifier.</param>
-    /// <param name="fileFoundAsyncAction">The action to run if the file is found.
-    /// The stream will be automatically closed after the action returns or
-    /// throws an exception.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns><see langword="true"/> if the file was found.</returns>
-    public Task<bool> TrySelectFromMovingModelAsync(string cdbName, MovingModel movingModel,
-        Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
-        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Returns a moving model file from the database.
@@ -710,34 +541,6 @@ public interface ISQLDataStore : IDisposable, IAsyncDisposable
     #region Select
 
     /// <summary>
-    /// Tries to find a moving model level of detail file in the database.
-    /// If the file was found, runs <paramref name="fileFoundAction"/> on the file contents.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="movingModelLod">The moving model level of detail identifier.</param>
-    /// <param name="fileFoundAction">The action to run if the file is found.
-    /// The stream will be automatically closed after the action returns or
-    /// throws an exception.</param>
-    /// <returns><see langword="true"/> if the file was found.</returns>
-    public bool TrySelectFromMovingModelLod(string cdbName, MovingModelLod movingModelLod,
-        Action<Stream> fileFoundAction);
-
-    /// <summary>
-    /// Tries to find a moving model level of detail file in the database.
-    /// If the file was found, runs <paramref name="fileFoundAsyncAction"/> on the file contents.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="movingModelLod">The moving model level of detail identifier.</param>
-    /// <param name="fileFoundAsyncAction">The action to run if the file is found.
-    /// The stream will be automatically closed after the action returns or
-    /// throws an exception.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns><see langword="true"/> if the file was found.</returns>
-    public Task<bool> TrySelectFromMovingModelLodAsync(string cdbName, MovingModelLod movingModelLod,
-        Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
-        CancellationToken cancellationToken = default);
-
-    /// <summary>
     /// Returns a moving model level of detail file from the database.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store.</param>
@@ -806,34 +609,6 @@ public interface ISQLDataStore : IDisposable, IAsyncDisposable
     #endregion
 
     #region Select
-
-    /// <summary>
-    /// Tries to find a tiled dataset file in the database.
-    /// If the file was found, runs <paramref name="fileFoundAction"/> on the file contents.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="tile">The tile identifier.</param>
-    /// <param name="fileFoundAction">The action to run if the file is found.
-    /// The stream will be automatically closed after the action returns or
-    /// throws an exception.</param>
-    /// <returns><see langword="true"/> if the file was found.</returns>
-    public bool TrySelectFromTile(string cdbName, Tile tile,
-        Action<Stream> fileFoundAction);
-
-    /// <summary>
-    /// Tries to find a tiled dataset file in the database.
-    /// If the file was found, runs <paramref name="fileFoundAsyncAction"/> on the file contents.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="tile">The tile identifier.</param>
-    /// <param name="fileFoundAsyncAction">The action to run if the file is found.
-    /// The stream will be automatically closed after the action returns or
-    /// throws an exception.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns><see langword="true"/> if the file was found.</returns>
-    public Task<bool> TrySelectFromTileAsync(string cdbName, Tile tile,
-        Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
-        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Returns a tiled dataset file from the database.
@@ -906,34 +681,6 @@ public interface ISQLDataStore : IDisposable, IAsyncDisposable
     #region Select
 
     /// <summary>
-    /// Tries to find an un-archived tiled dataset feature file in the database.
-    /// If the file was found, runs <paramref name="fileFoundAction"/> on the file contents.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="tileArchivedFeature">The tiled dataset feature identifier.</param>
-    /// <param name="fileFoundAction">The action to run if the file is found.
-    /// The stream will be automatically closed after the action returns or
-    /// throws an exception.</param>
-    /// <returns><see langword="true"/> if the file was found.</returns>
-    public bool TrySelectFromTileArchivedFeature(string cdbName, TileArchivedFeature tileArchivedFeature,
-        Action<Stream> fileFoundAction);
-
-    /// <summary>
-    /// Tries to find an un-archived tiled dataset feature file in the database.
-    /// If the file was found, runs <paramref name="fileFoundAsyncAction"/> on the file contents.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="tileArchivedFeature">The tiled dataset feature identifier.</param>
-    /// <param name="fileFoundAsyncAction">The action to run if the file is found.
-    /// The stream will be automatically closed after the action returns or
-    /// throws an exception.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns><see langword="true"/> if the file was found.</returns>
-    public Task<bool> TrySelectFromTileArchivedFeatureAsync(string cdbName, TileArchivedFeature tileArchivedFeature,
-        Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
-        CancellationToken cancellationToken = default);
-
-    /// <summary>
     /// Returns an un-archived tiled dataset feature file from the database.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store.</param>
@@ -1004,34 +751,6 @@ public interface ISQLDataStore : IDisposable, IAsyncDisposable
     #region Select
 
     /// <summary>
-    /// Tries to find an un-archived tiled dataset texture file in the database.
-    /// If the file was found, runs <paramref name="fileFoundAction"/> on the file contents.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="tileArchivedTexture">The tiled dataset texture identifier.</param>
-    /// <param name="fileFoundAction">The action to run if the file is found.
-    /// The stream will be automatically closed after the action returns or
-    /// throws an exception.</param>
-    /// <returns><see langword="true"/> if the file was found.</returns>
-    public bool TrySelectFromTileArchivedTexture(string cdbName, TileArchivedTexture tileArchivedTexture,
-        Action<Stream> fileFoundAction);
-
-    /// <summary>
-    /// Tries to find an un-archived tiled dataset texture file in the database.
-    /// If the file was found, runs <paramref name="fileFoundAsyncAction"/> on the file contents.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="tileArchivedTexture">The tiled dataset texture identifier.</param>
-    /// <param name="fileFoundAsyncAction">The action to run if the file is found.
-    /// The stream will be automatically closed after the action returns or
-    /// throws an exception.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns><see langword="true"/> if the file was found.</returns>
-    public Task<bool> TrySelectFromTileArchivedTextureAsync(string cdbName, TileArchivedTexture tileArchivedTexture,
-        Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
-        CancellationToken cancellationToken = default);
-
-    /// <summary>
     /// Returns an un-archived tiled dataset texture file from the database.
     /// </summary>
     /// <param name="cdbName">The name of the CDB data store.</param>
@@ -1100,34 +819,6 @@ public interface ISQLDataStore : IDisposable, IAsyncDisposable
     #endregion
 
     #region Select
-
-    /// <summary>
-    /// Tries to find a navigation file in the database.
-    /// If the file was found, runs <paramref name="fileFoundAction"/> on the file contents.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="navigation">The navigation identifier.</param>
-    /// <param name="fileFoundAction">The action to run if the file is found.
-    /// The stream will be automatically closed after the action returns or
-    /// throws an exception.</param>
-    /// <returns><see langword="true"/> if the file was found.</returns>
-    public bool TrySelectFromNavigation(string cdbName, Navigation navigation,
-        Action<Stream> fileFoundAction);
-
-    /// <summary>
-    /// Tries to find a navigation file in the database.
-    /// If the file was found, runs <paramref name="fileFoundAsyncAction"/> on the file contents.
-    /// </summary>
-    /// <param name="cdbName">The name of the CDB data store.</param>
-    /// <param name="navigation">The navigation identifier.</param>
-    /// <param name="fileFoundAsyncAction">The action to run if the file is found.
-    /// The stream will be automatically closed after the action returns or
-    /// throws an exception.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns><see langword="true"/> if the file was found.</returns>
-    public Task<bool> TrySelectFromNavigationAsync(string cdbName, Navigation navigation,
-        Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
-        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Returns a navigation file from the database.

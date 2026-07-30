@@ -221,22 +221,6 @@ public class PersistentConnection : ISQLDataStore
     #region Select
 
     /// <inheritdoc/>
-    public bool TrySelectFromMetadata(string cdbName, Metadata metadata, Action<Stream> fileFoundAction)
-    {
-        return sqlDataStore.TrySelectFromMetadata(selectFromMetadataCommand, cdbName, metadata,
-            fileFoundAction);
-    }
-
-    /// <inheritdoc/>
-    public Task<bool> TrySelectFromMetadataAsync(string cdbName, Metadata metadata,
-        Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
-        CancellationToken cancellationToken)
-    {
-        return sqlDataStore.TrySelectFromMetadataAsync(selectFromMetadataCommand, cdbName, metadata,
-            fileFoundAsyncAction, cancellationToken);
-    }
-
-    /// <inheritdoc/>
     public Stream? SelectFromMetadata(string cdbName, Metadata metadata)
     {
         return sqlDataStore.SelectFromMetadata(selectFromMetadataCommand, cdbName, metadata);
@@ -289,23 +273,6 @@ public class PersistentConnection : ISQLDataStore
     #endregion
 
     #region Select
-
-    /// <inheritdoc/>
-    public bool TrySelectFromTexture(string cdbName, Texture texture,
-        Action<Stream> fileFoundAction)
-    {
-        return sqlDataStore.TrySelectFromTexture(selectFromTextureCommand, cdbName, texture,
-            fileFoundAction);
-    }
-
-    /// <inheritdoc/>
-    public Task<bool> TrySelectFromTextureAsync(string cdbName, Texture texture,
-        Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
-        CancellationToken cancellationToken)
-    {
-        return sqlDataStore.TrySelectFromTextureAsync(selectFromTextureCommand, cdbName, texture,
-            fileFoundAsyncAction, cancellationToken);
-    }
 
     /// <inheritdoc/>
     public Stream? SelectFromTexture(string cdbName, Texture texture)
@@ -362,23 +329,6 @@ public class PersistentConnection : ISQLDataStore
     #region Select
 
     /// <inheritdoc/>
-    public bool TrySelectFromTextureLod(string cdbName, TextureLod textureLod,
-        Action<Stream> fileFoundAction)
-    {
-        return sqlDataStore.TrySelectFromTextureLod(selectFromTextureLodCommand, cdbName, textureLod,
-            fileFoundAction);
-    }
-
-    /// <inheritdoc/>
-    public Task<bool> TrySelectFromTextureLodAsync(string cdbName, TextureLod textureLod,
-        Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
-        CancellationToken cancellationToken)
-    {
-        return sqlDataStore.TrySelectFromTextureLodAsync(selectFromTextureLodCommand, cdbName, textureLod,
-            fileFoundAsyncAction, cancellationToken);
-    }
-
-    /// <inheritdoc/>
     public Stream? SelectFromTextureLod(string cdbName, TextureLod textureLod)
     {
         return sqlDataStore.SelectFromTextureLod(selectFromTextureLodCommand, cdbName, textureLod);
@@ -431,23 +381,6 @@ public class PersistentConnection : ISQLDataStore
     #endregion
 
     #region Select
-
-    /// <inheritdoc/>
-    public bool TrySelectFromGeotypicalModel(string cdbName, GeotypicalModel geotypicalModel,
-        Action<Stream> fileFoundAction)
-    {
-        return sqlDataStore.TrySelectFromGeotypicalModel(selectFromGeotypicalModelCommand, cdbName, geotypicalModel,
-            fileFoundAction);
-    }
-
-    /// <inheritdoc/>
-    public Task<bool> TrySelectFromGeotypicalModelAsync(string cdbName, GeotypicalModel geotypicalModel,
-        Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
-        CancellationToken cancellationToken)
-    {
-        return sqlDataStore.TrySelectFromGeotypicalModelAsync(selectFromGeotypicalModelCommand, cdbName, geotypicalModel,
-            fileFoundAsyncAction, cancellationToken);
-    }
 
     /// <inheritdoc/>
     public Stream? SelectFromGeotypicalModel(string cdbName, GeotypicalModel geotypicalModel)
@@ -504,23 +437,6 @@ public class PersistentConnection : ISQLDataStore
     #region Select
 
     /// <inheritdoc/>
-    public bool TrySelectFromGeotypicalModelLod(string cdbName, GeotypicalModelLod geotypicalModelLod,
-        Action<Stream> fileFoundAction)
-    {
-        return sqlDataStore.TrySelectFromGeotypicalModelLod(selectFromGeotypicalModelLodCommand, cdbName, geotypicalModelLod,
-            fileFoundAction);
-    }
-
-    /// <inheritdoc/>
-    public Task<bool> TrySelectFromGeotypicalModelLodAsync(string cdbName, GeotypicalModelLod geotypicalModelLod,
-        Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
-        CancellationToken cancellationToken)
-    {
-        return sqlDataStore.TrySelectFromGeotypicalModelLodAsync(selectFromGeotypicalModelLodCommand, cdbName, geotypicalModelLod,
-            fileFoundAsyncAction, cancellationToken);
-    }
-
-    /// <inheritdoc/>
     public Stream? SelectFromGeotypicalModelLod(string cdbName, GeotypicalModelLod geotypicalModelLod)
     {
         return sqlDataStore.SelectFromGeotypicalModelLod(selectFromGeotypicalModelLodCommand, cdbName, geotypicalModelLod);
@@ -573,23 +489,6 @@ public class PersistentConnection : ISQLDataStore
     #endregion
 
     #region Select
-
-    /// <inheritdoc/>
-    public bool TrySelectFromMovingModel(string cdbName, MovingModel movingModel,
-        Action<Stream> fileFoundAction)
-    {
-        return sqlDataStore.TrySelectFromMovingModel(selectFromMovingModelCommand, cdbName, movingModel,
-            fileFoundAction);
-    }
-
-    /// <inheritdoc/>
-    public Task<bool> TrySelectFromMovingModelAsync(string cdbName, MovingModel movingModel,
-        Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
-        CancellationToken cancellationToken)
-    {
-        return sqlDataStore.TrySelectFromMovingModelAsync(selectFromMovingModelCommand, cdbName, movingModel,
-            fileFoundAsyncAction, cancellationToken);
-    }
 
     /// <inheritdoc/>
     public Stream? SelectFromMovingModel(string cdbName, MovingModel movingModel)
@@ -646,22 +545,6 @@ public class PersistentConnection : ISQLDataStore
     #region Select
 
     /// <inheritdoc/>
-    public bool TrySelectFromMovingModelLod(string cdbName, MovingModelLod movingModelLod,
-        Action<Stream> fileFoundAction)
-    {
-        return sqlDataStore.TrySelectFromMovingModelLod(selectFromMovingModelLodCommand, cdbName, movingModelLod, fileFoundAction);
-    }
-
-    /// <inheritdoc/>
-    public Task<bool> TrySelectFromMovingModelLodAsync(string cdbName, MovingModelLod movingModelLod,
-        Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
-        CancellationToken cancellationToken)
-    {
-        return sqlDataStore.TrySelectFromMovingModelLodAsync(selectFromMovingModelLodCommand, cdbName, movingModelLod,
-            fileFoundAsyncAction, cancellationToken);
-    }
-
-    /// <inheritdoc/>
     public Stream? SelectFromMovingModelLod(string cdbName, MovingModelLod movingModelLod)
     {
         return sqlDataStore.SelectFromMovingModelLod(selectFromMovingModelLodCommand, cdbName, movingModelLod);
@@ -716,22 +599,6 @@ public class PersistentConnection : ISQLDataStore
     #region Select
 
     /// <inheritdoc/>
-    public bool TrySelectFromTile(string cdbName, Tile tile,
-        Action<Stream> fileFoundAction)
-    {
-        return sqlDataStore.TrySelectFromTile(selectFromTileCommand, cdbName, tile, fileFoundAction);
-    }
-
-    /// <inheritdoc/>
-    public Task<bool> TrySelectFromTileAsync(string cdbName, Tile tile,
-        Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
-        CancellationToken cancellationToken)
-    {
-        return sqlDataStore.TrySelectFromTileAsync(selectFromTileCommand, cdbName, tile, fileFoundAsyncAction,
-            cancellationToken);
-    }
-
-    /// <inheritdoc/>
     public Stream? SelectFromTile(string cdbName, Tile tile)
     {
         return sqlDataStore.SelectFromTile(selectFromTileCommand, cdbName, tile);
@@ -784,23 +651,6 @@ public class PersistentConnection : ISQLDataStore
     #endregion
 
     #region Select
-
-    /// <inheritdoc/>
-    public bool TrySelectFromTileArchivedFeature(string cdbName, TileArchivedFeature tileArchivedFeature,
-        Action<Stream> fileFoundAction)
-    {
-        return sqlDataStore.TrySelectFromTileArchivedFeature(selectFromTileArchivedFeatureCommand, cdbName, tileArchivedFeature,
-            fileFoundAction);
-    }
-
-    /// <inheritdoc/>
-    public Task<bool> TrySelectFromTileArchivedFeatureAsync(string cdbName, TileArchivedFeature tileArchivedFeature,
-        Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
-        CancellationToken cancellationToken)
-    {
-        return sqlDataStore.TrySelectFromTileArchivedFeatureAsync(selectFromTileArchivedFeatureCommand, cdbName, tileArchivedFeature,
-            fileFoundAsyncAction, cancellationToken);
-    }
 
     /// <inheritdoc/>
     public Stream? SelectFromTileArchivedFeature(string cdbName, TileArchivedFeature tileArchivedFeature)
@@ -859,23 +709,6 @@ public class PersistentConnection : ISQLDataStore
     #region Select
 
     /// <inheritdoc/>
-    public bool TrySelectFromTileArchivedTexture(string cdbName, TileArchivedTexture tileArchivedTexture,
-        Action<Stream> fileFoundAction)
-    {
-        return sqlDataStore.TrySelectFromTileArchivedTexture(selectFromTileArchivedTextureCommand, cdbName, tileArchivedTexture,
-            fileFoundAction);
-    }
-
-    /// <inheritdoc/>
-    public Task<bool> TrySelectFromTileArchivedTextureAsync(string cdbName, TileArchivedTexture tileArchivedTexture,
-        Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
-        CancellationToken cancellationToken)
-    {
-        return sqlDataStore.TrySelectFromTileArchivedTextureAsync(selectFromTileArchivedTextureCommand, cdbName, tileArchivedTexture,
-            fileFoundAsyncAction, cancellationToken);
-    }
-
-    /// <inheritdoc/>
     public Stream? SelectFromTileArchivedTexture(string cdbName, TileArchivedTexture tileArchivedTexture)
     {
         return sqlDataStore.SelectFromTileArchivedTexture(selectFromTileArchivedTextureCommand, cdbName, tileArchivedTexture);
@@ -928,24 +761,6 @@ public class PersistentConnection : ISQLDataStore
     #endregion
 
     #region Select
-
-    /// <inheritdoc/>
-    public bool TrySelectFromNavigation(string cdbName, Navigation navigation,
-        Action<Stream> fileFoundAction)
-    {
-        return sqlDataStore.TrySelectFromNavigation(selectFromNavigationCommand, cdbName, navigation,
-            fileFoundAction);
-    }
-
-    /// <inheritdoc/>
-    public Task<bool> TrySelectFromNavigationAsync(string cdbName, Navigation navigation,
-        Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
-        CancellationToken cancellationToken)
-    {
-        return sqlDataStore.TrySelectFromNavigationAsync(selectFromNavigationCommand, cdbName, navigation,
-            fileFoundAsyncAction,
-            cancellationToken);
-    }
 
     /// <inheritdoc/>
     public Stream? SelectFromNavigation(string cdbName, Navigation navigation)

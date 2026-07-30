@@ -334,44 +334,6 @@ public class FileSystemCDB : ICDB
         return ReadFileAsync(navigation, cancellationToken);
     }
 
-    /// <inheritdoc/>
-    public bool TryReadFile(string filePathAndName, Action<Stream> fileFoundAction)
-    {
-        FileInfo file = new(Path.Combine(CdbRoot.FullName, filePathAndName));
-        if (file.Exists)
-        {
-            logger.LogTrace("Found: {File}", file);
-            using DoubleBufferedStream doubleBufferedStream = new(new FileStream(file.FullName, fileStreamOptions));
-            fileFoundAction(doubleBufferedStream);
-            return true;
-        }
-        else
-        {
-            logger.LogTrace("Not found: {File}", file);
-            return false;
-        }
-    }
-
-    /// <inheritdoc/>
-    public async Task<bool> TryReadFileAsync(string filePathAndName,
-        Func<Stream, CancellationToken, Task> fileFoundAsyncAction,
-        CancellationToken cancellationToken)
-    {
-        FileInfo file = new(Path.Combine(CdbRoot.FullName, filePathAndName));
-        if (file.Exists)
-        {
-            logger.LogTrace("Found: {File}", file);
-            await using DoubleBufferedStream doubleBufferedStream = new(new FileStream(file.FullName, fileStreamOptions));
-            await fileFoundAsyncAction(doubleBufferedStream, cancellationToken);
-            return true;
-        }
-        else
-        {
-            logger.LogTrace("Not found: {File}", file);
-            return false;
-        }
-    }
-
     private void WriteFile(ICDBFileIdentifier identifier, Stream content)
     {
         string fullPath = Path.Combine(CdbRoot.FullName, identifier.RelativePath, identifier.Filename);
