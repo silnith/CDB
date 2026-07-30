@@ -658,7 +658,7 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     /// <inheritdoc/>
-    public int InsertIntoMetadata(string cdbName, Metadata metadata, Stream content)
+    public int WriteMetadata(string cdbName, Metadata metadata, Stream content)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
         using DbCommand insertIntoMetadataCommand = dbConnection.CreateCommand();
@@ -668,7 +668,7 @@ public abstract class SQLDataStore : ISQLDataStore
         return InsertIntoMetadata(insertIntoMetadataCommand, cdbName, metadata, content);
     }
 
-    /// <inheritdoc cref="ISQLDataStore.InsertIntoMetadata(string, Metadata, Stream)"/>
+    /// <inheritdoc cref="ISQLDataStore.WriteMetadata(string, Metadata, Stream)"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
@@ -717,7 +717,7 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     /// <inheritdoc/>
-    public async Task<int> InsertIntoMetadataAsync(string cdbName, Metadata metadata, Stream content,
+    public async Task<int> WriteMetadataAsync(string cdbName, Metadata metadata, Stream content,
         CancellationToken cancellationToken)
     {
         await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
@@ -729,7 +729,7 @@ public abstract class SQLDataStore : ISQLDataStore
             cancellationToken);
     }
 
-    /// <inheritdoc cref="ISQLDataStore.InsertIntoMetadataAsync(string, Metadata, Stream, CancellationToken)"/>
+    /// <inheritdoc cref="ISQLDataStore.WriteMetadataAsync(string, Metadata, Stream, CancellationToken)"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
@@ -779,7 +779,7 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     /// <inheritdoc/>
-    public Stream? SelectFromMetadata(string cdbName, Metadata metadata)
+    public Stream? ReadMetadata(string cdbName, Metadata metadata)
     {
         DbConnection dbConnection = dbDataSource.OpenConnection();
         try
@@ -815,7 +815,7 @@ public abstract class SQLDataStore : ISQLDataStore
         }
     }
 
-    /// <inheritdoc cref="ISQLDataStore.SelectFromMetadata(string, Metadata)"/>
+    /// <inheritdoc cref="ISQLDataStore.ReadMetadata(string, Metadata)"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
@@ -851,7 +851,7 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     /// <inheritdoc/>
-    public async Task<Stream?> SelectFromMetadataAsync(string cdbName, Metadata metadata,
+    public async Task<Stream?> ReadMetadataAsync(string cdbName, Metadata metadata,
         CancellationToken cancellationToken)
     {
         DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
@@ -888,7 +888,7 @@ public abstract class SQLDataStore : ISQLDataStore
         }
     }
 
-    /// <inheritdoc cref="ISQLDataStore.SelectFromMetadataAsync(string, Metadata, CancellationToken)"/>
+    /// <inheritdoc cref="ISQLDataStore.ReadMetadataAsync(string, Metadata, CancellationToken)"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
@@ -1015,7 +1015,7 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     /// <inheritdoc/>
-    public int InsertIntoTexture(string cdbName, Texture texture, Stream content)
+    public int WriteTexture(string cdbName, Texture texture, Stream content)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
         using DbCommand insertIntoTextureCommand = dbConnection.CreateCommand();
@@ -1025,7 +1025,7 @@ public abstract class SQLDataStore : ISQLDataStore
         return InsertIntoTexture(insertIntoTextureCommand, cdbName, texture, content);
     }
 
-    /// <inheritdoc cref="ISQLDataStore.InsertIntoTexture(string, Texture, Stream)"/>
+    /// <inheritdoc cref="ISQLDataStore.WriteTexture(string, Texture, Stream)"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
@@ -1074,7 +1074,7 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     /// <inheritdoc/>
-    public async Task<int> InsertIntoTextureAsync(string cdbName, Texture texture, Stream content,
+    public async Task<int> WriteTextureAsync(string cdbName, Texture texture, Stream content,
         CancellationToken cancellationToken)
     {
         await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
@@ -1086,7 +1086,7 @@ public abstract class SQLDataStore : ISQLDataStore
             cancellationToken);
     }
 
-    /// <inheritdoc cref="ISQLDataStore.InsertIntoTextureAsync(string, Texture, Stream, CancellationToken)"/>
+    /// <inheritdoc cref="ISQLDataStore.WriteTextureAsync(string, Texture, Stream, CancellationToken)"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
@@ -1139,7 +1139,7 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     /// <inheritdoc/>
-    public Stream? SelectFromTexture(string cdbName, Texture texture)
+    public Stream? ReadTexture(string cdbName, Texture texture)
     {
         DbConnection dbConnection = dbDataSource.OpenConnection();
         try
@@ -1175,7 +1175,7 @@ public abstract class SQLDataStore : ISQLDataStore
         }
     }
 
-    /// <inheritdoc cref="ISQLDataStore.SelectFromTexture(string, Texture)"/>
+    /// <inheritdoc cref="ISQLDataStore.ReadTexture(string, Texture)"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
@@ -1211,7 +1211,7 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     /// <inheritdoc/>
-    public async Task<Stream?> SelectFromTextureAsync(string cdbName, Texture texture,
+    public async Task<Stream?> ReadTextureAsync(string cdbName, Texture texture,
         CancellationToken cancellationToken)
     {
         DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
@@ -1248,7 +1248,7 @@ public abstract class SQLDataStore : ISQLDataStore
         }
     }
 
-    /// <inheritdoc cref="ISQLDataStore.SelectFromTextureAsync(string, Texture, CancellationToken)"/>
+    /// <inheritdoc cref="ISQLDataStore.ReadTextureAsync(string, Texture, CancellationToken)"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
@@ -1378,7 +1378,7 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     /// <inheritdoc/>
-    public int InsertIntoTextureLod(string cdbName, TextureLod textureLod, Stream content)
+    public int WriteTextureLevelOfDetail(string cdbName, TextureLod textureLod, Stream content)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
         using DbCommand insertIntoTextureLodCommand = dbConnection.CreateCommand();
@@ -1388,7 +1388,7 @@ public abstract class SQLDataStore : ISQLDataStore
         return InsertIntoTextureLod(insertIntoTextureLodCommand, cdbName, textureLod, content);
     }
 
-    /// <inheritdoc cref="ISQLDataStore.InsertIntoTextureLod(string, TextureLod, Stream)"/>
+    /// <inheritdoc cref="ISQLDataStore.WriteTextureLevelOfDetail(string, TextureLod, Stream)"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
@@ -1437,7 +1437,7 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     /// <inheritdoc/>
-    public async Task<int> InsertIntoTextureLodAsync(string cdbName, TextureLod textureLod, Stream content,
+    public async Task<int> WriteTextureLevelOfDetailAsync(string cdbName, TextureLod textureLod, Stream content,
         CancellationToken cancellationToken)
     {
         await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
@@ -1449,7 +1449,7 @@ public abstract class SQLDataStore : ISQLDataStore
             cancellationToken);
     }
 
-    /// <inheritdoc cref="ISQLDataStore.InsertIntoTextureLodAsync(string, TextureLod, Stream, CancellationToken)"/>
+    /// <inheritdoc cref="ISQLDataStore.WriteTextureLevelOfDetailAsync(string, TextureLod, Stream, CancellationToken)"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
@@ -1503,7 +1503,7 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     /// <inheritdoc/>
-    public Stream? SelectFromTextureLod(string cdbName, TextureLod textureLod)
+    public Stream? ReadTextureLevelOfDetail(string cdbName, TextureLod textureLod)
     {
         DbConnection dbConnection = dbDataSource.OpenConnection();
         try
@@ -1539,7 +1539,7 @@ public abstract class SQLDataStore : ISQLDataStore
         }
     }
 
-    /// <inheritdoc cref="ISQLDataStore.SelectFromTextureLod(string, TextureLod)"/>
+    /// <inheritdoc cref="ISQLDataStore.ReadTextureLevelOfDetail(string, TextureLod)"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
@@ -1575,7 +1575,7 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     /// <inheritdoc/>
-    public async Task<Stream?> SelectFromTextureLodAsync(string cdbName, TextureLod textureLod,
+    public async Task<Stream?> ReadTextureLevelOfDetailAsync(string cdbName, TextureLod textureLod,
         CancellationToken cancellationToken)
     {
         DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
@@ -1612,7 +1612,7 @@ public abstract class SQLDataStore : ISQLDataStore
         }
     }
 
-    /// <inheritdoc cref="ISQLDataStore.SelectFromTextureLodAsync(string, TextureLod, CancellationToken)"/>
+    /// <inheritdoc cref="ISQLDataStore.ReadTextureLevelOfDetailAsync(string, TextureLod, CancellationToken)"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
@@ -1751,7 +1751,7 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     /// <inheritdoc/>
-    public int InsertIntoGeotypicalModel(string cdbName, GeotypicalModel geotypicalModel, Stream content)
+    public int WriteGeotypicalModel(string cdbName, GeotypicalModel geotypicalModel, Stream content)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
         using DbCommand insertIntoGeotypicalModelCommand = dbConnection.CreateCommand();
@@ -1761,7 +1761,7 @@ public abstract class SQLDataStore : ISQLDataStore
         return InsertIntoGeotypicalModel(insertIntoGeotypicalModelCommand, cdbName, geotypicalModel, content);
     }
 
-    /// <inheritdoc cref="ISQLDataStore.InsertIntoGeotypicalModel(string, GeotypicalModel, Stream)"/>
+    /// <inheritdoc cref="ISQLDataStore.WriteGeotypicalModel(string, GeotypicalModel, Stream)"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
@@ -1810,7 +1810,7 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     /// <inheritdoc/>
-    public async Task<int> InsertIntoGeotypicalModelAsync(string cdbName, GeotypicalModel geotypicalModel, Stream content,
+    public async Task<int> WriteGeotypicalModelAsync(string cdbName, GeotypicalModel geotypicalModel, Stream content,
         CancellationToken cancellationToken)
     {
         await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
@@ -1822,7 +1822,7 @@ public abstract class SQLDataStore : ISQLDataStore
             cancellationToken);
     }
 
-    /// <inheritdoc cref="ISQLDataStore.InsertIntoGeotypicalModelAsync(string, GeotypicalModel, Stream, CancellationToken)"/>
+    /// <inheritdoc cref="ISQLDataStore.WriteGeotypicalModelAsync(string, GeotypicalModel, Stream, CancellationToken)"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
@@ -1879,7 +1879,7 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     /// <inheritdoc/>
-    public Stream? SelectFromGeotypicalModel(string cdbName, GeotypicalModel geotypicalModel)
+    public Stream? ReadGeotypicalModel(string cdbName, GeotypicalModel geotypicalModel)
     {
         DbConnection dbConnection = dbDataSource.OpenConnection();
         try
@@ -1915,7 +1915,7 @@ public abstract class SQLDataStore : ISQLDataStore
         }
     }
 
-    /// <inheritdoc cref="ISQLDataStore.SelectFromGeotypicalModel(string, GeotypicalModel)"/>
+    /// <inheritdoc cref="ISQLDataStore.ReadGeotypicalModel(string, GeotypicalModel)"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
@@ -1951,7 +1951,7 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     /// <inheritdoc/>
-    public async Task<Stream?> SelectFromGeotypicalModelAsync(string cdbName, GeotypicalModel geotypicalModel,
+    public async Task<Stream?> ReadGeotypicalModelAsync(string cdbName, GeotypicalModel geotypicalModel,
         CancellationToken cancellationToken)
     {
         DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
@@ -1988,7 +1988,7 @@ public abstract class SQLDataStore : ISQLDataStore
         }
     }
 
-    /// <inheritdoc cref="ISQLDataStore.SelectFromGeotypicalModelAsync(string, GeotypicalModel, CancellationToken)"/>
+    /// <inheritdoc cref="ISQLDataStore.ReadGeotypicalModelAsync(string, GeotypicalModel, CancellationToken)"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
@@ -2130,7 +2130,7 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     /// <inheritdoc/>
-    public int InsertIntoGeotypicalModelLod(string cdbName, GeotypicalModelLod geotypicalModelLod, Stream content)
+    public int WriteGeotypicalModelLevelOfDetail(string cdbName, GeotypicalModelLod geotypicalModelLod, Stream content)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
         using DbCommand insertIntoGeotypicalModelLodCommand = dbConnection.CreateCommand();
@@ -2140,7 +2140,7 @@ public abstract class SQLDataStore : ISQLDataStore
         return InsertIntoGeotypicalModelLod(insertIntoGeotypicalModelLodCommand, cdbName, geotypicalModelLod, content);
     }
 
-    /// <inheritdoc cref="ISQLDataStore.InsertIntoGeotypicalModelLod(string, GeotypicalModelLod, Stream)"/>
+    /// <inheritdoc cref="ISQLDataStore.WriteGeotypicalModelLevelOfDetail(string, GeotypicalModelLod, Stream)"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
@@ -2189,7 +2189,7 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     /// <inheritdoc/>
-    public async Task<int> InsertIntoGeotypicalModelLodAsync(string cdbName, GeotypicalModelLod geotypicalModelLod, Stream content,
+    public async Task<int> WriteGeotypicalModelLevelOfDetailAsync(string cdbName, GeotypicalModelLod geotypicalModelLod, Stream content,
         CancellationToken cancellationToken)
     {
         await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
@@ -2201,7 +2201,7 @@ public abstract class SQLDataStore : ISQLDataStore
             cancellationToken);
     }
 
-    /// <inheritdoc cref="ISQLDataStore.InsertIntoGeotypicalModelLodAsync(string, GeotypicalModelLod, Stream, CancellationToken)"/>
+    /// <inheritdoc cref="ISQLDataStore.WriteGeotypicalModelLevelOfDetailAsync(string, GeotypicalModelLod, Stream, CancellationToken)"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
@@ -2259,7 +2259,7 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     /// <inheritdoc/>
-    public Stream? SelectFromGeotypicalModelLod(string cdbName, GeotypicalModelLod geotypicalModelLod)
+    public Stream? ReadGeotypicalModelLevelOfDetail(string cdbName, GeotypicalModelLod geotypicalModelLod)
     {
         DbConnection dbConnection = dbDataSource.OpenConnection();
         try
@@ -2295,7 +2295,7 @@ public abstract class SQLDataStore : ISQLDataStore
         }
     }
 
-    /// <inheritdoc cref="ISQLDataStore.SelectFromGeotypicalModelLod(string, GeotypicalModelLod)"/>
+    /// <inheritdoc cref="ISQLDataStore.ReadGeotypicalModelLevelOfDetail(string, GeotypicalModelLod)"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
@@ -2331,7 +2331,7 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     /// <inheritdoc/>
-    public async Task<Stream?> SelectFromGeotypicalModelLodAsync(string cdbName, GeotypicalModelLod geotypicalModelLod,
+    public async Task<Stream?> ReadGeotypicalModelLevelOfDetailAsync(string cdbName, GeotypicalModelLod geotypicalModelLod,
         CancellationToken cancellationToken)
     {
         DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
@@ -2368,7 +2368,7 @@ public abstract class SQLDataStore : ISQLDataStore
         }
     }
 
-    /// <inheritdoc cref="ISQLDataStore.SelectFromGeotypicalModelLodAsync(string, GeotypicalModelLod, CancellationToken)"/>
+    /// <inheritdoc cref="ISQLDataStore.ReadGeotypicalModelLevelOfDetailAsync(string, GeotypicalModelLod, CancellationToken)"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
@@ -2513,7 +2513,7 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     /// <inheritdoc/>
-    public int InsertIntoMovingModel(string cdbName, MovingModel movingModel, Stream content)
+    public int WriteMovingModel(string cdbName, MovingModel movingModel, Stream content)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
         using DbCommand insertIntoMovingModelCommand = dbConnection.CreateCommand();
@@ -2523,7 +2523,7 @@ public abstract class SQLDataStore : ISQLDataStore
         return InsertIntoMovingModel(insertIntoMovingModelCommand, cdbName, movingModel, content);
     }
 
-    /// <inheritdoc cref="ISQLDataStore.InsertIntoMovingModel(string, MovingModel, Stream)"/>
+    /// <inheritdoc cref="ISQLDataStore.WriteMovingModel(string, MovingModel, Stream)"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
@@ -2572,7 +2572,7 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     /// <inheritdoc/>
-    public async Task<int> InsertIntoMovingModelAsync(string cdbName, MovingModel movingModel, Stream content,
+    public async Task<int> WriteMovingModelAsync(string cdbName, MovingModel movingModel, Stream content,
         CancellationToken cancellationToken)
     {
         await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
@@ -2584,7 +2584,7 @@ public abstract class SQLDataStore : ISQLDataStore
             cancellationToken);
     }
 
-    /// <inheritdoc cref="ISQLDataStore.InsertIntoMovingModelAsync(string, MovingModel, Stream, CancellationToken)"/>
+    /// <inheritdoc cref="ISQLDataStore.WriteMovingModelAsync(string, MovingModel, Stream, CancellationToken)"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
@@ -2643,7 +2643,7 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     /// <inheritdoc/>
-    public Stream? SelectFromMovingModel(string cdbName, MovingModel movingModel)
+    public Stream? ReadMovingModel(string cdbName, MovingModel movingModel)
     {
         DbConnection dbConnection = dbDataSource.OpenConnection();
         try
@@ -2679,7 +2679,7 @@ public abstract class SQLDataStore : ISQLDataStore
         }
     }
 
-    /// <inheritdoc cref="ISQLDataStore.SelectFromMovingModel(string, MovingModel)"/>
+    /// <inheritdoc cref="ISQLDataStore.ReadMovingModel(string, MovingModel)"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
@@ -2715,7 +2715,7 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     /// <inheritdoc/>
-    public async Task<Stream?> SelectFromMovingModelAsync(string cdbName, MovingModel movingModel,
+    public async Task<Stream?> ReadMovingModelAsync(string cdbName, MovingModel movingModel,
         CancellationToken cancellationToken)
     {
         DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
@@ -2752,7 +2752,7 @@ public abstract class SQLDataStore : ISQLDataStore
         }
     }
 
-    /// <inheritdoc cref="ISQLDataStore.SelectFromMovingModelAsync(string, MovingModel, CancellationToken)"/>
+    /// <inheritdoc cref="ISQLDataStore.ReadMovingModelAsync(string, MovingModel, CancellationToken)"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
@@ -2900,7 +2900,7 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     /// <inheritdoc/>
-    public int InsertIntoMovingModelLod(string cdbName, MovingModelLod movingModelLod, Stream content)
+    public int WriteMovingModelLevelOfDetail(string cdbName, MovingModelLod movingModelLod, Stream content)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
         using DbCommand insertIntoMovingModelLodCommand = dbConnection.CreateCommand();
@@ -2910,7 +2910,7 @@ public abstract class SQLDataStore : ISQLDataStore
         return InsertIntoMovingModelLod(insertIntoMovingModelLodCommand, cdbName, movingModelLod, content);
     }
 
-    /// <inheritdoc cref="ISQLDataStore.InsertIntoMovingModelLod(string, MovingModelLod, Stream)"/>
+    /// <inheritdoc cref="ISQLDataStore.WriteMovingModelLevelOfDetail(string, MovingModelLod, Stream)"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
@@ -2959,7 +2959,7 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     /// <inheritdoc/>
-    public async Task<int> InsertIntoMovingModelLodAsync(string cdbName, MovingModelLod movingModelLod, Stream content,
+    public async Task<int> WriteMovingModelLevelOfDetailAsync(string cdbName, MovingModelLod movingModelLod, Stream content,
         CancellationToken cancellationToken)
     {
         await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
@@ -2971,7 +2971,7 @@ public abstract class SQLDataStore : ISQLDataStore
             cancellationToken);
     }
 
-    /// <inheritdoc cref="ISQLDataStore.InsertIntoMovingModelLodAsync(string, MovingModelLod, Stream, CancellationToken)"/>
+    /// <inheritdoc cref="ISQLDataStore.WriteMovingModelLevelOfDetailAsync(string, MovingModelLod, Stream, CancellationToken)"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
@@ -3031,7 +3031,7 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     /// <inheritdoc/>
-    public Stream? SelectFromMovingModelLod(string cdbName, MovingModelLod movingModelLod)
+    public Stream? ReadMovingModelLevelOfDetail(string cdbName, MovingModelLod movingModelLod)
     {
         DbConnection dbConnection = dbDataSource.OpenConnection();
         try
@@ -3067,7 +3067,7 @@ public abstract class SQLDataStore : ISQLDataStore
         }
     }
 
-    /// <inheritdoc cref="ISQLDataStore.SelectFromMovingModelLod(string, MovingModelLod)"/>
+    /// <inheritdoc cref="ISQLDataStore.ReadMovingModelLevelOfDetail(string, MovingModelLod)"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
@@ -3103,7 +3103,7 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     /// <inheritdoc/>
-    public async Task<Stream?> SelectFromMovingModelLodAsync(string cdbName, MovingModelLod movingModelLod,
+    public async Task<Stream?> ReadMovingModelLevelOfDetailAsync(string cdbName, MovingModelLod movingModelLod,
         CancellationToken cancellationToken)
     {
         DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
@@ -3140,7 +3140,7 @@ public abstract class SQLDataStore : ISQLDataStore
         }
     }
 
-    /// <inheritdoc cref="ISQLDataStore.SelectFromMovingModelLodAsync(string, MovingModelLod, CancellationToken)"/>
+    /// <inheritdoc cref="ISQLDataStore.ReadMovingModelLevelOfDetailAsync(string, MovingModelLod, CancellationToken)"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
@@ -3279,7 +3279,7 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     /// <inheritdoc/>
-    public int InsertIntoTile(string cdbName, Tile tile, Stream content)
+    public int WriteTile(string cdbName, Tile tile, Stream content)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
         using DbCommand insertIntoTileCommand = dbConnection.CreateCommand();
@@ -3289,7 +3289,7 @@ public abstract class SQLDataStore : ISQLDataStore
         return InsertIntoTile(insertIntoTileCommand, cdbName, tile, content);
     }
 
-    /// <inheritdoc cref="ISQLDataStore.InsertIntoTile(string, Tile, Stream)"/>
+    /// <inheritdoc cref="ISQLDataStore.WriteTile(string, Tile, Stream)"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
@@ -3337,7 +3337,7 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     /// <inheritdoc/>
-    public async Task<int> InsertIntoTileAsync(string cdbName, Tile tile, Stream content,
+    public async Task<int> WriteTileAsync(string cdbName, Tile tile, Stream content,
         CancellationToken cancellationToken)
     {
         await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
@@ -3348,7 +3348,7 @@ public abstract class SQLDataStore : ISQLDataStore
         return await InsertIntoTileAsync(insertIntoTileCommand, cdbName, tile, content, cancellationToken);
     }
 
-    /// <inheritdoc cref="ISQLDataStore.InsertIntoTileAsync(string, Tile, Stream, CancellationToken)"/>
+    /// <inheritdoc cref="ISQLDataStore.WriteTileAsync(string, Tile, Stream, CancellationToken)"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
@@ -3405,7 +3405,7 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     /// <inheritdoc/>
-    public Stream? SelectFromTile(string cdbName, Tile tile)
+    public Stream? ReadTile(string cdbName, Tile tile)
     {
         DbConnection dbConnection = dbDataSource.OpenConnection();
         try
@@ -3441,7 +3441,7 @@ public abstract class SQLDataStore : ISQLDataStore
         }
     }
 
-    /// <inheritdoc cref="ISQLDataStore.SelectFromTile(string, Tile)"/>
+    /// <inheritdoc cref="ISQLDataStore.ReadTile(string, Tile)"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
@@ -3477,7 +3477,7 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     /// <inheritdoc/>
-    public async Task<Stream?> SelectFromTileAsync(string cdbName, Tile tile,
+    public async Task<Stream?> ReadTileAsync(string cdbName, Tile tile,
         CancellationToken cancellationToken)
     {
         DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
@@ -3514,7 +3514,7 @@ public abstract class SQLDataStore : ISQLDataStore
         }
     }
 
-    /// <inheritdoc cref="ISQLDataStore.SelectFromTileAsync(string, Tile, CancellationToken)"/>
+    /// <inheritdoc cref="ISQLDataStore.ReadTileAsync(string, Tile, CancellationToken)"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
@@ -3668,7 +3668,7 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     /// <inheritdoc/>
-    public int InsertIntoTileArchivedFeature(string cdbName, TileArchivedFeature tileArchivedFeature, Stream content)
+    public int WriteTileFeature(string cdbName, TileArchivedFeature tileArchivedFeature, Stream content)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
         using DbCommand insertIntoTileArchivedFeatureCommand = dbConnection.CreateCommand();
@@ -3678,7 +3678,7 @@ public abstract class SQLDataStore : ISQLDataStore
         return InsertIntoTileArchivedFeature(insertIntoTileArchivedFeatureCommand, cdbName, tileArchivedFeature, content);
     }
 
-    /// <inheritdoc cref="ISQLDataStore.InsertIntoTileArchivedFeature(string, TileArchivedFeature, Stream)"/>
+    /// <inheritdoc cref="ISQLDataStore.WriteTileFeature(string, TileArchivedFeature, Stream)"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
@@ -3727,7 +3727,7 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     /// <inheritdoc/>
-    public async Task<int> InsertIntoTileArchivedFeatureAsync(string cdbName, TileArchivedFeature tileArchivedFeature, Stream content,
+    public async Task<int> WriteTileFeatureAsync(string cdbName, TileArchivedFeature tileArchivedFeature, Stream content,
         CancellationToken cancellationToken)
     {
         await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
@@ -3739,7 +3739,7 @@ public abstract class SQLDataStore : ISQLDataStore
             cancellationToken);
     }
 
-    /// <inheritdoc cref="ISQLDataStore.InsertIntoTileArchivedFeatureAsync(string, TileArchivedFeature, Stream, CancellationToken)"/>
+    /// <inheritdoc cref="ISQLDataStore.WriteTileFeatureAsync(string, TileArchivedFeature, Stream, CancellationToken)"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
@@ -3801,7 +3801,7 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     /// <inheritdoc/>
-    public Stream? SelectFromTileArchivedFeature(string cdbName, TileArchivedFeature tileArchivedFeature)
+    public Stream? ReadTileFeature(string cdbName, TileArchivedFeature tileArchivedFeature)
     {
         DbConnection dbConnection = dbDataSource.OpenConnection();
         try
@@ -3837,7 +3837,7 @@ public abstract class SQLDataStore : ISQLDataStore
         }
     }
 
-    /// <inheritdoc cref="ISQLDataStore.SelectFromTileArchivedFeature(string, TileArchivedFeature)"/>
+    /// <inheritdoc cref="ISQLDataStore.ReadTileFeature(string, TileArchivedFeature)"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
@@ -3873,7 +3873,7 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     /// <inheritdoc/>
-    public async Task<Stream?> SelectFromTileArchivedFeatureAsync(string cdbName, TileArchivedFeature tileArchivedFeature,
+    public async Task<Stream?> ReadTileFeatureAsync(string cdbName, TileArchivedFeature tileArchivedFeature,
         CancellationToken cancellationToken)
     {
         DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
@@ -3910,7 +3910,7 @@ public abstract class SQLDataStore : ISQLDataStore
         }
     }
 
-    /// <inheritdoc cref="ISQLDataStore.SelectFromTileArchivedFeatureAsync(string, TileArchivedFeature, CancellationToken)"/>
+    /// <inheritdoc cref="ISQLDataStore.ReadTileFeatureAsync(string, TileArchivedFeature, CancellationToken)"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
@@ -4052,7 +4052,7 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     /// <inheritdoc/>
-    public int InsertIntoTileArchivedTexture(string cdbName, TileArchivedTexture tileArchivedTexture, Stream content)
+    public int WriteTileTexture(string cdbName, TileArchivedTexture tileArchivedTexture, Stream content)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
         using DbCommand insertIntoTileArchivedTextureCommand = dbConnection.CreateCommand();
@@ -4062,7 +4062,7 @@ public abstract class SQLDataStore : ISQLDataStore
         return InsertIntoTileArchivedTexture(insertIntoTileArchivedTextureCommand, cdbName, tileArchivedTexture, content);
     }
 
-    /// <inheritdoc cref="ISQLDataStore.InsertIntoTileArchivedTextureAsync(string, TileArchivedTexture, Stream, CancellationToken)"/>
+    /// <inheritdoc cref="ISQLDataStore.WriteTileTextureAsync(string, TileArchivedTexture, Stream, CancellationToken)"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
@@ -4111,7 +4111,7 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     /// <inheritdoc/>
-    public async Task<int> InsertIntoTileArchivedTextureAsync(string cdbName, TileArchivedTexture tileArchivedTexture, Stream content,
+    public async Task<int> WriteTileTextureAsync(string cdbName, TileArchivedTexture tileArchivedTexture, Stream content,
         CancellationToken cancellationToken)
     {
         await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
@@ -4123,7 +4123,7 @@ public abstract class SQLDataStore : ISQLDataStore
             cancellationToken);
     }
 
-    /// <inheritdoc cref="ISQLDataStore.InsertIntoTileArchivedTextureAsync(string, TileArchivedTexture, Stream, CancellationToken)"/>
+    /// <inheritdoc cref="ISQLDataStore.WriteTileTextureAsync(string, TileArchivedTexture, Stream, CancellationToken)"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
@@ -4181,7 +4181,7 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     /// <inheritdoc/>
-    public Stream? SelectFromTileArchivedTexture(string cdbName, TileArchivedTexture tileArchivedTexture)
+    public Stream? ReadTileTexture(string cdbName, TileArchivedTexture tileArchivedTexture)
     {
         DbConnection dbConnection = dbDataSource.OpenConnection();
         try
@@ -4217,7 +4217,7 @@ public abstract class SQLDataStore : ISQLDataStore
         }
     }
 
-    /// <inheritdoc cref="ISQLDataStore.SelectFromTileArchivedTexture(string, TileArchivedTexture)"/>
+    /// <inheritdoc cref="ISQLDataStore.ReadTileTexture(string, TileArchivedTexture)"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
@@ -4253,7 +4253,7 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     /// <inheritdoc/>
-    public async Task<Stream?> SelectFromTileArchivedTextureAsync(string cdbName, TileArchivedTexture tileArchivedTexture,
+    public async Task<Stream?> ReadTileTextureAsync(string cdbName, TileArchivedTexture tileArchivedTexture,
         CancellationToken cancellationToken)
     {
         DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
@@ -4290,7 +4290,7 @@ public abstract class SQLDataStore : ISQLDataStore
         }
     }
 
-    /// <inheritdoc cref="ISQLDataStore.SelectFromTileArchivedTextureAsync(string, TileArchivedTexture, CancellationToken)"/>
+    /// <inheritdoc cref="ISQLDataStore.ReadTileTextureAsync(string, TileArchivedTexture, CancellationToken)"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
@@ -4415,7 +4415,7 @@ public abstract class SQLDataStore : ISQLDataStore
 
 
     /// <inheritdoc/>
-    public int InsertIntoNavigation(string cdbName, Navigation navigation, Stream content)
+    public int WriteNavigation(string cdbName, Navigation navigation, Stream content)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
         using DbCommand insertIntoNavigationCommand = dbConnection.CreateCommand();
@@ -4425,7 +4425,7 @@ public abstract class SQLDataStore : ISQLDataStore
         return InsertIntoNavigation(insertIntoNavigationCommand, cdbName, navigation, content);
     }
 
-    /// <inheritdoc cref="ISQLDataStore.InsertIntoNavigation(string, Navigation, Stream)"/>
+    /// <inheritdoc cref="ISQLDataStore.WriteNavigation(string, Navigation, Stream)"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
@@ -4473,7 +4473,7 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     /// <inheritdoc/>
-    public async Task<int> InsertIntoNavigationAsync(string cdbName, Navigation navigation, Stream content,
+    public async Task<int> WriteNavigationAsync(string cdbName, Navigation navigation, Stream content,
         CancellationToken cancellationToken)
     {
         await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
@@ -4484,7 +4484,7 @@ public abstract class SQLDataStore : ISQLDataStore
         return await InsertIntoNavigationAsync(insertIntoNavigationCommand, cdbName, navigation, content, cancellationToken);
     }
 
-    /// <inheritdoc cref="ISQLDataStore.InsertIntoNavigationAsync(string, Navigation, Stream, CancellationToken)"/>
+    /// <inheritdoc cref="ISQLDataStore.WriteNavigationAsync(string, Navigation, Stream, CancellationToken)"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
@@ -4536,7 +4536,7 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     /// <inheritdoc/>
-    public Stream? SelectFromNavigation(string cdbName, Navigation navigation)
+    public Stream? ReadNavigation(string cdbName, Navigation navigation)
     {
         DbConnection dbConnection = dbDataSource.OpenConnection();
         try
@@ -4572,7 +4572,7 @@ public abstract class SQLDataStore : ISQLDataStore
         }
     }
 
-    /// <inheritdoc cref="ISQLDataStore.SelectFromNavigation(string, Navigation)"/>
+    /// <inheritdoc cref="ISQLDataStore.ReadNavigation(string, Navigation)"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
@@ -4608,7 +4608,7 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     /// <inheritdoc/>
-    public async Task<Stream?> SelectFromNavigationAsync(string cdbName, Navigation navigation,
+    public async Task<Stream?> ReadNavigationAsync(string cdbName, Navigation navigation,
         CancellationToken cancellationToken)
     {
         DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
@@ -4645,7 +4645,7 @@ public abstract class SQLDataStore : ISQLDataStore
         }
     }
 
-    /// <inheritdoc cref="ISQLDataStore.SelectFromNavigationAsync(string, Navigation, CancellationToken)"/>
+    /// <inheritdoc cref="ISQLDataStore.ReadNavigationAsync(string, Navigation, CancellationToken)"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
