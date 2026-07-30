@@ -95,7 +95,7 @@ public interface ISQLDataStore : IDisposable, IAsyncDisposable
     /// <param name="metadata">The metadata identifier.</param>
     /// <param name="content">The file contents.</param>
     /// <returns>The number of rows affected.</returns>
-    public int InsertIntoMetadata(Metadata metadata, byte[] content);
+    public int WriteMetadata(Metadata metadata, byte[] content);
 
     /// <summary>
     /// Inserts a metadata file into the database.
@@ -112,7 +112,7 @@ public interface ISQLDataStore : IDisposable, IAsyncDisposable
     /// <param name="content">The file contents.</param>
     /// <param name="cancellationToken">A cancellation token.</param>
     /// <returns>The number of rows affected.</returns>
-    public Task<int> InsertIntoMetadataAsync(Metadata metadata, byte[] content, CancellationToken cancellationToken = default);
+    public Task<int> WriteMetadataAsync(Metadata metadata, byte[] content, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Inserts a metadata file into the database.
@@ -156,7 +156,7 @@ public interface ISQLDataStore : IDisposable, IAsyncDisposable
     /// <param name="texture">The texture identifier.</param>
     /// <param name="content">The file contents.</param>
     /// <returns>The number of rows affected.</returns>
-    public int InsertIntoTexture(Texture texture, byte[] content);
+    public int WriteTexture(Texture texture, byte[] content);
 
     /// <summary>
     /// Inserts a texture file into the database.
@@ -173,7 +173,7 @@ public interface ISQLDataStore : IDisposable, IAsyncDisposable
     /// <param name="content">The file contents.</param>
     /// <param name="cancellationToken">A cancellation token.</param>
     /// <returns>The number of rows affected.</returns>
-    public Task<int> InsertIntoTextureAsync(Texture texture, byte[] content, CancellationToken cancellationToken = default);
+    public Task<int> WriteTextureAsync(Texture texture, byte[] content, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Inserts a texture file into the database.
@@ -218,7 +218,7 @@ public interface ISQLDataStore : IDisposable, IAsyncDisposable
     /// <param name="textureLod">The texture mipmap identifier.</param>
     /// <param name="content">The file contents.</param>
     /// <returns>The number of rows affected.</returns>
-    public int InsertIntoTextureLod(TextureLod textureLod, byte[] content);
+    public int WriteTextureLevelOfDetail(TextureLod textureLod, byte[] content);
 
     /// <summary>
     /// Inserts a texture mipmap file into the database.
@@ -235,7 +235,7 @@ public interface ISQLDataStore : IDisposable, IAsyncDisposable
     /// <param name="content">The file contents.</param>
     /// <param name="cancellationToken">A cancellation token.</param>
     /// <returns>The number of rows affected.</returns>
-    public Task<int> InsertIntoTextureLodAsync(TextureLod textureLod, byte[] content, CancellationToken cancellationToken = default);
+    public Task<int> WriteTextureLevelOfDetailAsync(TextureLod textureLod, byte[] content, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Inserts a texture mipmap file into the database.
@@ -279,7 +279,7 @@ public interface ISQLDataStore : IDisposable, IAsyncDisposable
     /// <param name="geotypicalModel">The geotypical model identifier.</param>
     /// <param name="content">The file contents.</param>
     /// <returns>The number of rows affected.</returns>
-    public int InsertIntoGeotypicalModel(GeotypicalModel geotypicalModel, byte[] content);
+    public int WriteGeotypicalModel(GeotypicalModel geotypicalModel, byte[] content);
 
     /// <summary>
     /// Inserts a geotypical model file into the database.
@@ -296,7 +296,7 @@ public interface ISQLDataStore : IDisposable, IAsyncDisposable
     /// <param name="content">The file contents.</param>
     /// <param name="cancellationToken">A cancellation token.</param>
     /// <returns>The number of rows affected.</returns>
-    public Task<int> InsertIntoGeotypicalModelAsync(GeotypicalModel geotypicalModel, byte[] content, CancellationToken cancellationToken = default);
+    public Task<int> WriteGeotypicalModelAsync(GeotypicalModel geotypicalModel, byte[] content, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Inserts a geotypical model file into the database.
@@ -340,7 +340,7 @@ public interface ISQLDataStore : IDisposable, IAsyncDisposable
     /// <param name="geotypicalModelLod">The geotypical model level of detail identifier.</param>
     /// <param name="content">The file contents.</param>
     /// <returns>The number of rows affected.</returns>
-    public int InsertIntoGeotypicalModelLod(GeotypicalModelLod geotypicalModelLod, byte[] content);
+    public int WriteGeotypicalModelLevelOfDetail(GeotypicalModelLod geotypicalModelLod, byte[] content);
 
     /// <summary>
     /// Inserts a geotypical model level of detail file into the database.
@@ -357,7 +357,7 @@ public interface ISQLDataStore : IDisposable, IAsyncDisposable
     /// <param name="content">The file contents.</param>
     /// <param name="cancellationToken">A cancellation token.</param>
     /// <returns>The number of rows affected.</returns>
-    public Task<int> InsertIntoGeotypicalModelLodAsync(GeotypicalModelLod geotypicalModelLod, byte[] content, CancellationToken cancellationToken = default);
+    public Task<int> WriteGeotypicalModelLevelOfDetailAsync(GeotypicalModelLod geotypicalModelLod, byte[] content, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Inserts a geotypical model level of detail file into the database.
@@ -401,7 +401,7 @@ public interface ISQLDataStore : IDisposable, IAsyncDisposable
     /// <param name="movingModel">The moving model identifier.</param>
     /// <param name="content">The file contents.</param>
     /// <returns>The number of rows affected.</returns>
-    public int InsertIntoMovingModel(MovingModel movingModel, byte[] content);
+    public int WriteMovingModel(MovingModel movingModel, byte[] content);
 
     /// <summary>
     /// Inserts a moving model file into the database.
@@ -418,7 +418,7 @@ public interface ISQLDataStore : IDisposable, IAsyncDisposable
     /// <param name="content">The file contents.</param>
     /// <param name="cancellationToken">A cancellation token.</param>
     /// <returns>The number of rows affected.</returns>
-    public Task<int> InsertIntoMovingModelAsync(MovingModel movingModel, byte[] content, CancellationToken cancellationToken = default);
+    public Task<int> WriteMovingModelAsync(MovingModel movingModel, byte[] content, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Inserts a moving model file into the database.
@@ -462,7 +462,7 @@ public interface ISQLDataStore : IDisposable, IAsyncDisposable
     /// <param name="movingModelLod">The moving model level of detail identifier.</param>
     /// <param name="content">The file contents.</param>
     /// <returns>The number of rows affected.</returns>
-    public int InsertIntoMovingModelLod(MovingModelLod movingModelLod, byte[] content);
+    public int WriteMovingModelLevelOfDetail(MovingModelLod movingModelLod, byte[] content);
 
     /// <summary>
     /// Inserts a moving model level of detail file into the database.
@@ -479,7 +479,7 @@ public interface ISQLDataStore : IDisposable, IAsyncDisposable
     /// <param name="content">The file contents.</param>
     /// <param name="cancellationToken">A cancellation token.</param>
     /// <returns>The number of rows affected.</returns>
-    public Task<int> InsertIntoMovingModelLodAsync(MovingModelLod movingModelLod, byte[] content, CancellationToken cancellationToken = default);
+    public Task<int> WriteMovingModelLevelOfDetailAsync(MovingModelLod movingModelLod, byte[] content, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Inserts a moving model level of detail file into the database.
@@ -523,7 +523,7 @@ public interface ISQLDataStore : IDisposable, IAsyncDisposable
     /// <param name="tile">The tile identifier.</param>
     /// <param name="content">The file contents.</param>
     /// <returns>The number of rows affected.</returns>
-    public int InsertIntoTile(Tile tile, byte[] content);
+    public int WriteTile(Tile tile, byte[] content);
 
     /// <summary>
     /// Inserts a tiled dataset file into the database.
@@ -540,7 +540,7 @@ public interface ISQLDataStore : IDisposable, IAsyncDisposable
     /// <param name="content">The file contents.</param>
     /// <param name="cancellationToken">A cancellation token.</param>
     /// <returns>The number of rows affected.</returns>
-    public Task<int> InsertIntoTileAsync(Tile tile, byte[] content, CancellationToken cancellationToken = default);
+    public Task<int> WriteTileAsync(Tile tile, byte[] content, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Inserts a tiled dataset file into the database.
@@ -584,7 +584,7 @@ public interface ISQLDataStore : IDisposable, IAsyncDisposable
     /// <param name="tileArchivedFeature">The un-archived tiled dataset feature identifier.</param>
     /// <param name="content">The file contents.</param>
     /// <returns>The number of rows affected.</returns>
-    public int InsertIntoTileArchivedFeature(TileArchivedFeature tileArchivedFeature, byte[] content);
+    public int WriteTileFeature(TileArchivedFeature tileArchivedFeature, byte[] content);
 
     /// <summary>
     /// Inserts an un-archived tiled dataset feature file into the database.
@@ -601,7 +601,7 @@ public interface ISQLDataStore : IDisposable, IAsyncDisposable
     /// <param name="content">The file contents.</param>
     /// <param name="cancellationToken">A cancellation token.</param>
     /// <returns>The number of rows affected.</returns>
-    public Task<int> InsertIntoTileArchivedFeatureAsync(TileArchivedFeature tileArchivedFeature, byte[] content, CancellationToken cancellationToken = default);
+    public Task<int> WriteTileFeatureAsync(TileArchivedFeature tileArchivedFeature, byte[] content, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Inserts an un-archived tiled dataset feature file into the database.
@@ -645,7 +645,7 @@ public interface ISQLDataStore : IDisposable, IAsyncDisposable
     /// <param name="tileArchivedTexture">The un-archived tiled dataset texture identifier.</param>
     /// <param name="content">The file contents.</param>
     /// <returns>The number of rows affected.</returns>
-    public int InsertIntoTileArchivedTexture(TileArchivedTexture tileArchivedTexture, byte[] content);
+    public int WriteTileTexture(TileArchivedTexture tileArchivedTexture, byte[] content);
 
     /// <summary>
     /// Inserts an un-archived tiled dataset texture file into the database.
@@ -662,7 +662,7 @@ public interface ISQLDataStore : IDisposable, IAsyncDisposable
     /// <param name="content">The file contents.</param>
     /// <param name="cancellationToken">A cancellation token.</param>
     /// <returns>The number of rows affected.</returns>
-    public Task<int> InsertIntoTileArchivedTextureAsync(TileArchivedTexture tileArchivedTexture, byte[] content, CancellationToken cancellationToken = default);
+    public Task<int> WriteTileTextureAsync(TileArchivedTexture tileArchivedTexture, byte[] content, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Inserts an un-archived tiled dataset texture file into the database.
@@ -706,7 +706,7 @@ public interface ISQLDataStore : IDisposable, IAsyncDisposable
     /// <param name="navigation">The navigation identifier.</param>
     /// <param name="content">The file contents.</param>
     /// <returns>The number of rows affected.</returns>
-    public int InsertIntoNavigation(Navigation navigation, byte[] content);
+    public int WriteNavigation(Navigation navigation, byte[] content);
 
     /// <summary>
     /// Inserts a navigation file into the database.
@@ -723,7 +723,7 @@ public interface ISQLDataStore : IDisposable, IAsyncDisposable
     /// <param name="content">The file contents.</param>
     /// <param name="cancellationToken">A cancellation token.</param>
     /// <returns>The number of rows affected.</returns>
-    public Task<int> InsertIntoNavigationAsync(Navigation navigation, byte[] content, CancellationToken cancellationToken = default);
+    public Task<int> WriteNavigationAsync(Navigation navigation, byte[] content, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Inserts a navigation file into the database.

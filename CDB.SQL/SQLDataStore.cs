@@ -637,7 +637,7 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     /// <inheritdoc/>
-    public int InsertIntoMetadata(Metadata metadata, byte[] content)
+    public int WriteMetadata(Metadata metadata, byte[] content)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
         using DbCommand insertIntoMetadataCommand = dbConnection.CreateCommand();
@@ -647,7 +647,7 @@ public abstract class SQLDataStore : ISQLDataStore
         return InsertIntoMetadata(insertIntoMetadataCommand, metadata, content);
     }
 
-    /// <inheritdoc cref="ISQLDataStore.InsertIntoMetadata(Metadata, byte[])"/>
+    /// <inheritdoc cref="ISQLDataStore.WriteMetadata(Metadata, byte[])"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
@@ -693,7 +693,7 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     /// <inheritdoc/>
-    public async Task<int> InsertIntoMetadataAsync(Metadata metadata, byte[] content, CancellationToken cancellationToken)
+    public async Task<int> WriteMetadataAsync(Metadata metadata, byte[] content, CancellationToken cancellationToken)
     {
         await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
         await using DbCommand insertIntoMetadataCommand = dbConnection.CreateCommand();
@@ -703,7 +703,7 @@ public abstract class SQLDataStore : ISQLDataStore
         return await InsertIntoMetadataAsync(insertIntoMetadataCommand, metadata, content, cancellationToken);
     }
 
-    /// <inheritdoc cref="ISQLDataStore.InsertIntoMetadataAsync(Metadata, byte[], CancellationToken)"/>
+    /// <inheritdoc cref="ISQLDataStore.WriteMetadataAsync(Metadata, byte[], CancellationToken)"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
@@ -986,7 +986,7 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     /// <inheritdoc/>
-    public int InsertIntoTexture(Texture texture, byte[] content)
+    public int WriteTexture(Texture texture, byte[] content)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
         using DbCommand insertIntoTextureCommand = dbConnection.CreateCommand();
@@ -996,7 +996,7 @@ public abstract class SQLDataStore : ISQLDataStore
         return InsertIntoTexture(insertIntoTextureCommand, texture, content);
     }
 
-    /// <inheritdoc cref="ISQLDataStore.InsertIntoTexture(Texture, byte[])"/>
+    /// <inheritdoc cref="ISQLDataStore.WriteTexture(Texture, byte[])"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
@@ -1042,7 +1042,7 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     /// <inheritdoc/>
-    public async Task<int> InsertIntoTextureAsync(Texture texture, byte[] content, CancellationToken cancellationToken)
+    public async Task<int> WriteTextureAsync(Texture texture, byte[] content, CancellationToken cancellationToken)
     {
         await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
         await using DbCommand insertIntoTextureCommand = dbConnection.CreateCommand();
@@ -1052,7 +1052,7 @@ public abstract class SQLDataStore : ISQLDataStore
         return await InsertIntoTextureAsync(insertIntoTextureCommand, texture, content, cancellationToken);
     }
 
-    /// <inheritdoc cref="ISQLDataStore.InsertIntoTextureAsync(Texture, byte[], CancellationToken)"/>
+    /// <inheritdoc cref="ISQLDataStore.WriteTextureAsync(Texture, byte[], CancellationToken)"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
@@ -1341,7 +1341,7 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     /// <inheritdoc/>
-    public int InsertIntoTextureLod(TextureLod textureLod, byte[] content)
+    public int WriteTextureLevelOfDetail(TextureLod textureLod, byte[] content)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
         using DbCommand insertIntoTextureLodCommand = dbConnection.CreateCommand();
@@ -1351,7 +1351,7 @@ public abstract class SQLDataStore : ISQLDataStore
         return InsertIntoTextureLod(insertIntoTextureLodCommand, textureLod, content);
     }
 
-    /// <inheritdoc cref="ISQLDataStore.InsertIntoTextureLod(TextureLod, byte[])"/>
+    /// <inheritdoc cref="ISQLDataStore.WriteTextureLevelOfDetail(TextureLod, byte[])"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
@@ -1397,7 +1397,7 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     /// <inheritdoc/>
-    public async Task<int> InsertIntoTextureLodAsync(TextureLod textureLod, byte[] content, CancellationToken cancellationToken)
+    public async Task<int> WriteTextureLevelOfDetailAsync(TextureLod textureLod, byte[] content, CancellationToken cancellationToken)
     {
         await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
         await using DbCommand insertIntoTextureLodCommand = dbConnection.CreateCommand();
@@ -1407,7 +1407,7 @@ public abstract class SQLDataStore : ISQLDataStore
         return await InsertIntoTextureLodAsync(insertIntoTextureLodCommand, textureLod, content, cancellationToken);
     }
 
-    /// <inheritdoc cref="ISQLDataStore.InsertIntoTextureLodAsync(TextureLod, byte[], CancellationToken)"/>
+    /// <inheritdoc cref="ISQLDataStore.WriteTextureLevelOfDetailAsync(TextureLod, byte[], CancellationToken)"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
@@ -1706,7 +1706,7 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     /// <inheritdoc/>
-    public int InsertIntoGeotypicalModel(GeotypicalModel geotypicalModel, byte[] content)
+    public int WriteGeotypicalModel(GeotypicalModel geotypicalModel, byte[] content)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
         using DbCommand insertIntoGeotypicalModelCommand = dbConnection.CreateCommand();
@@ -1716,7 +1716,7 @@ public abstract class SQLDataStore : ISQLDataStore
         return InsertIntoGeotypicalModel(insertIntoGeotypicalModelCommand, geotypicalModel, content);
     }
 
-    /// <inheritdoc cref="ISQLDataStore.InsertIntoGeotypicalModel(GeotypicalModel, byte[])"/>
+    /// <inheritdoc cref="ISQLDataStore.WriteGeotypicalModel(GeotypicalModel, byte[])"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
@@ -1762,7 +1762,7 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     /// <inheritdoc/>
-    public async Task<int> InsertIntoGeotypicalModelAsync(GeotypicalModel geotypicalModel, byte[] content, CancellationToken cancellationToken)
+    public async Task<int> WriteGeotypicalModelAsync(GeotypicalModel geotypicalModel, byte[] content, CancellationToken cancellationToken)
     {
         await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
         await using DbCommand insertIntoGeotypicalModelCommand = dbConnection.CreateCommand();
@@ -1772,7 +1772,7 @@ public abstract class SQLDataStore : ISQLDataStore
         return await InsertIntoGeotypicalModelAsync(insertIntoGeotypicalModelCommand, geotypicalModel, content, cancellationToken);
     }
 
-    /// <inheritdoc cref="ISQLDataStore.InsertIntoGeotypicalModelAsync(GeotypicalModel, byte[], CancellationToken)"/>
+    /// <inheritdoc cref="ISQLDataStore.WriteGeotypicalModelAsync(GeotypicalModel, byte[], CancellationToken)"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
@@ -2077,7 +2077,7 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     /// <inheritdoc/>
-    public int InsertIntoGeotypicalModelLod(GeotypicalModelLod geotypicalModelLod, byte[] content)
+    public int WriteGeotypicalModelLevelOfDetail(GeotypicalModelLod geotypicalModelLod, byte[] content)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
         using DbCommand insertIntoGeotypicalModelLodCommand = dbConnection.CreateCommand();
@@ -2087,7 +2087,7 @@ public abstract class SQLDataStore : ISQLDataStore
         return InsertIntoGeotypicalModelLod(insertIntoGeotypicalModelLodCommand, geotypicalModelLod, content);
     }
 
-    /// <inheritdoc cref="ISQLDataStore.InsertIntoGeotypicalModelLod(GeotypicalModelLod, byte[])"/>
+    /// <inheritdoc cref="ISQLDataStore.WriteGeotypicalModelLevelOfDetail(GeotypicalModelLod, byte[])"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
@@ -2133,7 +2133,7 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     /// <inheritdoc/>
-    public async Task<int> InsertIntoGeotypicalModelLodAsync(GeotypicalModelLod geotypicalModelLod, byte[] content, CancellationToken cancellationToken)
+    public async Task<int> WriteGeotypicalModelLevelOfDetailAsync(GeotypicalModelLod geotypicalModelLod, byte[] content, CancellationToken cancellationToken)
     {
         await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
         await using DbCommand insertIntoGeotypicalModelLodCommand = dbConnection.CreateCommand();
@@ -2143,7 +2143,7 @@ public abstract class SQLDataStore : ISQLDataStore
         return await InsertIntoGeotypicalModelLodAsync(insertIntoGeotypicalModelLodCommand, geotypicalModelLod, content, cancellationToken);
     }
 
-    /// <inheritdoc cref="ISQLDataStore.InsertIntoGeotypicalModelLodAsync(GeotypicalModelLod, byte[], CancellationToken)"/>
+    /// <inheritdoc cref="ISQLDataStore.WriteGeotypicalModelLevelOfDetailAsync(GeotypicalModelLod, byte[], CancellationToken)"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
@@ -2452,7 +2452,7 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     /// <inheritdoc/>
-    public int InsertIntoMovingModel(MovingModel movingModel, byte[] content)
+    public int WriteMovingModel(MovingModel movingModel, byte[] content)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
         using DbCommand insertIntoMovingModelCommand = dbConnection.CreateCommand();
@@ -2462,7 +2462,7 @@ public abstract class SQLDataStore : ISQLDataStore
         return InsertIntoMovingModel(insertIntoMovingModelCommand, movingModel, content);
     }
 
-    /// <inheritdoc cref="ISQLDataStore.InsertIntoMovingModel(MovingModel, byte[])"/>
+    /// <inheritdoc cref="ISQLDataStore.WriteMovingModel(MovingModel, byte[])"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
@@ -2508,7 +2508,7 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     /// <inheritdoc/>
-    public async Task<int> InsertIntoMovingModelAsync(MovingModel movingModel, byte[] content, CancellationToken cancellationToken)
+    public async Task<int> WriteMovingModelAsync(MovingModel movingModel, byte[] content, CancellationToken cancellationToken)
     {
         await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
         await using DbCommand insertIntoMovingModelCommand = dbConnection.CreateCommand();
@@ -2518,7 +2518,7 @@ public abstract class SQLDataStore : ISQLDataStore
         return await InsertIntoMovingModelAsync(insertIntoMovingModelCommand, movingModel, content, cancellationToken);
     }
 
-    /// <inheritdoc cref="ISQLDataStore.InsertIntoMovingModelAsync(MovingModel, byte[], CancellationToken)"/>
+    /// <inheritdoc cref="ISQLDataStore.WriteMovingModelAsync(MovingModel, byte[], CancellationToken)"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
@@ -2831,7 +2831,7 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     /// <inheritdoc/>
-    public int InsertIntoMovingModelLod(MovingModelLod movingModelLod, byte[] content)
+    public int WriteMovingModelLevelOfDetail(MovingModelLod movingModelLod, byte[] content)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
         using DbCommand insertIntoMovingModelLodCommand = dbConnection.CreateCommand();
@@ -2841,7 +2841,7 @@ public abstract class SQLDataStore : ISQLDataStore
         return InsertIntoMovingModelLod(insertIntoMovingModelLodCommand, movingModelLod, content);
     }
 
-    /// <inheritdoc cref="ISQLDataStore.InsertIntoMovingModelLod(MovingModelLod, byte[])"/>
+    /// <inheritdoc cref="ISQLDataStore.WriteMovingModelLevelOfDetail(MovingModelLod, byte[])"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
@@ -2887,7 +2887,7 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     /// <inheritdoc/>
-    public async Task<int> InsertIntoMovingModelLodAsync(MovingModelLod movingModelLod, byte[] content, CancellationToken cancellationToken)
+    public async Task<int> WriteMovingModelLevelOfDetailAsync(MovingModelLod movingModelLod, byte[] content, CancellationToken cancellationToken)
     {
         await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
         await using DbCommand insertIntoMovingModelLodCommand = dbConnection.CreateCommand();
@@ -2897,7 +2897,7 @@ public abstract class SQLDataStore : ISQLDataStore
         return await InsertIntoMovingModelLodAsync(insertIntoMovingModelLodCommand, movingModelLod, content, cancellationToken);
     }
 
-    /// <inheritdoc cref="ISQLDataStore.InsertIntoMovingModelLodAsync(MovingModelLod, byte[], CancellationToken)"/>
+    /// <inheritdoc cref="ISQLDataStore.WriteMovingModelLevelOfDetailAsync(MovingModelLod, byte[], CancellationToken)"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
@@ -3202,7 +3202,7 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     /// <inheritdoc/>
-    public int InsertIntoTile(Tile tile, byte[] content)
+    public int WriteTile(Tile tile, byte[] content)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
         using DbCommand insertIntoTileCommand = dbConnection.CreateCommand();
@@ -3212,7 +3212,7 @@ public abstract class SQLDataStore : ISQLDataStore
         return InsertIntoTile(insertIntoTileCommand, tile, content);
     }
 
-    /// <inheritdoc cref="ISQLDataStore.InsertIntoTile(Tile, byte[])"/>
+    /// <inheritdoc cref="ISQLDataStore.WriteTile(Tile, byte[])"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
@@ -3258,7 +3258,7 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     /// <inheritdoc/>
-    public async Task<int> InsertIntoTileAsync(Tile tile, byte[] content, CancellationToken cancellationToken)
+    public async Task<int> WriteTileAsync(Tile tile, byte[] content, CancellationToken cancellationToken)
     {
         await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
         await using DbCommand insertIntoTileCommand = dbConnection.CreateCommand();
@@ -3268,7 +3268,7 @@ public abstract class SQLDataStore : ISQLDataStore
         return await InsertIntoTileAsync(insertIntoTileCommand, tile, content, cancellationToken);
     }
 
-    /// <inheritdoc cref="ISQLDataStore.InsertIntoTileAsync(Tile, byte[], CancellationToken)"/>
+    /// <inheritdoc cref="ISQLDataStore.WriteTileAsync(Tile, byte[], CancellationToken)"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
@@ -3585,7 +3585,7 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     /// <inheritdoc/>
-    public int InsertIntoTileArchivedFeature(TileArchivedFeature tileArchivedFeature, byte[] content)
+    public int WriteTileFeature(TileArchivedFeature tileArchivedFeature, byte[] content)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
         using DbCommand insertIntoTileArchivedFeatureCommand = dbConnection.CreateCommand();
@@ -3595,7 +3595,7 @@ public abstract class SQLDataStore : ISQLDataStore
         return InsertIntoTileArchivedFeature(insertIntoTileArchivedFeatureCommand, tileArchivedFeature, content);
     }
 
-    /// <inheritdoc cref="ISQLDataStore.InsertIntoTileArchivedFeature(TileArchivedFeature, byte[])"/>
+    /// <inheritdoc cref="ISQLDataStore.WriteTileFeature(TileArchivedFeature, byte[])"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
@@ -3641,7 +3641,7 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     /// <inheritdoc/>
-    public async Task<int> InsertIntoTileArchivedFeatureAsync(TileArchivedFeature tileArchivedFeature, byte[] content, CancellationToken cancellationToken)
+    public async Task<int> WriteTileFeatureAsync(TileArchivedFeature tileArchivedFeature, byte[] content, CancellationToken cancellationToken)
     {
         await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
         await using DbCommand insertIntoTileArchivedFeatureCommand = dbConnection.CreateCommand();
@@ -3651,7 +3651,7 @@ public abstract class SQLDataStore : ISQLDataStore
         return await InsertIntoTileArchivedFeatureAsync(insertIntoTileArchivedFeatureCommand, tileArchivedFeature, content, cancellationToken);
     }
 
-    /// <inheritdoc cref="ISQLDataStore.InsertIntoTileArchivedFeatureAsync(TileArchivedFeature, byte[], CancellationToken)"/>
+    /// <inheritdoc cref="ISQLDataStore.WriteTileFeatureAsync(TileArchivedFeature, byte[], CancellationToken)"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
@@ -3961,7 +3961,7 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     /// <inheritdoc/>
-    public int InsertIntoTileArchivedTexture(TileArchivedTexture tileArchivedTexture, byte[] content)
+    public int WriteTileTexture(TileArchivedTexture tileArchivedTexture, byte[] content)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
         using DbCommand insertIntoTileArchivedTextureCommand = dbConnection.CreateCommand();
@@ -3971,7 +3971,7 @@ public abstract class SQLDataStore : ISQLDataStore
         return InsertIntoTileArchivedTexture(insertIntoTileArchivedTextureCommand, tileArchivedTexture, content);
     }
 
-    /// <inheritdoc cref="ISQLDataStore.InsertIntoTileArchivedTextureAsync(TileArchivedTexture, byte[], CancellationToken)"/>
+    /// <inheritdoc cref="ISQLDataStore.WriteTileTextureAsync(TileArchivedTexture, byte[], CancellationToken)"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
@@ -4017,7 +4017,7 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     /// <inheritdoc/>
-    public async Task<int> InsertIntoTileArchivedTextureAsync(TileArchivedTexture tileArchivedTexture, byte[] content, CancellationToken cancellationToken)
+    public async Task<int> WriteTileTextureAsync(TileArchivedTexture tileArchivedTexture, byte[] content, CancellationToken cancellationToken)
     {
         await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
         await using DbCommand insertIntoTileArchivedTextureCommand = dbConnection.CreateCommand();
@@ -4027,7 +4027,7 @@ public abstract class SQLDataStore : ISQLDataStore
         return await InsertIntoTileArchivedTextureAsync(insertIntoTileArchivedTextureCommand, tileArchivedTexture, content, cancellationToken);
     }
 
-    /// <inheritdoc cref="ISQLDataStore.InsertIntoTileArchivedTextureAsync(TileArchivedTexture, byte[], CancellationToken)"/>
+    /// <inheritdoc cref="ISQLDataStore.WriteTileTextureAsync(TileArchivedTexture, byte[], CancellationToken)"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
@@ -4315,7 +4315,7 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     /// <inheritdoc/>
-    public int InsertIntoNavigation(Navigation navigation, byte[] content)
+    public int WriteNavigation(Navigation navigation, byte[] content)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
         using DbCommand insertIntoNavigationCommand = dbConnection.CreateCommand();
@@ -4325,7 +4325,7 @@ public abstract class SQLDataStore : ISQLDataStore
         return InsertIntoNavigation(insertIntoNavigationCommand, navigation, content);
     }
 
-    /// <inheritdoc cref="ISQLDataStore.InsertIntoNavigation(Navigation, byte[])"/>
+    /// <inheritdoc cref="ISQLDataStore.WriteNavigation(Navigation, byte[])"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
@@ -4372,7 +4372,7 @@ public abstract class SQLDataStore : ISQLDataStore
     }
 
     /// <inheritdoc/>
-    public async Task<int> InsertIntoNavigationAsync(Navigation navigation, byte[] content, CancellationToken cancellationToken)
+    public async Task<int> WriteNavigationAsync(Navigation navigation, byte[] content, CancellationToken cancellationToken)
     {
         await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
         await using DbCommand insertIntoNavigationCommand = dbConnection.CreateCommand();
@@ -4382,7 +4382,7 @@ public abstract class SQLDataStore : ISQLDataStore
         return await InsertIntoNavigationAsync(insertIntoNavigationCommand, navigation, content, cancellationToken);
     }
 
-    /// <inheritdoc cref="ISQLDataStore.InsertIntoNavigationAsync(Navigation, byte[], CancellationToken)"/>
+    /// <inheritdoc cref="ISQLDataStore.WriteNavigationAsync(Navigation, byte[], CancellationToken)"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
