@@ -145,6 +145,9 @@ public class PersistentConnection : ISQLDataStore
 
     }
 
+    /// <inheritdoc/>
+    public string Name => sqlDataStore.Name;
+
     #region CDB
 
     #region Insert
