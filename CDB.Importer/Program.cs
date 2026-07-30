@@ -2,12 +2,13 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Silnith.CDB.FileSystem;
 using Silnith.CDB.FileSystem.Visitor;
 using Silnith.CDB.SQL;
 using Silnith.CDB.SQL.SQLite;
-using Silnith.CDB.XML;
 using System;
+using System.Data;
 using System.Data.Common;
 using System.IO;
 
@@ -54,13 +55,8 @@ internal class Program
         hostApplicationBuilder.Services.AddOptions<SQLiteDataStoreSettings>()
             .Configure(settings =>
             {
-                settings.CreateSchema = true;
-            });
-        hostApplicationBuilder.Services.AddSingleton<SQLCDB>();
-        hostApplicationBuilder.Services.AddOptions<SQLCDBSettings>()
-            .Configure(settings =>
-            {
                 settings.Name = "CDB";
+                settings.CreateSchema = true;
             });
 
         return hostApplicationBuilder.Build();
@@ -79,23 +75,20 @@ internal class Program
             sqlDataStore.DumpStatements(streamWriter);
         }
 
-        SQLCDB sqlCDB = host.Services.GetRequiredService<SQLCDB>();
-        string cdbName = sqlCDB.Name;
         FileSystemCDB fileSystemCDB = host.Services.GetRequiredService<FileSystemCDB>();
 
-        CDBInformation sqlCDBInformation = new();
-        sqlCDBInformation.Initialize(sqlCDB);
-
-        CDBInformation fileSystemCDBInformation = new();
-        fileSystemCDBInformation.Initialize(fileSystemCDB);
+        //using PersistentConnection persistentConnection = sqlDataStore.GetPersistentConnection();
 
         DateTimeOffset start = DateTimeOffset.UtcNow;
 
-        sqlDataStore.InsertIntoCDB(cdbName);
+        //using DbTransaction dbTransaction = persistentConnection.DbConnection.BeginTransaction(IsolationLevel.Serializable);
+
         foreach ((ICDBIdentifier id, Stream stream) in fileSystemCDB.EnumerateFiles())
         {
-            id.WriteToCDB(sqlCDB, stream);
+            id.WriteToCDB(sqlDataStore, stream);
         }
+
+        //dbTransaction.Commit();
 
         DateTimeOffset end = DateTimeOffset.UtcNow;
 

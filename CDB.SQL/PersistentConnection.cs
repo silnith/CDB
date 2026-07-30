@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Silnith.CDB.SQL;
 
-public class PersistentConnection : ISQLDataStore
+public class PersistentConnection : ICDB
 {
     private readonly SQLDataStore sqlDataStore;
 
@@ -145,7 +145,7 @@ public class PersistentConnection : ISQLDataStore
 
     }
 
-    /// <inheritdoc/>
+    /// <inheritdoc cref="SQLDataStore.Name"/>
     public string Name => sqlDataStore.Name;
 
     #region CDB

@@ -47,13 +47,8 @@ public class Program
         builder.Services.AddOptions<SQLiteDataStoreSettings>()
             .Configure(settings =>
             {
-                settings.CreateSchema = false;
-            });
-        builder.Services.AddSingleton<ICDB, SQLCDB>();
-        builder.Services.AddOptions<SQLCDBSettings>()
-            .Configure(settings =>
-            {
                 settings.Name = "CDB";
+                settings.CreateSchema = false;
             });
 
         var app = builder.Build();

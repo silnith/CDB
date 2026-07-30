@@ -22,7 +22,7 @@ namespace Silnith.CDB.SQL;
 /// projects.
 /// </para>
 /// </remarks>
-public abstract class SQLDataStore : ISQLDataStore
+public abstract class SQLDataStore : ICDB
 {
     /// <summary>
     /// Creates a parameter for a database command, sets the name and type of
@@ -60,6 +60,7 @@ public abstract class SQLDataStore : ISQLDataStore
         if (options.Value.CreateSchema)
         {
             CreateSchema();
+            InsertIntoCDB(Name);
         }
     }
 

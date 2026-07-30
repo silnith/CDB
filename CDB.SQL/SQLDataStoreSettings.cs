@@ -1,4 +1,6 @@
-﻿namespace Silnith.CDB.SQL;
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace Silnith.CDB.SQL;
 
 /// <summary>
 /// Configuration settings for an SQL-based CDB data store.
@@ -14,6 +16,7 @@ public class SQLDataStoreSettings
     /// inside the database.
     /// </para>
     /// </remarks>
+    [Required]
     public string Name
     {
         get;
