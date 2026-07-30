@@ -52,6 +52,18 @@ public class CDBInstance : ICDB
     }
 
     /// <inheritdoc/>
+    public void WriteMetadata(Metadata metadata, Stream content)
+    {
+        cdbs.First().WriteMetadata(metadata, content);
+    }
+
+    /// <inheritdoc/>
+    public Task WriteMetadataAsync(Metadata metadata, Stream content, CancellationToken cancellationToken)
+    {
+        return cdbs.First().WriteMetadataAsync(metadata, content, cancellationToken);
+    }
+
+    /// <inheritdoc/>
     public Stream? ReadTexture(Texture texture)
     {
         foreach (ICDB cdb in cdbs)
@@ -77,6 +89,18 @@ public class CDBInstance : ICDB
             }
         }
         return null;
+    }
+
+    /// <inheritdoc/>
+    public void WriteTexture(Texture texture, Stream content)
+    {
+        cdbs.First().WriteTexture(texture, content);
+    }
+
+    /// <inheritdoc/>
+    public Task WriteTextureAsync(Texture texture, Stream content, CancellationToken cancellationToken)
+    {
+        return cdbs.First().WriteTextureAsync(texture, content, cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -108,6 +132,18 @@ public class CDBInstance : ICDB
     }
 
     /// <inheritdoc/>
+    public void WriteTextureLevelOfDetail(TextureLod textureLod, Stream content)
+    {
+        cdbs.First().WriteTextureLevelOfDetail(textureLod, content);
+    }
+
+    /// <inheritdoc/>
+    public Task WriteTextureLevelOfDetailAsync(TextureLod textureLod, Stream content, CancellationToken cancellationToken)
+    {
+        return cdbs.First().WriteTextureLevelOfDetailAsync(textureLod, content, cancellationToken);
+    }
+
+    /// <inheritdoc/>
     public Stream? ReadGeotypicalModel(GeotypicalModel geotypicalModel)
     {
         foreach (ICDB cdb in cdbs)
@@ -133,6 +169,18 @@ public class CDBInstance : ICDB
             }
         }
         return null;
+    }
+
+    /// <inheritdoc/>
+    public void WriteGeotypicalModel(GeotypicalModel geotypicalModel, Stream content)
+    {
+        cdbs.First().WriteGeotypicalModel(geotypicalModel, content);
+    }
+
+    /// <inheritdoc/>
+    public Task WriteGeotypicalModelAsync(GeotypicalModel geotypicalModel, Stream content, CancellationToken cancellationToken)
+    {
+        return cdbs.First().WriteGeotypicalModelAsync(geotypicalModel, content, cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -162,6 +210,18 @@ public class CDBInstance : ICDB
         }
         return null;
     }
+    /// <inheritdoc/>
+    public void WriteGeotypicalModelLevelOfDetail(GeotypicalModelLod geotypicalModelLod, Stream content)
+    {
+        cdbs.First().WriteGeotypicalModelLevelOfDetail(geotypicalModelLod, content);
+    }
+
+    /// <inheritdoc/>
+    public Task WriteGeotypicalModelLevelOfDetailAsync(GeotypicalModelLod geotypicalModelLod, Stream content, CancellationToken cancellationToken)
+    {
+        return cdbs.First().WriteGeotypicalModelLevelOfDetailAsync(geotypicalModelLod, content, cancellationToken);
+    }
+
 
     /// <inheritdoc/>
     public Stream? ReadMovingModel(MovingModel movingModel)
@@ -189,6 +249,18 @@ public class CDBInstance : ICDB
             }
         }
         return null;
+    }
+
+    /// <inheritdoc/>
+    public void WriteMovingModel(MovingModel movingModel, Stream content)
+    {
+        cdbs.First().WriteMovingModel(movingModel, content);
+    }
+
+    /// <inheritdoc/>
+    public Task WriteMovingModelAsync(MovingModel movingModel, Stream content, CancellationToken cancellationToken)
+    {
+        return cdbs.First().WriteMovingModelAsync(movingModel, content, cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -220,6 +292,18 @@ public class CDBInstance : ICDB
     }
 
     /// <inheritdoc/>
+    public void WriteMovingModelLevelOfDetail(MovingModelLod movingModelLod, Stream content)
+    {
+        cdbs.First().WriteMovingModelLevelOfDetail(movingModelLod, content);
+    }
+
+    /// <inheritdoc/>
+    public Task WriteMovingModelLevelOfDetailAsync(MovingModelLod movingModelLod, Stream content, CancellationToken cancellationToken)
+    {
+        return cdbs.First().WriteMovingModelLevelOfDetailAsync(movingModelLod, content, cancellationToken);
+    }
+
+    /// <inheritdoc/>
     public Stream? ReadTile(Tile tile)
     {
         foreach (ICDB cdb in cdbs)
@@ -245,6 +329,18 @@ public class CDBInstance : ICDB
             }
         }
         return null;
+    }
+
+    /// <inheritdoc/>
+    public void WriteTile(Tile tile, Stream content)
+    {
+        cdbs.First().WriteTile(tile, content);
+    }
+
+    /// <inheritdoc/>
+    public Task WriteTileAsync(Tile tile, Stream content, CancellationToken cancellationToken)
+    {
+        return cdbs.First().WriteTileAsync(tile, content, cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -276,6 +372,18 @@ public class CDBInstance : ICDB
     }
 
     /// <inheritdoc/>
+    public void WriteTileFeature(TileArchivedFeature tileFeature, Stream content)
+    {
+        cdbs.First().WriteTileFeature(tileFeature, content);
+    }
+
+    /// <inheritdoc/>
+    public Task WriteTileFeatureAsync(TileArchivedFeature tileFeature, Stream content, CancellationToken cancellationToken)
+    {
+        return cdbs.First().WriteTileFeatureAsync(tileFeature, content, cancellationToken);
+    }
+
+    /// <inheritdoc/>
     public Stream? ReadTileTexture(TileArchivedTexture tileTexture)
     {
         foreach (ICDB cdb in cdbs)
@@ -304,6 +412,18 @@ public class CDBInstance : ICDB
     }
 
     /// <inheritdoc/>
+    public void WriteTileTexture(TileArchivedTexture tileTexture, Stream content)
+    {
+        cdbs.First().WriteTileTexture(tileTexture, content);
+    }
+
+    /// <inheritdoc/>
+    public Task WriteTileTextureAsync(TileArchivedTexture tileTexture, Stream content, CancellationToken cancellationToken)
+    {
+        return cdbs.First().WriteTileTextureAsync(tileTexture, content, cancellationToken);
+    }
+
+    /// <inheritdoc/>
     public Stream? ReadNavigation(Navigation navigation)
     {
         foreach (ICDB cdb in cdbs)
@@ -329,6 +449,18 @@ public class CDBInstance : ICDB
             }
         }
         return null;
+    }
+
+    /// <inheritdoc/>
+    public void WriteNavigation(Navigation navigation, Stream content)
+    {
+        cdbs.First().WriteNavigation(navigation, content);
+    }
+
+    /// <inheritdoc/>
+    public Task WriteNavigationAsync(Navigation navigation, Stream content, CancellationToken cancellationToken)
+    {
+        return cdbs.First().WriteNavigationAsync(navigation, content, cancellationToken);
     }
 
     public Task<Stream?> ReadNavigation2Async(Navigation navigation, CancellationToken cancellationToken)
@@ -437,138 +569,6 @@ public class CDBInstance : ICDB
                 }
             }
         }
-    }
-
-    /// <inheritdoc/>
-    public void WriteMetadata(Metadata metadata, Stream content)
-    {
-        cdbs.First().WriteMetadata(metadata, content);
-    }
-
-    /// <inheritdoc/>
-    public Task WriteMetadataAsync(Metadata metadata, Stream content, CancellationToken cancellationToken)
-    {
-        return cdbs.First().WriteMetadataAsync(metadata, content, cancellationToken);
-    }
-
-    /// <inheritdoc/>
-    public void WriteTexture(Texture texture, Stream content)
-    {
-        cdbs.First().WriteTexture(texture, content);
-    }
-
-    /// <inheritdoc/>
-    public Task WriteTextureAsync(Texture texture, Stream content, CancellationToken cancellationToken)
-    {
-        return cdbs.First().WriteTextureAsync(texture, content, cancellationToken);
-    }
-
-    /// <inheritdoc/>
-    public void WriteTextureLevelOfDetail(TextureLod textureLod, Stream content)
-    {
-        cdbs.First().WriteTextureLevelOfDetail(textureLod, content);
-    }
-
-    /// <inheritdoc/>
-    public Task WriteTextureLevelOfDetailAsync(TextureLod textureLod, Stream content, CancellationToken cancellationToken)
-    {
-        return cdbs.First().WriteTextureLevelOfDetailAsync(textureLod, content, cancellationToken);
-    }
-
-    /// <inheritdoc/>
-    public void WriteGeotypicalModel(GeotypicalModel geotypicalModel, Stream content)
-    {
-        cdbs.First().WriteGeotypicalModel(geotypicalModel, content);
-    }
-
-    /// <inheritdoc/>
-    public Task WriteGeotypicalModelAsync(GeotypicalModel geotypicalModel, Stream content, CancellationToken cancellationToken)
-    {
-        return cdbs.First().WriteGeotypicalModelAsync(geotypicalModel, content, cancellationToken);
-    }
-
-    /// <inheritdoc/>
-    public void WriteGeotypicalModelLevelOfDetail(GeotypicalModelLod geotypicalModelLod, Stream content)
-    {
-        cdbs.First().WriteGeotypicalModelLevelOfDetail(geotypicalModelLod, content);
-    }
-
-    /// <inheritdoc/>
-    public Task WriteGeotypicalModelLevelOfDetailAsync(GeotypicalModelLod geotypicalModelLod, Stream content, CancellationToken cancellationToken)
-    {
-        return cdbs.First().WriteGeotypicalModelLevelOfDetailAsync(geotypicalModelLod, content, cancellationToken);
-    }
-
-    /// <inheritdoc/>
-    public void WriteMovingModel(MovingModel movingModel, Stream content)
-    {
-        cdbs.First().WriteMovingModel(movingModel, content);
-    }
-
-    /// <inheritdoc/>
-    public Task WriteMovingModelAsync(MovingModel movingModel, Stream content, CancellationToken cancellationToken)
-    {
-        return cdbs.First().WriteMovingModelAsync(movingModel, content, cancellationToken);
-    }
-
-    /// <inheritdoc/>
-    public void WriteMovingModelLevelOfDetail(MovingModelLod movingModelLod, Stream content)
-    {
-        cdbs.First().WriteMovingModelLevelOfDetail(movingModelLod, content);
-    }
-
-    /// <inheritdoc/>
-    public Task WriteMovingModelLevelOfDetailAsync(MovingModelLod movingModelLod, Stream content, CancellationToken cancellationToken)
-    {
-        return cdbs.First().WriteMovingModelLevelOfDetailAsync(movingModelLod, content, cancellationToken);
-    }
-
-    /// <inheritdoc/>
-    public void WriteTile(Tile tile, Stream content)
-    {
-        cdbs.First().WriteTile(tile, content);
-    }
-
-    /// <inheritdoc/>
-    public Task WriteTileAsync(Tile tile, Stream content, CancellationToken cancellationToken)
-    {
-        return cdbs.First().WriteTileAsync(tile, content, cancellationToken);
-    }
-
-    /// <inheritdoc/>
-    public void WriteTileFeature(TileArchivedFeature tileFeature, Stream content)
-    {
-        cdbs.First().WriteTileFeature(tileFeature, content);
-    }
-
-    /// <inheritdoc/>
-    public Task WriteTileFeatureAsync(TileArchivedFeature tileFeature, Stream content, CancellationToken cancellationToken)
-    {
-        return cdbs.First().WriteTileFeatureAsync(tileFeature, content, cancellationToken);
-    }
-
-    /// <inheritdoc/>
-    public void WriteTileTexture(TileArchivedTexture tileTexture, Stream content)
-    {
-        cdbs.First().WriteTileTexture(tileTexture, content);
-    }
-
-    /// <inheritdoc/>
-    public Task WriteTileTextureAsync(TileArchivedTexture tileTexture, Stream content, CancellationToken cancellationToken)
-    {
-        return cdbs.First().WriteTileTextureAsync(tileTexture, content, cancellationToken);
-    }
-
-    /// <inheritdoc/>
-    public void WriteNavigation(Navigation navigation, Stream content)
-    {
-        cdbs.First().WriteNavigation(navigation, content);
-    }
-
-    /// <inheritdoc/>
-    public Task WriteNavigationAsync(Navigation navigation, Stream content, CancellationToken cancellationToken)
-    {
-        return cdbs.First().WriteNavigationAsync(navigation, content, cancellationToken);
     }
 
     #region Dispose Pattern

@@ -428,103 +428,6 @@ public abstract class SQLCDB : ICDB
         get;
     }
 
-    #region Insert
-
-    /// <summary>
-    /// The SQL statement that inserts a new name into the CDB table.
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    ///   <listheader><description>Parameters</description></listheader>
-    ///   <item><description><see cref="CdbParamName"/></description></item>
-    /// </list>
-    /// </remarks>
-    protected abstract string InsertIntoCDBStatement
-    {
-        get;
-    }
-
-    internal void InitializeInsertIntoCDBCommand(DbCommand dbCommand)
-    {
-        dbCommand.CommandText = InsertIntoCDBStatement;
-        CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
-    }
-
-    /// <summary>
-    /// Inserts a name into the table identifying all the unique data stores
-    /// contained in the database.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// An <see cref="SQLCDB"/> is capable of holding multiple CDB data stores.
-    /// Each distinct data store is identified by a name.
-    /// </para>
-    /// </remarks>
-    /// <param name="cdbName">The name of a new CDB data store.</param>
-    public void InsertIntoCDB(string cdbName)
-    {
-        using DbConnection dbConnection = dbDataSource.OpenConnection();
-        using DbCommand insertIntoCDBCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoCDBCommand(insertIntoCDBCommand);
-        insertIntoCDBCommand.Prepare();
-
-        InsertIntoCDB(insertIntoCDBCommand, cdbName);
-    }
-
-    /// <inheritdoc cref="InsertIntoCDB(string)"/>
-    /// <remarks>
-    /// <para>
-    /// This is what subclasses should override to customize behavior.
-    /// </para>
-    /// </remarks>
-    /// <param name="insertIntoCDBCommand">The prepared statement to use to execute the query.</param>
-    protected internal virtual void InsertIntoCDB(DbCommand insertIntoCDBCommand,
-        string cdbName)
-    {
-        insertIntoCDBCommand.Parameters[CdbParamName].Value = cdbName;
-
-        insertIntoCDBCommand.ExecuteNonQuery();
-    }
-
-    /// <summary>
-    /// Inserts a name into the table identifying all the unique data stores
-    /// contained in the database.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// An <see cref="SQLCDB"/> is capable of holding multiple CDB data stores.
-    /// Each distinct data store is identified by a name.
-    /// </para>
-    /// </remarks>
-    /// <param name="cdbName">The name of a new CDB data store.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    public async Task InsertIntoCDBAsync(string cdbName, CancellationToken cancellationToken)
-    {
-        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        await using DbCommand insertIntoCDBCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoCDBCommand(insertIntoCDBCommand);
-        await insertIntoCDBCommand.PrepareAsync(cancellationToken);
-
-        await InsertIntoCDBAsync(insertIntoCDBCommand, cdbName, cancellationToken);
-    }
-
-    /// <inheritdoc cref="InsertIntoCDBAsync(string, CancellationToken)"/>
-    /// <remarks>
-    /// <para>
-    /// This is what subclasses should override to customize behavior.
-    /// </para>
-    /// </remarks>
-    /// <param name="insertIntoCDBCommand">The prepared statement to use to execute the query.</param>
-    protected internal virtual Task InsertIntoCDBAsync(DbCommand insertIntoCDBCommand,
-        string cdbName, CancellationToken cancellationToken = default)
-    {
-        insertIntoCDBCommand.Parameters[CdbParamName].Value = cdbName;
-
-        return insertIntoCDBCommand.ExecuteNonQueryAsync(cancellationToken);
-    }
-
-    #endregion
-
     #region Select
 
     /// <summary>
@@ -626,6 +529,103 @@ public abstract class SQLCDB : ICDB
 
     #endregion
 
+    #region Insert
+
+    /// <summary>
+    /// The SQL statement that inserts a new name into the CDB table.
+    /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    /// </list>
+    /// </remarks>
+    protected abstract string InsertIntoCDBStatement
+    {
+        get;
+    }
+
+    internal void InitializeInsertIntoCDBCommand(DbCommand dbCommand)
+    {
+        dbCommand.CommandText = InsertIntoCDBStatement;
+        CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
+    }
+
+    /// <summary>
+    /// Inserts a name into the table identifying all the unique data stores
+    /// contained in the database.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// An <see cref="SQLCDB"/> is capable of holding multiple CDB data stores.
+    /// Each distinct data store is identified by a name.
+    /// </para>
+    /// </remarks>
+    /// <param name="cdbName">The name of a new CDB data store.</param>
+    public void InsertIntoCDB(string cdbName)
+    {
+        using DbConnection dbConnection = dbDataSource.OpenConnection();
+        using DbCommand insertIntoCDBCommand = dbConnection.CreateCommand();
+        InitializeInsertIntoCDBCommand(insertIntoCDBCommand);
+        insertIntoCDBCommand.Prepare();
+
+        InsertIntoCDB(insertIntoCDBCommand, cdbName);
+    }
+
+    /// <inheritdoc cref="InsertIntoCDB(string)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoCDBCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual void InsertIntoCDB(DbCommand insertIntoCDBCommand,
+        string cdbName)
+    {
+        insertIntoCDBCommand.Parameters[CdbParamName].Value = cdbName;
+
+        insertIntoCDBCommand.ExecuteNonQuery();
+    }
+
+    /// <summary>
+    /// Inserts a name into the table identifying all the unique data stores
+    /// contained in the database.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// An <see cref="SQLCDB"/> is capable of holding multiple CDB data stores.
+    /// Each distinct data store is identified by a name.
+    /// </para>
+    /// </remarks>
+    /// <param name="cdbName">The name of a new CDB data store.</param>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    public async Task InsertIntoCDBAsync(string cdbName, CancellationToken cancellationToken)
+    {
+        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
+        await using DbCommand insertIntoCDBCommand = dbConnection.CreateCommand();
+        InitializeInsertIntoCDBCommand(insertIntoCDBCommand);
+        await insertIntoCDBCommand.PrepareAsync(cancellationToken);
+
+        await InsertIntoCDBAsync(insertIntoCDBCommand, cdbName, cancellationToken);
+    }
+
+    /// <inheritdoc cref="InsertIntoCDBAsync(string, CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoCDBCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual Task InsertIntoCDBAsync(DbCommand insertIntoCDBCommand,
+        string cdbName, CancellationToken cancellationToken = default)
+    {
+        insertIntoCDBCommand.Parameters[CdbParamName].Value = cdbName;
+
+        return insertIntoCDBCommand.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    #endregion
+
     #endregion
 
     #region Metadata
@@ -637,159 +637,6 @@ public abstract class SQLCDB : ICDB
     {
         get;
     }
-
-    #region Insert
-
-    /// <summary>
-    /// The SQL statement to insert a row into the Metadata table.
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    ///   <listheader><description>Parameters</description></listheader>
-    ///   <item><description><see cref="CdbParamName"/></description></item>
-    ///   <item><description><see cref="MetadataNameParamName"/></description></item>
-    ///   <item><description><see cref="FileTypeParamName"/></description></item>
-    ///   <item><description><see cref="ContentParamName"/></description></item>
-    /// </list>
-    /// </remarks>
-    protected abstract string InsertIntoMetadataStatement
-    {
-        get;
-    }
-
-    private void CreateAndAttachMetadataParameters(DbCommand dbCommand)
-    {
-        CreateAndAttachParameter(dbCommand, MetadataNameParamName, DbType.String);
-        CreateAndAttachParameter(dbCommand, FileTypeParamName, DbType.String);
-    }
-
-    private void SetMetadataParameters(DbCommand dbCommand, Metadata metadata)
-    {
-        dbCommand.Parameters[MetadataNameParamName].Value = metadata.Name;
-        dbCommand.Parameters[FileTypeParamName].Value = metadata.FileType;
-    }
-
-    internal void InitializeInsertIntoMetadataCommand(DbCommand dbCommand)
-    {
-        dbCommand.CommandText = InsertIntoMetadataStatement;
-        CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
-        CreateAndAttachMetadataParameters(dbCommand);
-        CreateAndAttachParameter(dbCommand, ContentParamName, DbType.Binary);
-    }
-
-    /// <inheritdoc cref="WriteMetadata(Metadata, Stream)"/>
-    public void WriteMetadata(Metadata metadata, byte[] content)
-    {
-        using DbConnection dbConnection = dbDataSource.OpenConnection();
-        using DbCommand insertIntoMetadataCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoMetadataCommand(insertIntoMetadataCommand);
-        insertIntoMetadataCommand.Prepare();
-
-        InsertIntoMetadata(insertIntoMetadataCommand, metadata, content);
-    }
-
-    /// <inheritdoc cref="WriteMetadata(Metadata, byte[])"/>
-    /// <remarks>
-    /// <para>
-    /// This is what subclasses should override to customize behavior.
-    /// </para>
-    /// </remarks>
-    /// <param name="insertIntoMetadataCommand">The prepared statement to use to execute the query.</param>
-    protected internal virtual void InsertIntoMetadata(DbCommand insertIntoMetadataCommand,
-        Metadata metadata, byte[] content)
-    {
-        insertIntoMetadataCommand.Parameters[CdbParamName].Value = Name;
-        SetMetadataParameters(insertIntoMetadataCommand, metadata);
-        insertIntoMetadataCommand.Parameters[ContentParamName].Value = content;
-
-        insertIntoMetadataCommand.ExecuteNonQuery();
-    }
-
-    /// <inheritdoc/>
-    public void WriteMetadata(Metadata metadata, Stream content)
-    {
-        using DbConnection dbConnection = dbDataSource.OpenConnection();
-        using DbCommand insertIntoMetadataCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoMetadataCommand(insertIntoMetadataCommand);
-        insertIntoMetadataCommand.Prepare();
-
-        InsertIntoMetadata(insertIntoMetadataCommand, metadata, content);
-    }
-
-    /// <inheritdoc cref="WriteMetadata(Metadata, Stream)"/>
-    /// <remarks>
-    /// <para>
-    /// This is what subclasses should override to customize behavior.
-    /// </para>
-    /// </remarks>
-    /// <param name="insertIntoMetadataCommand">The prepared statement to use to execute the query.</param>
-    protected internal virtual void InsertIntoMetadata(DbCommand insertIntoMetadataCommand,
-        Metadata metadata, Stream content)
-    {
-        insertIntoMetadataCommand.Parameters[CdbParamName].Value = Name;
-        SetMetadataParameters(insertIntoMetadataCommand, metadata);
-        insertIntoMetadataCommand.Parameters[ContentParamName].Value = content;
-
-        insertIntoMetadataCommand.ExecuteNonQuery();
-    }
-
-    /// <inheritdoc cref="WriteMetadataAsync(Metadata, Stream, CancellationToken)"/>
-    public async Task WriteMetadataAsync(Metadata metadata, byte[] content, CancellationToken cancellationToken)
-    {
-        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        await using DbCommand insertIntoMetadataCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoMetadataCommand(insertIntoMetadataCommand);
-        await insertIntoMetadataCommand.PrepareAsync(cancellationToken);
-
-        await InsertIntoMetadataAsync(insertIntoMetadataCommand, metadata, content, cancellationToken);
-    }
-
-    /// <inheritdoc cref="WriteMetadataAsync(Metadata, byte[], CancellationToken)"/>
-    /// <remarks>
-    /// <para>
-    /// This is what subclasses should override to customize behavior.
-    /// </para>
-    /// </remarks>
-    /// <param name="insertIntoMetadataCommand">The prepared statement to use to execute the query.</param>
-    protected internal virtual Task InsertIntoMetadataAsync(DbCommand insertIntoMetadataCommand,
-        Metadata metadata, byte[] content, CancellationToken cancellationToken)
-    {
-        insertIntoMetadataCommand.Parameters[CdbParamName].Value = Name;
-        SetMetadataParameters(insertIntoMetadataCommand, metadata);
-        insertIntoMetadataCommand.Parameters[ContentParamName].Value = content;
-
-        return insertIntoMetadataCommand.ExecuteNonQueryAsync(cancellationToken);
-    }
-
-    /// <inheritdoc/>
-    public async Task WriteMetadataAsync(Metadata metadata, Stream content, CancellationToken cancellationToken)
-    {
-        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        await using DbCommand insertIntoMetadataCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoMetadataCommand(insertIntoMetadataCommand);
-        await insertIntoMetadataCommand.PrepareAsync(cancellationToken);
-
-        await InsertIntoMetadataAsync(insertIntoMetadataCommand, metadata, content, cancellationToken);
-    }
-
-    /// <inheritdoc cref="WriteMetadataAsync(Metadata, Stream, CancellationToken)"/>
-    /// <remarks>
-    /// <para>
-    /// This is what subclasses should override to customize behavior.
-    /// </para>
-    /// </remarks>
-    /// <param name="insertIntoMetadataCommand">The prepared statement to use to execute the query.</param>
-    protected internal virtual Task InsertIntoMetadataAsync(DbCommand insertIntoMetadataCommand,
-        Metadata metadata, Stream content, CancellationToken cancellationToken)
-    {
-        insertIntoMetadataCommand.Parameters[CdbParamName].Value = Name;
-        SetMetadataParameters(insertIntoMetadataCommand, metadata);
-        insertIntoMetadataCommand.Parameters[ContentParamName].Value = content;
-
-        return insertIntoMetadataCommand.ExecuteNonQueryAsync(cancellationToken);
-    }
-
-    #endregion
 
     #region Select
 
@@ -966,6 +813,159 @@ public abstract class SQLCDB : ICDB
 
     #endregion
 
+    #region Insert
+
+    /// <summary>
+    /// The SQL statement to insert a row into the Metadata table.
+    /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="MetadataNameParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    ///   <item><description><see cref="ContentParamName"/></description></item>
+    /// </list>
+    /// </remarks>
+    protected abstract string InsertIntoMetadataStatement
+    {
+        get;
+    }
+
+    private void CreateAndAttachMetadataParameters(DbCommand dbCommand)
+    {
+        CreateAndAttachParameter(dbCommand, MetadataNameParamName, DbType.String);
+        CreateAndAttachParameter(dbCommand, FileTypeParamName, DbType.String);
+    }
+
+    private void SetMetadataParameters(DbCommand dbCommand, Metadata metadata)
+    {
+        dbCommand.Parameters[MetadataNameParamName].Value = metadata.Name;
+        dbCommand.Parameters[FileTypeParamName].Value = metadata.FileType;
+    }
+
+    internal void InitializeInsertIntoMetadataCommand(DbCommand dbCommand)
+    {
+        dbCommand.CommandText = InsertIntoMetadataStatement;
+        CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
+        CreateAndAttachMetadataParameters(dbCommand);
+        CreateAndAttachParameter(dbCommand, ContentParamName, DbType.Binary);
+    }
+
+    /// <inheritdoc cref="WriteMetadata(Metadata, Stream)"/>
+    public void WriteMetadata(Metadata metadata, byte[] content)
+    {
+        using DbConnection dbConnection = dbDataSource.OpenConnection();
+        using DbCommand insertIntoMetadataCommand = dbConnection.CreateCommand();
+        InitializeInsertIntoMetadataCommand(insertIntoMetadataCommand);
+        insertIntoMetadataCommand.Prepare();
+
+        InsertIntoMetadata(insertIntoMetadataCommand, metadata, content);
+    }
+
+    /// <inheritdoc cref="WriteMetadata(Metadata, byte[])"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoMetadataCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual void InsertIntoMetadata(DbCommand insertIntoMetadataCommand,
+        Metadata metadata, byte[] content)
+    {
+        insertIntoMetadataCommand.Parameters[CdbParamName].Value = Name;
+        SetMetadataParameters(insertIntoMetadataCommand, metadata);
+        insertIntoMetadataCommand.Parameters[ContentParamName].Value = content;
+
+        insertIntoMetadataCommand.ExecuteNonQuery();
+    }
+
+    /// <inheritdoc/>
+    public void WriteMetadata(Metadata metadata, Stream content)
+    {
+        using DbConnection dbConnection = dbDataSource.OpenConnection();
+        using DbCommand insertIntoMetadataCommand = dbConnection.CreateCommand();
+        InitializeInsertIntoMetadataCommand(insertIntoMetadataCommand);
+        insertIntoMetadataCommand.Prepare();
+
+        InsertIntoMetadata(insertIntoMetadataCommand, metadata, content);
+    }
+
+    /// <inheritdoc cref="WriteMetadata(Metadata, Stream)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoMetadataCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual void InsertIntoMetadata(DbCommand insertIntoMetadataCommand,
+        Metadata metadata, Stream content)
+    {
+        insertIntoMetadataCommand.Parameters[CdbParamName].Value = Name;
+        SetMetadataParameters(insertIntoMetadataCommand, metadata);
+        insertIntoMetadataCommand.Parameters[ContentParamName].Value = content;
+
+        insertIntoMetadataCommand.ExecuteNonQuery();
+    }
+
+    /// <inheritdoc cref="WriteMetadataAsync(Metadata, Stream, CancellationToken)"/>
+    public async Task WriteMetadataAsync(Metadata metadata, byte[] content, CancellationToken cancellationToken)
+    {
+        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
+        await using DbCommand insertIntoMetadataCommand = dbConnection.CreateCommand();
+        InitializeInsertIntoMetadataCommand(insertIntoMetadataCommand);
+        await insertIntoMetadataCommand.PrepareAsync(cancellationToken);
+
+        await InsertIntoMetadataAsync(insertIntoMetadataCommand, metadata, content, cancellationToken);
+    }
+
+    /// <inheritdoc cref="WriteMetadataAsync(Metadata, byte[], CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoMetadataCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual Task InsertIntoMetadataAsync(DbCommand insertIntoMetadataCommand,
+        Metadata metadata, byte[] content, CancellationToken cancellationToken)
+    {
+        insertIntoMetadataCommand.Parameters[CdbParamName].Value = Name;
+        SetMetadataParameters(insertIntoMetadataCommand, metadata);
+        insertIntoMetadataCommand.Parameters[ContentParamName].Value = content;
+
+        return insertIntoMetadataCommand.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task WriteMetadataAsync(Metadata metadata, Stream content, CancellationToken cancellationToken)
+    {
+        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
+        await using DbCommand insertIntoMetadataCommand = dbConnection.CreateCommand();
+        InitializeInsertIntoMetadataCommand(insertIntoMetadataCommand);
+        await insertIntoMetadataCommand.PrepareAsync(cancellationToken);
+
+        await InsertIntoMetadataAsync(insertIntoMetadataCommand, metadata, content, cancellationToken);
+    }
+
+    /// <inheritdoc cref="WriteMetadataAsync(Metadata, Stream, CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoMetadataCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual Task InsertIntoMetadataAsync(DbCommand insertIntoMetadataCommand,
+        Metadata metadata, Stream content, CancellationToken cancellationToken)
+    {
+        insertIntoMetadataCommand.Parameters[CdbParamName].Value = Name;
+        SetMetadataParameters(insertIntoMetadataCommand, metadata);
+        insertIntoMetadataCommand.Parameters[ContentParamName].Value = content;
+
+        return insertIntoMetadataCommand.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    #endregion
+
     #endregion
 
     #region Texture
@@ -977,168 +977,6 @@ public abstract class SQLCDB : ICDB
     {
         get;
     }
-
-    #region Insert
-
-    /// <summary>
-    /// The SQL statement to insert a row into the Texture table.
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    ///   <listheader><description>Parameters</description></listheader>
-    ///   <item><description><see cref="CdbParamName"/></description></item>
-    ///   <item><description><see cref="DatasetParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
-    ///   <item><description><see cref="TextureNameParamName"/></description></item>
-    ///   <item><description><see cref="FileTypeParamName"/></description></item>
-    ///   <item><description><see cref="ContentParamName"/></description></item>
-    /// </list>
-    /// </remarks>
-    protected abstract string InsertIntoTextureStatement
-    {
-        get;
-    }
-
-    internal void InitializeInsertIntoTextureCommand(DbCommand dbCommand)
-    {
-        dbCommand.CommandText = InsertIntoTextureStatement;
-        CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
-        CreateAndAttachTextureParameters(dbCommand);
-        CreateAndAttachParameter(dbCommand, ContentParamName, DbType.Binary);
-    }
-
-    private void CreateAndAttachTextureParameters(DbCommand dbCommand)
-    {
-        CreateAndAttachParameter(dbCommand, DatasetParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, ComponentSelector1ParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, ComponentSelector2ParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, TextureNameParamName, DbType.String);
-        CreateAndAttachParameter(dbCommand, FileTypeParamName, DbType.String);
-    }
-
-    private void SetTextureParameters(DbCommand dbCommand, Texture texture)
-    {
-        dbCommand.Parameters[DatasetParamName].Value = texture.Dataset.Value;
-        dbCommand.Parameters[ComponentSelector1ParamName].Value = texture.ComponentSelector1;
-        dbCommand.Parameters[ComponentSelector2ParamName].Value = texture.ComponentSelector2;
-        dbCommand.Parameters[TextureNameParamName].Value = texture.Name;
-        dbCommand.Parameters[FileTypeParamName].Value = texture.FileType;
-    }
-
-    /// <inheritdoc cref="WriteTexture(Texture, Stream)"/>
-    public void WriteTexture(Texture texture, byte[] content)
-    {
-        using DbConnection dbConnection = dbDataSource.OpenConnection();
-        using DbCommand insertIntoTextureCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoTextureCommand(insertIntoTextureCommand);
-        insertIntoTextureCommand.Prepare();
-
-        InsertIntoTexture(insertIntoTextureCommand, texture, content);
-    }
-
-    /// <inheritdoc cref="WriteTexture(Texture, byte[])"/>
-    /// <remarks>
-    /// <para>
-    /// This is what subclasses should override to customize behavior.
-    /// </para>
-    /// </remarks>
-    /// <param name="insertIntoTextureCommand">The prepared statement to use to execute the query.</param>
-    protected internal virtual void InsertIntoTexture(DbCommand insertIntoTextureCommand,
-        Texture texture, byte[] content)
-    {
-        insertIntoTextureCommand.Parameters[CdbParamName].Value = Name;
-        SetTextureParameters(insertIntoTextureCommand, texture);
-        insertIntoTextureCommand.Parameters[ContentParamName].Value = content;
-
-        insertIntoTextureCommand.ExecuteNonQuery();
-    }
-
-    /// <inheritdoc/>
-    public void WriteTexture(Texture texture, Stream content)
-    {
-        using DbConnection dbConnection = dbDataSource.OpenConnection();
-        using DbCommand insertIntoTextureCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoTextureCommand(insertIntoTextureCommand);
-        insertIntoTextureCommand.Prepare();
-
-        InsertIntoTexture(insertIntoTextureCommand, texture, content);
-    }
-
-    /// <inheritdoc cref="WriteTexture(Texture, Stream)"/>
-    /// <remarks>
-    /// <para>
-    /// This is what subclasses should override to customize behavior.
-    /// </para>
-    /// </remarks>
-    /// <param name="insertIntoTextureCommand">The prepared statement to use to execute the query.</param>
-    protected internal virtual void InsertIntoTexture(DbCommand insertIntoTextureCommand,
-        Texture texture, Stream content)
-    {
-        insertIntoTextureCommand.Parameters[CdbParamName].Value = Name;
-        SetTextureParameters(insertIntoTextureCommand, texture);
-        insertIntoTextureCommand.Parameters[ContentParamName].Value = content;
-
-        insertIntoTextureCommand.ExecuteNonQuery();
-    }
-
-    /// <inheritdoc cref="WriteTextureAsync(Texture, Stream, CancellationToken)"/>
-    public async Task WriteTextureAsync(Texture texture, byte[] content, CancellationToken cancellationToken)
-    {
-        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        await using DbCommand insertIntoTextureCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoTextureCommand(insertIntoTextureCommand);
-        await insertIntoTextureCommand.PrepareAsync(cancellationToken);
-
-        await InsertIntoTextureAsync(insertIntoTextureCommand, texture, content, cancellationToken);
-    }
-
-    /// <inheritdoc cref="WriteTextureAsync(Texture, byte[], CancellationToken)"/>
-    /// <remarks>
-    /// <para>
-    /// This is what subclasses should override to customize behavior.
-    /// </para>
-    /// </remarks>
-    /// <param name="insertIntoTextureCommand">The prepared statement to use to execute the query.</param>
-    protected internal virtual Task InsertIntoTextureAsync(DbCommand insertIntoTextureCommand,
-        Texture texture, byte[] content, CancellationToken cancellationToken)
-    {
-        insertIntoTextureCommand.Parameters[CdbParamName].Value = Name;
-        SetTextureParameters(insertIntoTextureCommand, texture);
-        insertIntoTextureCommand.Parameters[ContentParamName].Value = content;
-
-        return insertIntoTextureCommand.ExecuteNonQueryAsync(cancellationToken);
-    }
-
-    /// <inheritdoc/>
-    public async Task WriteTextureAsync(Texture texture, Stream content, CancellationToken cancellationToken)
-    {
-        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        await using DbCommand insertIntoTextureCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoTextureCommand(insertIntoTextureCommand);
-        await insertIntoTextureCommand.PrepareAsync(cancellationToken);
-
-        await InsertIntoTextureAsync(insertIntoTextureCommand, texture, content, cancellationToken);
-    }
-
-    /// <inheritdoc cref="WriteTextureAsync(Texture, Stream, CancellationToken)"/>
-    /// <remarks>
-    /// <para>
-    /// This is what subclasses should override to customize behavior.
-    /// </para>
-    /// </remarks>
-    /// <param name="insertIntoTextureCommand">The prepared statement to use to execute the query.</param>
-    protected internal virtual Task InsertIntoTextureAsync(DbCommand insertIntoTextureCommand,
-        Texture texture, Stream content, CancellationToken cancellationToken)
-    {
-        insertIntoTextureCommand.Parameters[CdbParamName].Value = Name;
-        SetTextureParameters(insertIntoTextureCommand, texture);
-        insertIntoTextureCommand.Parameters[ContentParamName].Value = content;
-
-        return insertIntoTextureCommand.ExecuteNonQueryAsync(cancellationToken);
-    }
-
-    #endregion
 
     #region Select
 
@@ -1318,6 +1156,168 @@ public abstract class SQLCDB : ICDB
 
     #endregion
 
+    #region Insert
+
+    /// <summary>
+    /// The SQL statement to insert a row into the Texture table.
+    /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="TextureNameParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    ///   <item><description><see cref="ContentParamName"/></description></item>
+    /// </list>
+    /// </remarks>
+    protected abstract string InsertIntoTextureStatement
+    {
+        get;
+    }
+
+    internal void InitializeInsertIntoTextureCommand(DbCommand dbCommand)
+    {
+        dbCommand.CommandText = InsertIntoTextureStatement;
+        CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
+        CreateAndAttachTextureParameters(dbCommand);
+        CreateAndAttachParameter(dbCommand, ContentParamName, DbType.Binary);
+    }
+
+    private void CreateAndAttachTextureParameters(DbCommand dbCommand)
+    {
+        CreateAndAttachParameter(dbCommand, DatasetParamName, DbType.Int32);
+        CreateAndAttachParameter(dbCommand, ComponentSelector1ParamName, DbType.Int32);
+        CreateAndAttachParameter(dbCommand, ComponentSelector2ParamName, DbType.Int32);
+        CreateAndAttachParameter(dbCommand, TextureNameParamName, DbType.String);
+        CreateAndAttachParameter(dbCommand, FileTypeParamName, DbType.String);
+    }
+
+    private void SetTextureParameters(DbCommand dbCommand, Texture texture)
+    {
+        dbCommand.Parameters[DatasetParamName].Value = texture.Dataset.Value;
+        dbCommand.Parameters[ComponentSelector1ParamName].Value = texture.ComponentSelector1;
+        dbCommand.Parameters[ComponentSelector2ParamName].Value = texture.ComponentSelector2;
+        dbCommand.Parameters[TextureNameParamName].Value = texture.Name;
+        dbCommand.Parameters[FileTypeParamName].Value = texture.FileType;
+    }
+
+    /// <inheritdoc cref="WriteTexture(Texture, Stream)"/>
+    public void WriteTexture(Texture texture, byte[] content)
+    {
+        using DbConnection dbConnection = dbDataSource.OpenConnection();
+        using DbCommand insertIntoTextureCommand = dbConnection.CreateCommand();
+        InitializeInsertIntoTextureCommand(insertIntoTextureCommand);
+        insertIntoTextureCommand.Prepare();
+
+        InsertIntoTexture(insertIntoTextureCommand, texture, content);
+    }
+
+    /// <inheritdoc cref="WriteTexture(Texture, byte[])"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoTextureCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual void InsertIntoTexture(DbCommand insertIntoTextureCommand,
+        Texture texture, byte[] content)
+    {
+        insertIntoTextureCommand.Parameters[CdbParamName].Value = Name;
+        SetTextureParameters(insertIntoTextureCommand, texture);
+        insertIntoTextureCommand.Parameters[ContentParamName].Value = content;
+
+        insertIntoTextureCommand.ExecuteNonQuery();
+    }
+
+    /// <inheritdoc/>
+    public void WriteTexture(Texture texture, Stream content)
+    {
+        using DbConnection dbConnection = dbDataSource.OpenConnection();
+        using DbCommand insertIntoTextureCommand = dbConnection.CreateCommand();
+        InitializeInsertIntoTextureCommand(insertIntoTextureCommand);
+        insertIntoTextureCommand.Prepare();
+
+        InsertIntoTexture(insertIntoTextureCommand, texture, content);
+    }
+
+    /// <inheritdoc cref="WriteTexture(Texture, Stream)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoTextureCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual void InsertIntoTexture(DbCommand insertIntoTextureCommand,
+        Texture texture, Stream content)
+    {
+        insertIntoTextureCommand.Parameters[CdbParamName].Value = Name;
+        SetTextureParameters(insertIntoTextureCommand, texture);
+        insertIntoTextureCommand.Parameters[ContentParamName].Value = content;
+
+        insertIntoTextureCommand.ExecuteNonQuery();
+    }
+
+    /// <inheritdoc cref="WriteTextureAsync(Texture, Stream, CancellationToken)"/>
+    public async Task WriteTextureAsync(Texture texture, byte[] content, CancellationToken cancellationToken)
+    {
+        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
+        await using DbCommand insertIntoTextureCommand = dbConnection.CreateCommand();
+        InitializeInsertIntoTextureCommand(insertIntoTextureCommand);
+        await insertIntoTextureCommand.PrepareAsync(cancellationToken);
+
+        await InsertIntoTextureAsync(insertIntoTextureCommand, texture, content, cancellationToken);
+    }
+
+    /// <inheritdoc cref="WriteTextureAsync(Texture, byte[], CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoTextureCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual Task InsertIntoTextureAsync(DbCommand insertIntoTextureCommand,
+        Texture texture, byte[] content, CancellationToken cancellationToken)
+    {
+        insertIntoTextureCommand.Parameters[CdbParamName].Value = Name;
+        SetTextureParameters(insertIntoTextureCommand, texture);
+        insertIntoTextureCommand.Parameters[ContentParamName].Value = content;
+
+        return insertIntoTextureCommand.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task WriteTextureAsync(Texture texture, Stream content, CancellationToken cancellationToken)
+    {
+        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
+        await using DbCommand insertIntoTextureCommand = dbConnection.CreateCommand();
+        InitializeInsertIntoTextureCommand(insertIntoTextureCommand);
+        await insertIntoTextureCommand.PrepareAsync(cancellationToken);
+
+        await InsertIntoTextureAsync(insertIntoTextureCommand, texture, content, cancellationToken);
+    }
+
+    /// <inheritdoc cref="WriteTextureAsync(Texture, Stream, CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoTextureCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual Task InsertIntoTextureAsync(DbCommand insertIntoTextureCommand,
+        Texture texture, Stream content, CancellationToken cancellationToken)
+    {
+        insertIntoTextureCommand.Parameters[CdbParamName].Value = Name;
+        SetTextureParameters(insertIntoTextureCommand, texture);
+        insertIntoTextureCommand.Parameters[ContentParamName].Value = content;
+
+        return insertIntoTextureCommand.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    #endregion
+
     #endregion
 
     #region Texture LOD
@@ -1329,171 +1329,6 @@ public abstract class SQLCDB : ICDB
     {
         get;
     }
-
-    #region Insert
-
-    /// <summary>
-    /// The SQL statement to insert a row into the Texture Level of Detail table.
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    ///   <listheader><description>Parameters</description></listheader>
-    ///   <item><description><see cref="CdbParamName"/></description></item>
-    ///   <item><description><see cref="DatasetParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
-    ///   <item><description><see cref="LevelOfDetailParamName"/></description></item>
-    ///   <item><description><see cref="TextureNameParamName"/></description></item>
-    ///   <item><description><see cref="FileTypeParamName"/></description></item>
-    ///   <item><description><see cref="ContentParamName"/></description></item>
-    /// </list>
-    /// </remarks>
-    protected abstract string InsertIntoTextureLodStatement
-    {
-        get;
-    }
-
-    internal void InitializeInsertIntoTextureLodCommand(DbCommand dbCommand)
-    {
-        dbCommand.CommandText = InsertIntoTextureLodStatement;
-        CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
-        CreateAndAttachTextureLodParameters(dbCommand);
-        CreateAndAttachParameter(dbCommand, ContentParamName, DbType.Binary);
-    }
-
-    private void CreateAndAttachTextureLodParameters(DbCommand dbCommand)
-    {
-        CreateAndAttachParameter(dbCommand, DatasetParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, ComponentSelector1ParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, ComponentSelector2ParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, LevelOfDetailParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, TextureNameParamName, DbType.String);
-        CreateAndAttachParameter(dbCommand, FileTypeParamName, DbType.String);
-    }
-
-    private void SetTextureLodParameters(DbCommand dbCommand, TextureLod textureLod)
-    {
-        dbCommand.Parameters[DatasetParamName].Value = textureLod.Dataset.Value;
-        dbCommand.Parameters[ComponentSelector1ParamName].Value = textureLod.ComponentSelector1;
-        dbCommand.Parameters[ComponentSelector2ParamName].Value = textureLod.ComponentSelector2;
-        dbCommand.Parameters[LevelOfDetailParamName].Value = textureLod.LevelOfDetail.Value;
-        dbCommand.Parameters[TextureNameParamName].Value = textureLod.Name;
-        dbCommand.Parameters[FileTypeParamName].Value = textureLod.FileType;
-    }
-
-    /// <inheritdoc cref="WriteTextureLevelOfDetail(TextureLod, Stream)"/>
-    public void WriteTextureLevelOfDetail(TextureLod textureLod, byte[] content)
-    {
-        using DbConnection dbConnection = dbDataSource.OpenConnection();
-        using DbCommand insertIntoTextureLodCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoTextureLodCommand(insertIntoTextureLodCommand);
-        insertIntoTextureLodCommand.Prepare();
-
-        InsertIntoTextureLod(insertIntoTextureLodCommand, textureLod, content);
-    }
-
-    /// <inheritdoc cref="WriteTextureLevelOfDetail(TextureLod, byte[])"/>
-    /// <remarks>
-    /// <para>
-    /// This is what subclasses should override to customize behavior.
-    /// </para>
-    /// </remarks>
-    /// <param name="insertIntoTextureLodCommand">The prepared statement to use to execute the query.</param>
-    protected internal virtual void InsertIntoTextureLod(DbCommand insertIntoTextureLodCommand,
-        TextureLod textureLod, byte[] content)
-    {
-        insertIntoTextureLodCommand.Parameters[CdbParamName].Value = Name;
-        SetTextureLodParameters(insertIntoTextureLodCommand, textureLod);
-        insertIntoTextureLodCommand.Parameters[ContentParamName].Value = content;
-
-        insertIntoTextureLodCommand.ExecuteNonQuery();
-    }
-
-    /// <inheritdoc/>
-    public void WriteTextureLevelOfDetail(TextureLod textureLod, Stream content)
-    {
-        using DbConnection dbConnection = dbDataSource.OpenConnection();
-        using DbCommand insertIntoTextureLodCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoTextureLodCommand(insertIntoTextureLodCommand);
-        insertIntoTextureLodCommand.Prepare();
-
-        InsertIntoTextureLod(insertIntoTextureLodCommand, textureLod, content);
-    }
-
-    /// <inheritdoc cref="WriteTextureLevelOfDetail(TextureLod, Stream)"/>
-    /// <remarks>
-    /// <para>
-    /// This is what subclasses should override to customize behavior.
-    /// </para>
-    /// </remarks>
-    /// <param name="insertIntoTextureLodCommand">The prepared statement to use to execute the query.</param>
-    protected internal virtual void InsertIntoTextureLod(DbCommand insertIntoTextureLodCommand,
-        TextureLod textureLod, Stream content)
-    {
-        insertIntoTextureLodCommand.Parameters[CdbParamName].Value = Name;
-        SetTextureLodParameters(insertIntoTextureLodCommand, textureLod);
-        insertIntoTextureLodCommand.Parameters[ContentParamName].Value = content;
-
-        insertIntoTextureLodCommand.ExecuteNonQuery();
-    }
-
-    /// <inheritdoc cref="WriteTextureLevelOfDetailAsync(TextureLod, Stream, CancellationToken)"/>
-    public async Task WriteTextureLevelOfDetailAsync(TextureLod textureLod, byte[] content, CancellationToken cancellationToken)
-    {
-        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        await using DbCommand insertIntoTextureLodCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoTextureLodCommand(insertIntoTextureLodCommand);
-        await insertIntoTextureLodCommand.PrepareAsync(cancellationToken);
-
-        await InsertIntoTextureLodAsync(insertIntoTextureLodCommand, textureLod, content, cancellationToken);
-    }
-
-    /// <inheritdoc cref="WriteTextureLevelOfDetailAsync(TextureLod, byte[], CancellationToken)"/>
-    /// <remarks>
-    /// <para>
-    /// This is what subclasses should override to customize behavior.
-    /// </para>
-    /// </remarks>
-    /// <param name="insertIntoTextureLodCommand">The prepared statement to use to execute the query.</param>
-    protected internal virtual Task InsertIntoTextureLodAsync(DbCommand insertIntoTextureLodCommand,
-        TextureLod textureLod, byte[] content, CancellationToken cancellationToken)
-    {
-        insertIntoTextureLodCommand.Parameters[CdbParamName].Value = Name;
-        SetTextureLodParameters(insertIntoTextureLodCommand, textureLod);
-        insertIntoTextureLodCommand.Parameters[ContentParamName].Value = content;
-
-        return insertIntoTextureLodCommand.ExecuteNonQueryAsync(cancellationToken);
-    }
-
-    /// <inheritdoc/>
-    public async Task WriteTextureLevelOfDetailAsync(TextureLod textureLod, Stream content, CancellationToken cancellationToken)
-    {
-        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        await using DbCommand insertIntoTextureLodCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoTextureLodCommand(insertIntoTextureLodCommand);
-        await insertIntoTextureLodCommand.PrepareAsync(cancellationToken);
-
-        await InsertIntoTextureLodAsync(insertIntoTextureLodCommand, textureLod, content, cancellationToken);
-    }
-
-    /// <inheritdoc cref="WriteTextureLevelOfDetailAsync(TextureLod, Stream, CancellationToken)"/>
-    /// <remarks>
-    /// <para>
-    /// This is what subclasses should override to customize behavior.
-    /// </para>
-    /// </remarks>
-    /// <param name="insertIntoTextureLodCommand">The prepared statement to use to execute the query.</param>
-    protected internal virtual Task InsertIntoTextureLodAsync(DbCommand insertIntoTextureLodCommand,
-        TextureLod textureLod, Stream content, CancellationToken cancellationToken)
-    {
-        insertIntoTextureLodCommand.Parameters[CdbParamName].Value = Name;
-        SetTextureLodParameters(insertIntoTextureLodCommand, textureLod);
-        insertIntoTextureLodCommand.Parameters[ContentParamName].Value = content;
-
-        return insertIntoTextureLodCommand.ExecuteNonQueryAsync(cancellationToken);
-    }
-
-    #endregion
 
     #region Select
 
@@ -1674,6 +1509,171 @@ public abstract class SQLCDB : ICDB
 
     #endregion
 
+    #region Insert
+
+    /// <summary>
+    /// The SQL statement to insert a row into the Texture Level of Detail table.
+    /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="LevelOfDetailParamName"/></description></item>
+    ///   <item><description><see cref="TextureNameParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    ///   <item><description><see cref="ContentParamName"/></description></item>
+    /// </list>
+    /// </remarks>
+    protected abstract string InsertIntoTextureLodStatement
+    {
+        get;
+    }
+
+    internal void InitializeInsertIntoTextureLodCommand(DbCommand dbCommand)
+    {
+        dbCommand.CommandText = InsertIntoTextureLodStatement;
+        CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
+        CreateAndAttachTextureLodParameters(dbCommand);
+        CreateAndAttachParameter(dbCommand, ContentParamName, DbType.Binary);
+    }
+
+    private void CreateAndAttachTextureLodParameters(DbCommand dbCommand)
+    {
+        CreateAndAttachParameter(dbCommand, DatasetParamName, DbType.Int32);
+        CreateAndAttachParameter(dbCommand, ComponentSelector1ParamName, DbType.Int32);
+        CreateAndAttachParameter(dbCommand, ComponentSelector2ParamName, DbType.Int32);
+        CreateAndAttachParameter(dbCommand, LevelOfDetailParamName, DbType.Int32);
+        CreateAndAttachParameter(dbCommand, TextureNameParamName, DbType.String);
+        CreateAndAttachParameter(dbCommand, FileTypeParamName, DbType.String);
+    }
+
+    private void SetTextureLodParameters(DbCommand dbCommand, TextureLod textureLod)
+    {
+        dbCommand.Parameters[DatasetParamName].Value = textureLod.Dataset.Value;
+        dbCommand.Parameters[ComponentSelector1ParamName].Value = textureLod.ComponentSelector1;
+        dbCommand.Parameters[ComponentSelector2ParamName].Value = textureLod.ComponentSelector2;
+        dbCommand.Parameters[LevelOfDetailParamName].Value = textureLod.LevelOfDetail.Value;
+        dbCommand.Parameters[TextureNameParamName].Value = textureLod.Name;
+        dbCommand.Parameters[FileTypeParamName].Value = textureLod.FileType;
+    }
+
+    /// <inheritdoc cref="WriteTextureLevelOfDetail(TextureLod, Stream)"/>
+    public void WriteTextureLevelOfDetail(TextureLod textureLod, byte[] content)
+    {
+        using DbConnection dbConnection = dbDataSource.OpenConnection();
+        using DbCommand insertIntoTextureLodCommand = dbConnection.CreateCommand();
+        InitializeInsertIntoTextureLodCommand(insertIntoTextureLodCommand);
+        insertIntoTextureLodCommand.Prepare();
+
+        InsertIntoTextureLod(insertIntoTextureLodCommand, textureLod, content);
+    }
+
+    /// <inheritdoc cref="WriteTextureLevelOfDetail(TextureLod, byte[])"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoTextureLodCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual void InsertIntoTextureLod(DbCommand insertIntoTextureLodCommand,
+        TextureLod textureLod, byte[] content)
+    {
+        insertIntoTextureLodCommand.Parameters[CdbParamName].Value = Name;
+        SetTextureLodParameters(insertIntoTextureLodCommand, textureLod);
+        insertIntoTextureLodCommand.Parameters[ContentParamName].Value = content;
+
+        insertIntoTextureLodCommand.ExecuteNonQuery();
+    }
+
+    /// <inheritdoc/>
+    public void WriteTextureLevelOfDetail(TextureLod textureLod, Stream content)
+    {
+        using DbConnection dbConnection = dbDataSource.OpenConnection();
+        using DbCommand insertIntoTextureLodCommand = dbConnection.CreateCommand();
+        InitializeInsertIntoTextureLodCommand(insertIntoTextureLodCommand);
+        insertIntoTextureLodCommand.Prepare();
+
+        InsertIntoTextureLod(insertIntoTextureLodCommand, textureLod, content);
+    }
+
+    /// <inheritdoc cref="WriteTextureLevelOfDetail(TextureLod, Stream)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoTextureLodCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual void InsertIntoTextureLod(DbCommand insertIntoTextureLodCommand,
+        TextureLod textureLod, Stream content)
+    {
+        insertIntoTextureLodCommand.Parameters[CdbParamName].Value = Name;
+        SetTextureLodParameters(insertIntoTextureLodCommand, textureLod);
+        insertIntoTextureLodCommand.Parameters[ContentParamName].Value = content;
+
+        insertIntoTextureLodCommand.ExecuteNonQuery();
+    }
+
+    /// <inheritdoc cref="WriteTextureLevelOfDetailAsync(TextureLod, Stream, CancellationToken)"/>
+    public async Task WriteTextureLevelOfDetailAsync(TextureLod textureLod, byte[] content, CancellationToken cancellationToken)
+    {
+        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
+        await using DbCommand insertIntoTextureLodCommand = dbConnection.CreateCommand();
+        InitializeInsertIntoTextureLodCommand(insertIntoTextureLodCommand);
+        await insertIntoTextureLodCommand.PrepareAsync(cancellationToken);
+
+        await InsertIntoTextureLodAsync(insertIntoTextureLodCommand, textureLod, content, cancellationToken);
+    }
+
+    /// <inheritdoc cref="WriteTextureLevelOfDetailAsync(TextureLod, byte[], CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoTextureLodCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual Task InsertIntoTextureLodAsync(DbCommand insertIntoTextureLodCommand,
+        TextureLod textureLod, byte[] content, CancellationToken cancellationToken)
+    {
+        insertIntoTextureLodCommand.Parameters[CdbParamName].Value = Name;
+        SetTextureLodParameters(insertIntoTextureLodCommand, textureLod);
+        insertIntoTextureLodCommand.Parameters[ContentParamName].Value = content;
+
+        return insertIntoTextureLodCommand.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task WriteTextureLevelOfDetailAsync(TextureLod textureLod, Stream content, CancellationToken cancellationToken)
+    {
+        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
+        await using DbCommand insertIntoTextureLodCommand = dbConnection.CreateCommand();
+        InitializeInsertIntoTextureLodCommand(insertIntoTextureLodCommand);
+        await insertIntoTextureLodCommand.PrepareAsync(cancellationToken);
+
+        await InsertIntoTextureLodAsync(insertIntoTextureLodCommand, textureLod, content, cancellationToken);
+    }
+
+    /// <inheritdoc cref="WriteTextureLevelOfDetailAsync(TextureLod, Stream, CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoTextureLodCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual Task InsertIntoTextureLodAsync(DbCommand insertIntoTextureLodCommand,
+        TextureLod textureLod, Stream content, CancellationToken cancellationToken)
+    {
+        insertIntoTextureLodCommand.Parameters[CdbParamName].Value = Name;
+        SetTextureLodParameters(insertIntoTextureLodCommand, textureLod);
+        insertIntoTextureLodCommand.Parameters[ContentParamName].Value = content;
+
+        return insertIntoTextureLodCommand.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    #endregion
+
     #endregion
 
     #region Geotypical Model
@@ -1685,180 +1685,6 @@ public abstract class SQLCDB : ICDB
     {
         get;
     }
-
-    #region Insert
-
-    /// <summary>
-    /// The SQL statement to insert a row into the Geotypical Model table.
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    ///   <listheader><description>Parameters</description></listheader>
-    ///   <item><description><see cref="CdbParamName"/></description></item>
-    ///   <item><description><see cref="DatasetParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
-    ///   <item><description><see cref="FeatureCategoryParamName"/></description></item>
-    ///   <item><description><see cref="FeatureSubcategoryParamName"/></description></item>
-    ///   <item><description><see cref="FeatureTypeParamName"/></description></item>
-    ///   <item><description><see cref="FeatureSubcodeParamName"/></description></item>
-    ///   <item><description><see cref="ModelNameParamName"/></description></item>
-    ///   <item><description><see cref="FileTypeParamName"/></description></item>
-    ///   <item><description><see cref="ContentParamName"/></description></item>
-    /// </list>
-    /// </remarks>
-    protected abstract string InsertIntoGeotypicalModelStatement
-    {
-        get;
-    }
-
-    internal void InitializeInsertIntoGeotypicalModelCommand(DbCommand dbCommand)
-    {
-        dbCommand.CommandText = InsertIntoGeotypicalModelStatement;
-        CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
-        CreateAndAttachGeotypicalModelParameters(dbCommand);
-        CreateAndAttachParameter(dbCommand, ContentParamName, DbType.Binary);
-    }
-
-    private void CreateAndAttachGeotypicalModelParameters(DbCommand dbCommand)
-    {
-        CreateAndAttachParameter(dbCommand, DatasetParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, ComponentSelector1ParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, ComponentSelector2ParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, FeatureCategoryParamName, DbType.String);
-        CreateAndAttachParameter(dbCommand, FeatureSubcategoryParamName, DbType.String);
-        CreateAndAttachParameter(dbCommand, FeatureTypeParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, FeatureSubcodeParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, ModelNameParamName, DbType.String);
-        CreateAndAttachParameter(dbCommand, FileTypeParamName, DbType.String);
-    }
-
-    private void SetGeotypicalModelParameters(DbCommand dbCommand, GeotypicalModel geotypicalModel)
-    {
-        dbCommand.Parameters[DatasetParamName].Value = geotypicalModel.Dataset.Value;
-        dbCommand.Parameters[ComponentSelector1ParamName].Value = geotypicalModel.ComponentSelector1;
-        dbCommand.Parameters[ComponentSelector2ParamName].Value = geotypicalModel.ComponentSelector2;
-        dbCommand.Parameters[FeatureCategoryParamName].Value = geotypicalModel.FeatureCode.Category;
-        dbCommand.Parameters[FeatureSubcategoryParamName].Value = geotypicalModel.FeatureCode.Subcategory;
-        dbCommand.Parameters[FeatureTypeParamName].Value = geotypicalModel.FeatureCode.Type;
-        dbCommand.Parameters[FeatureSubcodeParamName].Value = geotypicalModel.FeatureSubcode;
-        dbCommand.Parameters[ModelNameParamName].Value = geotypicalModel.Name;
-        dbCommand.Parameters[FileTypeParamName].Value = geotypicalModel.FileType;
-    }
-
-    /// <inheritdoc cref="WriteGeotypicalModel(GeotypicalModel, Stream)"/>
-    public void WriteGeotypicalModel(GeotypicalModel geotypicalModel, byte[] content)
-    {
-        using DbConnection dbConnection = dbDataSource.OpenConnection();
-        using DbCommand insertIntoGeotypicalModelCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoGeotypicalModelCommand(insertIntoGeotypicalModelCommand);
-        insertIntoGeotypicalModelCommand.Prepare();
-
-        InsertIntoGeotypicalModel(insertIntoGeotypicalModelCommand, geotypicalModel, content);
-    }
-
-    /// <inheritdoc cref="WriteGeotypicalModel(GeotypicalModel, byte[])"/>
-    /// <remarks>
-    /// <para>
-    /// This is what subclasses should override to customize behavior.
-    /// </para>
-    /// </remarks>
-    /// <param name="insertIntoGeotypicalModelCommand">The prepared statement to use to execute the query.</param>
-    protected internal virtual void InsertIntoGeotypicalModel(DbCommand insertIntoGeotypicalModelCommand,
-        GeotypicalModel geotypicalModel, byte[] content)
-    {
-        insertIntoGeotypicalModelCommand.Parameters[CdbParamName].Value = Name;
-        SetGeotypicalModelParameters(insertIntoGeotypicalModelCommand, geotypicalModel);
-        insertIntoGeotypicalModelCommand.Parameters[ContentParamName].Value = content;
-
-        insertIntoGeotypicalModelCommand.ExecuteNonQuery();
-    }
-
-    /// <inheritdoc/>
-    public void WriteGeotypicalModel(GeotypicalModel geotypicalModel, Stream content)
-    {
-        using DbConnection dbConnection = dbDataSource.OpenConnection();
-        using DbCommand insertIntoGeotypicalModelCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoGeotypicalModelCommand(insertIntoGeotypicalModelCommand);
-        insertIntoGeotypicalModelCommand.Prepare();
-
-        InsertIntoGeotypicalModel(insertIntoGeotypicalModelCommand, geotypicalModel, content);
-    }
-
-    /// <inheritdoc cref="WriteGeotypicalModel(GeotypicalModel, Stream)"/>
-    /// <remarks>
-    /// <para>
-    /// This is what subclasses should override to customize behavior.
-    /// </para>
-    /// </remarks>
-    /// <param name="insertIntoGeotypicalModelCommand">The prepared statement to use to execute the query.</param>
-    protected internal virtual void InsertIntoGeotypicalModel(DbCommand insertIntoGeotypicalModelCommand,
-        GeotypicalModel geotypicalModel, Stream content)
-    {
-        insertIntoGeotypicalModelCommand.Parameters[CdbParamName].Value = Name;
-        SetGeotypicalModelParameters(insertIntoGeotypicalModelCommand, geotypicalModel);
-        insertIntoGeotypicalModelCommand.Parameters[ContentParamName].Value = content;
-
-        insertIntoGeotypicalModelCommand.ExecuteNonQuery();
-    }
-
-    /// <inheritdoc cref="WriteGeotypicalModelAsync(GeotypicalModel, Stream, CancellationToken)"/>
-    public async Task WriteGeotypicalModelAsync(GeotypicalModel geotypicalModel, byte[] content, CancellationToken cancellationToken)
-    {
-        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        await using DbCommand insertIntoGeotypicalModelCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoGeotypicalModelCommand(insertIntoGeotypicalModelCommand);
-        await insertIntoGeotypicalModelCommand.PrepareAsync(cancellationToken);
-
-        await InsertIntoGeotypicalModelAsync(insertIntoGeotypicalModelCommand, geotypicalModel, content, cancellationToken);
-    }
-
-    /// <inheritdoc cref="WriteGeotypicalModelAsync(GeotypicalModel, byte[], CancellationToken)"/>
-    /// <remarks>
-    /// <para>
-    /// This is what subclasses should override to customize behavior.
-    /// </para>
-    /// </remarks>
-    /// <param name="insertIntoGeotypicalModelCommand">The prepared statement to use to execute the query.</param>
-    protected internal virtual Task InsertIntoGeotypicalModelAsync(DbCommand insertIntoGeotypicalModelCommand,
-        GeotypicalModel geotypicalModel, byte[] content, CancellationToken cancellationToken)
-    {
-        insertIntoGeotypicalModelCommand.Parameters[CdbParamName].Value = Name;
-        SetGeotypicalModelParameters(insertIntoGeotypicalModelCommand, geotypicalModel);
-        insertIntoGeotypicalModelCommand.Parameters[ContentParamName].Value = content;
-
-        return insertIntoGeotypicalModelCommand.ExecuteNonQueryAsync(cancellationToken);
-    }
-
-    /// <inheritdoc/>
-    public async Task WriteGeotypicalModelAsync(GeotypicalModel geotypicalModel, Stream content, CancellationToken cancellationToken)
-    {
-        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        await using DbCommand insertIntoGeotypicalModelCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoGeotypicalModelCommand(insertIntoGeotypicalModelCommand);
-        await insertIntoGeotypicalModelCommand.PrepareAsync(cancellationToken);
-
-        await InsertIntoGeotypicalModelAsync(insertIntoGeotypicalModelCommand, geotypicalModel, content, cancellationToken);
-    }
-
-    /// <inheritdoc cref="WriteGeotypicalModelAsync(GeotypicalModel, Stream, CancellationToken)"/>
-    /// <remarks>
-    /// <para>
-    /// This is what subclasses should override to customize behavior.
-    /// </para>
-    /// </remarks>
-    /// <param name="insertIntoGeotypicalModelCommand">The prepared statement to use to execute the query.</param>
-    protected internal virtual Task InsertIntoGeotypicalModelAsync(DbCommand insertIntoGeotypicalModelCommand,
-        GeotypicalModel geotypicalModel, Stream content, CancellationToken cancellationToken)
-    {
-        insertIntoGeotypicalModelCommand.Parameters[CdbParamName].Value = Name;
-        SetGeotypicalModelParameters(insertIntoGeotypicalModelCommand, geotypicalModel);
-        insertIntoGeotypicalModelCommand.Parameters[ContentParamName].Value = content;
-
-        return insertIntoGeotypicalModelCommand.ExecuteNonQueryAsync(cancellationToken);
-    }
-
-    #endregion
 
     #region Select
 
@@ -2042,6 +1868,180 @@ public abstract class SQLCDB : ICDB
 
     #endregion
 
+    #region Insert
+
+    /// <summary>
+    /// The SQL statement to insert a row into the Geotypical Model table.
+    /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="FeatureCategoryParamName"/></description></item>
+    ///   <item><description><see cref="FeatureSubcategoryParamName"/></description></item>
+    ///   <item><description><see cref="FeatureTypeParamName"/></description></item>
+    ///   <item><description><see cref="FeatureSubcodeParamName"/></description></item>
+    ///   <item><description><see cref="ModelNameParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    ///   <item><description><see cref="ContentParamName"/></description></item>
+    /// </list>
+    /// </remarks>
+    protected abstract string InsertIntoGeotypicalModelStatement
+    {
+        get;
+    }
+
+    internal void InitializeInsertIntoGeotypicalModelCommand(DbCommand dbCommand)
+    {
+        dbCommand.CommandText = InsertIntoGeotypicalModelStatement;
+        CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
+        CreateAndAttachGeotypicalModelParameters(dbCommand);
+        CreateAndAttachParameter(dbCommand, ContentParamName, DbType.Binary);
+    }
+
+    private void CreateAndAttachGeotypicalModelParameters(DbCommand dbCommand)
+    {
+        CreateAndAttachParameter(dbCommand, DatasetParamName, DbType.Int32);
+        CreateAndAttachParameter(dbCommand, ComponentSelector1ParamName, DbType.Int32);
+        CreateAndAttachParameter(dbCommand, ComponentSelector2ParamName, DbType.Int32);
+        CreateAndAttachParameter(dbCommand, FeatureCategoryParamName, DbType.String);
+        CreateAndAttachParameter(dbCommand, FeatureSubcategoryParamName, DbType.String);
+        CreateAndAttachParameter(dbCommand, FeatureTypeParamName, DbType.Int32);
+        CreateAndAttachParameter(dbCommand, FeatureSubcodeParamName, DbType.Int32);
+        CreateAndAttachParameter(dbCommand, ModelNameParamName, DbType.String);
+        CreateAndAttachParameter(dbCommand, FileTypeParamName, DbType.String);
+    }
+
+    private void SetGeotypicalModelParameters(DbCommand dbCommand, GeotypicalModel geotypicalModel)
+    {
+        dbCommand.Parameters[DatasetParamName].Value = geotypicalModel.Dataset.Value;
+        dbCommand.Parameters[ComponentSelector1ParamName].Value = geotypicalModel.ComponentSelector1;
+        dbCommand.Parameters[ComponentSelector2ParamName].Value = geotypicalModel.ComponentSelector2;
+        dbCommand.Parameters[FeatureCategoryParamName].Value = geotypicalModel.FeatureCode.Category;
+        dbCommand.Parameters[FeatureSubcategoryParamName].Value = geotypicalModel.FeatureCode.Subcategory;
+        dbCommand.Parameters[FeatureTypeParamName].Value = geotypicalModel.FeatureCode.Type;
+        dbCommand.Parameters[FeatureSubcodeParamName].Value = geotypicalModel.FeatureSubcode;
+        dbCommand.Parameters[ModelNameParamName].Value = geotypicalModel.Name;
+        dbCommand.Parameters[FileTypeParamName].Value = geotypicalModel.FileType;
+    }
+
+    /// <inheritdoc cref="WriteGeotypicalModel(GeotypicalModel, Stream)"/>
+    public void WriteGeotypicalModel(GeotypicalModel geotypicalModel, byte[] content)
+    {
+        using DbConnection dbConnection = dbDataSource.OpenConnection();
+        using DbCommand insertIntoGeotypicalModelCommand = dbConnection.CreateCommand();
+        InitializeInsertIntoGeotypicalModelCommand(insertIntoGeotypicalModelCommand);
+        insertIntoGeotypicalModelCommand.Prepare();
+
+        InsertIntoGeotypicalModel(insertIntoGeotypicalModelCommand, geotypicalModel, content);
+    }
+
+    /// <inheritdoc cref="WriteGeotypicalModel(GeotypicalModel, byte[])"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoGeotypicalModelCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual void InsertIntoGeotypicalModel(DbCommand insertIntoGeotypicalModelCommand,
+        GeotypicalModel geotypicalModel, byte[] content)
+    {
+        insertIntoGeotypicalModelCommand.Parameters[CdbParamName].Value = Name;
+        SetGeotypicalModelParameters(insertIntoGeotypicalModelCommand, geotypicalModel);
+        insertIntoGeotypicalModelCommand.Parameters[ContentParamName].Value = content;
+
+        insertIntoGeotypicalModelCommand.ExecuteNonQuery();
+    }
+
+    /// <inheritdoc/>
+    public void WriteGeotypicalModel(GeotypicalModel geotypicalModel, Stream content)
+    {
+        using DbConnection dbConnection = dbDataSource.OpenConnection();
+        using DbCommand insertIntoGeotypicalModelCommand = dbConnection.CreateCommand();
+        InitializeInsertIntoGeotypicalModelCommand(insertIntoGeotypicalModelCommand);
+        insertIntoGeotypicalModelCommand.Prepare();
+
+        InsertIntoGeotypicalModel(insertIntoGeotypicalModelCommand, geotypicalModel, content);
+    }
+
+    /// <inheritdoc cref="WriteGeotypicalModel(GeotypicalModel, Stream)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoGeotypicalModelCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual void InsertIntoGeotypicalModel(DbCommand insertIntoGeotypicalModelCommand,
+        GeotypicalModel geotypicalModel, Stream content)
+    {
+        insertIntoGeotypicalModelCommand.Parameters[CdbParamName].Value = Name;
+        SetGeotypicalModelParameters(insertIntoGeotypicalModelCommand, geotypicalModel);
+        insertIntoGeotypicalModelCommand.Parameters[ContentParamName].Value = content;
+
+        insertIntoGeotypicalModelCommand.ExecuteNonQuery();
+    }
+
+    /// <inheritdoc cref="WriteGeotypicalModelAsync(GeotypicalModel, Stream, CancellationToken)"/>
+    public async Task WriteGeotypicalModelAsync(GeotypicalModel geotypicalModel, byte[] content, CancellationToken cancellationToken)
+    {
+        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
+        await using DbCommand insertIntoGeotypicalModelCommand = dbConnection.CreateCommand();
+        InitializeInsertIntoGeotypicalModelCommand(insertIntoGeotypicalModelCommand);
+        await insertIntoGeotypicalModelCommand.PrepareAsync(cancellationToken);
+
+        await InsertIntoGeotypicalModelAsync(insertIntoGeotypicalModelCommand, geotypicalModel, content, cancellationToken);
+    }
+
+    /// <inheritdoc cref="WriteGeotypicalModelAsync(GeotypicalModel, byte[], CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoGeotypicalModelCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual Task InsertIntoGeotypicalModelAsync(DbCommand insertIntoGeotypicalModelCommand,
+        GeotypicalModel geotypicalModel, byte[] content, CancellationToken cancellationToken)
+    {
+        insertIntoGeotypicalModelCommand.Parameters[CdbParamName].Value = Name;
+        SetGeotypicalModelParameters(insertIntoGeotypicalModelCommand, geotypicalModel);
+        insertIntoGeotypicalModelCommand.Parameters[ContentParamName].Value = content;
+
+        return insertIntoGeotypicalModelCommand.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task WriteGeotypicalModelAsync(GeotypicalModel geotypicalModel, Stream content, CancellationToken cancellationToken)
+    {
+        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
+        await using DbCommand insertIntoGeotypicalModelCommand = dbConnection.CreateCommand();
+        InitializeInsertIntoGeotypicalModelCommand(insertIntoGeotypicalModelCommand);
+        await insertIntoGeotypicalModelCommand.PrepareAsync(cancellationToken);
+
+        await InsertIntoGeotypicalModelAsync(insertIntoGeotypicalModelCommand, geotypicalModel, content, cancellationToken);
+    }
+
+    /// <inheritdoc cref="WriteGeotypicalModelAsync(GeotypicalModel, Stream, CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoGeotypicalModelCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual Task InsertIntoGeotypicalModelAsync(DbCommand insertIntoGeotypicalModelCommand,
+        GeotypicalModel geotypicalModel, Stream content, CancellationToken cancellationToken)
+    {
+        insertIntoGeotypicalModelCommand.Parameters[CdbParamName].Value = Name;
+        SetGeotypicalModelParameters(insertIntoGeotypicalModelCommand, geotypicalModel);
+        insertIntoGeotypicalModelCommand.Parameters[ContentParamName].Value = content;
+
+        return insertIntoGeotypicalModelCommand.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    #endregion
+
     #endregion
 
     #region Geotypical Model LOD
@@ -2053,183 +2053,6 @@ public abstract class SQLCDB : ICDB
     {
         get;
     }
-
-    #region Insert
-
-    /// <summary>
-    /// The SQL statement to insert a row into the Geotypical Model Level of Detail table.
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    ///   <listheader><description>Parameters</description></listheader>
-    ///   <item><description><see cref="CdbParamName"/></description></item>
-    ///   <item><description><see cref="DatasetParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
-    ///   <item><description><see cref="LevelOfDetailParamName"/></description></item>
-    ///   <item><description><see cref="FeatureCategoryParamName"/></description></item>
-    ///   <item><description><see cref="FeatureSubcategoryParamName"/></description></item>
-    ///   <item><description><see cref="FeatureTypeParamName"/></description></item>
-    ///   <item><description><see cref="FeatureSubcodeParamName"/></description></item>
-    ///   <item><description><see cref="ModelNameParamName"/></description></item>
-    ///   <item><description><see cref="FileTypeParamName"/></description></item>
-    ///   <item><description><see cref="ContentParamName"/></description></item>
-    /// </list>
-    /// </remarks>
-    protected abstract string InsertIntoGeotypicalModelLodStatement
-    {
-        get;
-    }
-
-    internal void InitializeInsertIntoGeotypicalModelLodCommand(DbCommand dbCommand)
-    {
-        dbCommand.CommandText = InsertIntoGeotypicalModelLodStatement;
-        CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
-        CreateAndAttachGeotypicalModelLodParameters(dbCommand);
-        CreateAndAttachParameter(dbCommand, ContentParamName, DbType.Binary);
-    }
-
-    private void CreateAndAttachGeotypicalModelLodParameters(DbCommand dbCommand)
-    {
-        CreateAndAttachParameter(dbCommand, DatasetParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, ComponentSelector1ParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, ComponentSelector2ParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, LevelOfDetailParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, FeatureCategoryParamName, DbType.String);
-        CreateAndAttachParameter(dbCommand, FeatureSubcategoryParamName, DbType.String);
-        CreateAndAttachParameter(dbCommand, FeatureTypeParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, FeatureSubcodeParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, ModelNameParamName, DbType.String);
-        CreateAndAttachParameter(dbCommand, FileTypeParamName, DbType.String);
-    }
-
-    private void SetGeotypicalModelLodParameters(DbCommand dbCommand, GeotypicalModelLod geotypicalModelLod)
-    {
-        dbCommand.Parameters[DatasetParamName].Value = geotypicalModelLod.Dataset.Value;
-        dbCommand.Parameters[ComponentSelector1ParamName].Value = geotypicalModelLod.ComponentSelector1;
-        dbCommand.Parameters[ComponentSelector2ParamName].Value = geotypicalModelLod.ComponentSelector2;
-        dbCommand.Parameters[LevelOfDetailParamName].Value = geotypicalModelLod.LevelOfDetail.Value;
-        dbCommand.Parameters[FeatureCategoryParamName].Value = geotypicalModelLod.FeatureCode.Category;
-        dbCommand.Parameters[FeatureSubcategoryParamName].Value = geotypicalModelLod.FeatureCode.Subcategory;
-        dbCommand.Parameters[FeatureTypeParamName].Value = geotypicalModelLod.FeatureCode.Type;
-        dbCommand.Parameters[FeatureSubcodeParamName].Value = geotypicalModelLod.FeatureSubcode;
-        dbCommand.Parameters[ModelNameParamName].Value = geotypicalModelLod.Name;
-        dbCommand.Parameters[FileTypeParamName].Value = geotypicalModelLod.FileType;
-    }
-
-    /// <inheritdoc cref="WriteGeotypicalModelLevelOfDetail(GeotypicalModelLod, Stream)"/>
-    public void WriteGeotypicalModelLevelOfDetail(GeotypicalModelLod geotypicalModelLod, byte[] content)
-    {
-        using DbConnection dbConnection = dbDataSource.OpenConnection();
-        using DbCommand insertIntoGeotypicalModelLodCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoGeotypicalModelLodCommand(insertIntoGeotypicalModelLodCommand);
-        insertIntoGeotypicalModelLodCommand.Prepare();
-
-        InsertIntoGeotypicalModelLod(insertIntoGeotypicalModelLodCommand, geotypicalModelLod, content);
-    }
-
-    /// <inheritdoc cref="WriteGeotypicalModelLevelOfDetail(GeotypicalModelLod, byte[])"/>
-    /// <remarks>
-    /// <para>
-    /// This is what subclasses should override to customize behavior.
-    /// </para>
-    /// </remarks>
-    /// <param name="insertIntoGeotypicalModelLodCommand">The prepared statement to use to execute the query.</param>
-    protected internal virtual void InsertIntoGeotypicalModelLod(DbCommand insertIntoGeotypicalModelLodCommand,
-        GeotypicalModelLod geotypicalModelLod, byte[] content)
-    {
-        insertIntoGeotypicalModelLodCommand.Parameters[CdbParamName].Value = Name;
-        SetGeotypicalModelLodParameters(insertIntoGeotypicalModelLodCommand, geotypicalModelLod);
-        insertIntoGeotypicalModelLodCommand.Parameters[ContentParamName].Value = content;
-
-        insertIntoGeotypicalModelLodCommand.ExecuteNonQuery();
-    }
-
-    /// <inheritdoc/>
-    public void WriteGeotypicalModelLevelOfDetail(GeotypicalModelLod geotypicalModelLod, Stream content)
-    {
-        using DbConnection dbConnection = dbDataSource.OpenConnection();
-        using DbCommand insertIntoGeotypicalModelLodCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoGeotypicalModelLodCommand(insertIntoGeotypicalModelLodCommand);
-        insertIntoGeotypicalModelLodCommand.Prepare();
-
-        InsertIntoGeotypicalModelLod(insertIntoGeotypicalModelLodCommand, geotypicalModelLod, content);
-    }
-
-    /// <inheritdoc cref="WriteGeotypicalModelLevelOfDetail(GeotypicalModelLod, Stream)"/>
-    /// <remarks>
-    /// <para>
-    /// This is what subclasses should override to customize behavior.
-    /// </para>
-    /// </remarks>
-    /// <param name="insertIntoGeotypicalModelLodCommand">The prepared statement to use to execute the query.</param>
-    protected internal virtual void InsertIntoGeotypicalModelLod(DbCommand insertIntoGeotypicalModelLodCommand,
-        GeotypicalModelLod geotypicalModelLod, Stream content)
-    {
-        insertIntoGeotypicalModelLodCommand.Parameters[CdbParamName].Value = Name;
-        SetGeotypicalModelLodParameters(insertIntoGeotypicalModelLodCommand, geotypicalModelLod);
-        insertIntoGeotypicalModelLodCommand.Parameters[ContentParamName].Value = content;
-
-        insertIntoGeotypicalModelLodCommand.ExecuteNonQuery();
-    }
-
-    /// <inheritdoc cref="WriteGeotypicalModelLevelOfDetailAsync(GeotypicalModelLod, Stream, CancellationToken)"/>
-    public async Task WriteGeotypicalModelLevelOfDetailAsync(GeotypicalModelLod geotypicalModelLod, byte[] content, CancellationToken cancellationToken)
-    {
-        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        await using DbCommand insertIntoGeotypicalModelLodCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoGeotypicalModelLodCommand(insertIntoGeotypicalModelLodCommand);
-        await insertIntoGeotypicalModelLodCommand.PrepareAsync(cancellationToken);
-
-        await InsertIntoGeotypicalModelLodAsync(insertIntoGeotypicalModelLodCommand, geotypicalModelLod, content, cancellationToken);
-    }
-
-    /// <inheritdoc cref="WriteGeotypicalModelLevelOfDetailAsync(GeotypicalModelLod, byte[], CancellationToken)"/>
-    /// <remarks>
-    /// <para>
-    /// This is what subclasses should override to customize behavior.
-    /// </para>
-    /// </remarks>
-    /// <param name="insertIntoGeotypicalModelLodCommand">The prepared statement to use to execute the query.</param>
-    protected internal virtual Task InsertIntoGeotypicalModelLodAsync(DbCommand insertIntoGeotypicalModelLodCommand,
-        GeotypicalModelLod geotypicalModelLod, byte[] content, CancellationToken cancellationToken)
-    {
-        insertIntoGeotypicalModelLodCommand.Parameters[CdbParamName].Value = Name;
-        SetGeotypicalModelLodParameters(insertIntoGeotypicalModelLodCommand, geotypicalModelLod);
-        insertIntoGeotypicalModelLodCommand.Parameters[ContentParamName].Value = content;
-
-        return insertIntoGeotypicalModelLodCommand.ExecuteNonQueryAsync(cancellationToken);
-    }
-
-    /// <inheritdoc/>
-    public async Task WriteGeotypicalModelLevelOfDetailAsync(GeotypicalModelLod geotypicalModelLod, Stream content, CancellationToken cancellationToken)
-    {
-        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        await using DbCommand insertIntoGeotypicalModelLodCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoGeotypicalModelLodCommand(insertIntoGeotypicalModelLodCommand);
-        await insertIntoGeotypicalModelLodCommand.PrepareAsync(cancellationToken);
-
-        await InsertIntoGeotypicalModelLodAsync(insertIntoGeotypicalModelLodCommand, geotypicalModelLod, content, cancellationToken);
-    }
-
-    /// <inheritdoc cref="WriteGeotypicalModelLevelOfDetailAsync(GeotypicalModelLod, Stream, CancellationToken)"/>
-    /// <remarks>
-    /// <para>
-    /// This is what subclasses should override to customize behavior.
-    /// </para>
-    /// </remarks>
-    /// <param name="insertIntoGeotypicalModelLodCommand">The prepared statement to use to execute the query.</param>
-    protected internal virtual Task InsertIntoGeotypicalModelLodAsync(DbCommand insertIntoGeotypicalModelLodCommand,
-        GeotypicalModelLod geotypicalModelLod, Stream content, CancellationToken cancellationToken)
-    {
-        insertIntoGeotypicalModelLodCommand.Parameters[CdbParamName].Value = Name;
-        SetGeotypicalModelLodParameters(insertIntoGeotypicalModelLodCommand, geotypicalModelLod);
-        insertIntoGeotypicalModelLodCommand.Parameters[ContentParamName].Value = content;
-
-        return insertIntoGeotypicalModelLodCommand.ExecuteNonQueryAsync(cancellationToken);
-    }
-
-    #endregion
 
     #region Select
 
@@ -2414,6 +2237,183 @@ public abstract class SQLCDB : ICDB
 
     #endregion
 
+    #region Insert
+
+    /// <summary>
+    /// The SQL statement to insert a row into the Geotypical Model Level of Detail table.
+    /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="LevelOfDetailParamName"/></description></item>
+    ///   <item><description><see cref="FeatureCategoryParamName"/></description></item>
+    ///   <item><description><see cref="FeatureSubcategoryParamName"/></description></item>
+    ///   <item><description><see cref="FeatureTypeParamName"/></description></item>
+    ///   <item><description><see cref="FeatureSubcodeParamName"/></description></item>
+    ///   <item><description><see cref="ModelNameParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    ///   <item><description><see cref="ContentParamName"/></description></item>
+    /// </list>
+    /// </remarks>
+    protected abstract string InsertIntoGeotypicalModelLodStatement
+    {
+        get;
+    }
+
+    internal void InitializeInsertIntoGeotypicalModelLodCommand(DbCommand dbCommand)
+    {
+        dbCommand.CommandText = InsertIntoGeotypicalModelLodStatement;
+        CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
+        CreateAndAttachGeotypicalModelLodParameters(dbCommand);
+        CreateAndAttachParameter(dbCommand, ContentParamName, DbType.Binary);
+    }
+
+    private void CreateAndAttachGeotypicalModelLodParameters(DbCommand dbCommand)
+    {
+        CreateAndAttachParameter(dbCommand, DatasetParamName, DbType.Int32);
+        CreateAndAttachParameter(dbCommand, ComponentSelector1ParamName, DbType.Int32);
+        CreateAndAttachParameter(dbCommand, ComponentSelector2ParamName, DbType.Int32);
+        CreateAndAttachParameter(dbCommand, LevelOfDetailParamName, DbType.Int32);
+        CreateAndAttachParameter(dbCommand, FeatureCategoryParamName, DbType.String);
+        CreateAndAttachParameter(dbCommand, FeatureSubcategoryParamName, DbType.String);
+        CreateAndAttachParameter(dbCommand, FeatureTypeParamName, DbType.Int32);
+        CreateAndAttachParameter(dbCommand, FeatureSubcodeParamName, DbType.Int32);
+        CreateAndAttachParameter(dbCommand, ModelNameParamName, DbType.String);
+        CreateAndAttachParameter(dbCommand, FileTypeParamName, DbType.String);
+    }
+
+    private void SetGeotypicalModelLodParameters(DbCommand dbCommand, GeotypicalModelLod geotypicalModelLod)
+    {
+        dbCommand.Parameters[DatasetParamName].Value = geotypicalModelLod.Dataset.Value;
+        dbCommand.Parameters[ComponentSelector1ParamName].Value = geotypicalModelLod.ComponentSelector1;
+        dbCommand.Parameters[ComponentSelector2ParamName].Value = geotypicalModelLod.ComponentSelector2;
+        dbCommand.Parameters[LevelOfDetailParamName].Value = geotypicalModelLod.LevelOfDetail.Value;
+        dbCommand.Parameters[FeatureCategoryParamName].Value = geotypicalModelLod.FeatureCode.Category;
+        dbCommand.Parameters[FeatureSubcategoryParamName].Value = geotypicalModelLod.FeatureCode.Subcategory;
+        dbCommand.Parameters[FeatureTypeParamName].Value = geotypicalModelLod.FeatureCode.Type;
+        dbCommand.Parameters[FeatureSubcodeParamName].Value = geotypicalModelLod.FeatureSubcode;
+        dbCommand.Parameters[ModelNameParamName].Value = geotypicalModelLod.Name;
+        dbCommand.Parameters[FileTypeParamName].Value = geotypicalModelLod.FileType;
+    }
+
+    /// <inheritdoc cref="WriteGeotypicalModelLevelOfDetail(GeotypicalModelLod, Stream)"/>
+    public void WriteGeotypicalModelLevelOfDetail(GeotypicalModelLod geotypicalModelLod, byte[] content)
+    {
+        using DbConnection dbConnection = dbDataSource.OpenConnection();
+        using DbCommand insertIntoGeotypicalModelLodCommand = dbConnection.CreateCommand();
+        InitializeInsertIntoGeotypicalModelLodCommand(insertIntoGeotypicalModelLodCommand);
+        insertIntoGeotypicalModelLodCommand.Prepare();
+
+        InsertIntoGeotypicalModelLod(insertIntoGeotypicalModelLodCommand, geotypicalModelLod, content);
+    }
+
+    /// <inheritdoc cref="WriteGeotypicalModelLevelOfDetail(GeotypicalModelLod, byte[])"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoGeotypicalModelLodCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual void InsertIntoGeotypicalModelLod(DbCommand insertIntoGeotypicalModelLodCommand,
+        GeotypicalModelLod geotypicalModelLod, byte[] content)
+    {
+        insertIntoGeotypicalModelLodCommand.Parameters[CdbParamName].Value = Name;
+        SetGeotypicalModelLodParameters(insertIntoGeotypicalModelLodCommand, geotypicalModelLod);
+        insertIntoGeotypicalModelLodCommand.Parameters[ContentParamName].Value = content;
+
+        insertIntoGeotypicalModelLodCommand.ExecuteNonQuery();
+    }
+
+    /// <inheritdoc/>
+    public void WriteGeotypicalModelLevelOfDetail(GeotypicalModelLod geotypicalModelLod, Stream content)
+    {
+        using DbConnection dbConnection = dbDataSource.OpenConnection();
+        using DbCommand insertIntoGeotypicalModelLodCommand = dbConnection.CreateCommand();
+        InitializeInsertIntoGeotypicalModelLodCommand(insertIntoGeotypicalModelLodCommand);
+        insertIntoGeotypicalModelLodCommand.Prepare();
+
+        InsertIntoGeotypicalModelLod(insertIntoGeotypicalModelLodCommand, geotypicalModelLod, content);
+    }
+
+    /// <inheritdoc cref="WriteGeotypicalModelLevelOfDetail(GeotypicalModelLod, Stream)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoGeotypicalModelLodCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual void InsertIntoGeotypicalModelLod(DbCommand insertIntoGeotypicalModelLodCommand,
+        GeotypicalModelLod geotypicalModelLod, Stream content)
+    {
+        insertIntoGeotypicalModelLodCommand.Parameters[CdbParamName].Value = Name;
+        SetGeotypicalModelLodParameters(insertIntoGeotypicalModelLodCommand, geotypicalModelLod);
+        insertIntoGeotypicalModelLodCommand.Parameters[ContentParamName].Value = content;
+
+        insertIntoGeotypicalModelLodCommand.ExecuteNonQuery();
+    }
+
+    /// <inheritdoc cref="WriteGeotypicalModelLevelOfDetailAsync(GeotypicalModelLod, Stream, CancellationToken)"/>
+    public async Task WriteGeotypicalModelLevelOfDetailAsync(GeotypicalModelLod geotypicalModelLod, byte[] content, CancellationToken cancellationToken)
+    {
+        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
+        await using DbCommand insertIntoGeotypicalModelLodCommand = dbConnection.CreateCommand();
+        InitializeInsertIntoGeotypicalModelLodCommand(insertIntoGeotypicalModelLodCommand);
+        await insertIntoGeotypicalModelLodCommand.PrepareAsync(cancellationToken);
+
+        await InsertIntoGeotypicalModelLodAsync(insertIntoGeotypicalModelLodCommand, geotypicalModelLod, content, cancellationToken);
+    }
+
+    /// <inheritdoc cref="WriteGeotypicalModelLevelOfDetailAsync(GeotypicalModelLod, byte[], CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoGeotypicalModelLodCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual Task InsertIntoGeotypicalModelLodAsync(DbCommand insertIntoGeotypicalModelLodCommand,
+        GeotypicalModelLod geotypicalModelLod, byte[] content, CancellationToken cancellationToken)
+    {
+        insertIntoGeotypicalModelLodCommand.Parameters[CdbParamName].Value = Name;
+        SetGeotypicalModelLodParameters(insertIntoGeotypicalModelLodCommand, geotypicalModelLod);
+        insertIntoGeotypicalModelLodCommand.Parameters[ContentParamName].Value = content;
+
+        return insertIntoGeotypicalModelLodCommand.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task WriteGeotypicalModelLevelOfDetailAsync(GeotypicalModelLod geotypicalModelLod, Stream content, CancellationToken cancellationToken)
+    {
+        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
+        await using DbCommand insertIntoGeotypicalModelLodCommand = dbConnection.CreateCommand();
+        InitializeInsertIntoGeotypicalModelLodCommand(insertIntoGeotypicalModelLodCommand);
+        await insertIntoGeotypicalModelLodCommand.PrepareAsync(cancellationToken);
+
+        await InsertIntoGeotypicalModelLodAsync(insertIntoGeotypicalModelLodCommand, geotypicalModelLod, content, cancellationToken);
+    }
+
+    /// <inheritdoc cref="WriteGeotypicalModelLevelOfDetailAsync(GeotypicalModelLod, Stream, CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoGeotypicalModelLodCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual Task InsertIntoGeotypicalModelLodAsync(DbCommand insertIntoGeotypicalModelLodCommand,
+        GeotypicalModelLod geotypicalModelLod, Stream content, CancellationToken cancellationToken)
+    {
+        insertIntoGeotypicalModelLodCommand.Parameters[CdbParamName].Value = Name;
+        SetGeotypicalModelLodParameters(insertIntoGeotypicalModelLodCommand, geotypicalModelLod);
+        insertIntoGeotypicalModelLodCommand.Parameters[ContentParamName].Value = content;
+
+        return insertIntoGeotypicalModelLodCommand.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    #endregion
+
     #endregion
 
     #region Moving Model
@@ -2425,186 +2425,6 @@ public abstract class SQLCDB : ICDB
     {
         get;
     }
-
-    #region Insert
-
-    /// <summary>
-    /// The SQL statement to insert a row into the Moving Model table.
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    ///   <listheader><description>Parameters</description></listheader>
-    ///   <item><description><see cref="CdbParamName"/></description></item>
-    ///   <item><description><see cref="DatasetParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
-    ///   <item><description><see cref="DISKindParamName"/></description></item>
-    ///   <item><description><see cref="DISDomainParamName"/></description></item>
-    ///   <item><description><see cref="DISCountryParamName"/></description></item>
-    ///   <item><description><see cref="DISCategoryParamName"/></description></item>
-    ///   <item><description><see cref="DISSubcategoryParamName"/></description></item>
-    ///   <item><description><see cref="DISSpecificParamName"/></description></item>
-    ///   <item><description><see cref="DISExtraParamName"/></description></item>
-    ///   <item><description><see cref="FileTypeParamName"/></description></item>
-    ///   <item><description><see cref="ContentParamName"/></description></item>
-    /// </list>
-    /// </remarks>
-    protected abstract string InsertIntoMovingModelStatement
-    {
-        get;
-    }
-
-    internal void InitializeInsertIntoMovingModelCommand(DbCommand dbCommand)
-    {
-        dbCommand.CommandText = InsertIntoMovingModelStatement;
-        CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
-        CreateAndAttachMovingModelParameters(dbCommand);
-        CreateAndAttachParameter(dbCommand, ContentParamName, DbType.String);
-    }
-
-    private void CreateAndAttachMovingModelParameters(DbCommand dbCommand)
-    {
-        CreateAndAttachParameter(dbCommand, DatasetParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, ComponentSelector1ParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, ComponentSelector2ParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, DISKindParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, DISDomainParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, DISCountryParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, DISCategoryParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, DISSubcategoryParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, DISSpecificParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, DISExtraParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, FileTypeParamName, DbType.String);
-    }
-
-    private void SetMovingModelParameters(DbCommand dbCommand, MovingModel movingModel)
-    {
-        dbCommand.Parameters[DatasetParamName].Value = movingModel.Dataset.Value;
-        dbCommand.Parameters[ComponentSelector1ParamName].Value = movingModel.ComponentSelector1;
-        dbCommand.Parameters[ComponentSelector2ParamName].Value = movingModel.ComponentSelector2;
-        dbCommand.Parameters[DISKindParamName].Value = movingModel.MMDC.Kind;
-        dbCommand.Parameters[DISDomainParamName].Value = movingModel.MMDC.Domain;
-        dbCommand.Parameters[DISCountryParamName].Value = movingModel.MMDC.Country;
-        dbCommand.Parameters[DISCategoryParamName].Value = movingModel.MMDC.Category;
-        dbCommand.Parameters[DISSubcategoryParamName].Value = movingModel.MMDC.Subcategory;
-        dbCommand.Parameters[DISSpecificParamName].Value = movingModel.MMDC.Specific;
-        dbCommand.Parameters[DISExtraParamName].Value = movingModel.MMDC.Extra;
-        dbCommand.Parameters[FileTypeParamName].Value = movingModel.FileType;
-    }
-
-    /// <inheritdoc cref="WriteMovingModel(MovingModel, Stream)"/>
-    public void WriteMovingModel(MovingModel movingModel, byte[] content)
-    {
-        using DbConnection dbConnection = dbDataSource.OpenConnection();
-        using DbCommand insertIntoMovingModelCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoMovingModelCommand(insertIntoMovingModelCommand);
-        insertIntoMovingModelCommand.Prepare();
-
-        InsertIntoMovingModel(insertIntoMovingModelCommand, movingModel, content);
-    }
-
-    /// <inheritdoc cref="WriteMovingModel(MovingModel, byte[])"/>
-    /// <remarks>
-    /// <para>
-    /// This is what subclasses should override to customize behavior.
-    /// </para>
-    /// </remarks>
-    /// <param name="insertIntoMovingModelCommand">The prepared statement to use to execute the query.</param>
-    protected internal virtual void InsertIntoMovingModel(DbCommand insertIntoMovingModelCommand,
-        MovingModel movingModel, byte[] content)
-    {
-        insertIntoMovingModelCommand.Parameters[CdbParamName].Value = Name;
-        SetMovingModelParameters(insertIntoMovingModelCommand, movingModel);
-        insertIntoMovingModelCommand.Parameters[ContentParamName].Value = content;
-
-        insertIntoMovingModelCommand.ExecuteNonQuery();
-    }
-
-    /// <inheritdoc/>
-    public void WriteMovingModel(MovingModel movingModel, Stream content)
-    {
-        using DbConnection dbConnection = dbDataSource.OpenConnection();
-        using DbCommand insertIntoMovingModelCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoMovingModelCommand(insertIntoMovingModelCommand);
-        insertIntoMovingModelCommand.Prepare();
-
-        InsertIntoMovingModel(insertIntoMovingModelCommand, movingModel, content);
-    }
-
-    /// <inheritdoc cref="WriteMovingModel(MovingModel, Stream)"/>
-    /// <remarks>
-    /// <para>
-    /// This is what subclasses should override to customize behavior.
-    /// </para>
-    /// </remarks>
-    /// <param name="insertIntoMovingModelCommand">The prepared statement to use to execute the query.</param>
-    protected internal virtual void InsertIntoMovingModel(DbCommand insertIntoMovingModelCommand,
-        MovingModel movingModel, Stream content)
-    {
-        insertIntoMovingModelCommand.Parameters[CdbParamName].Value = Name;
-        SetMovingModelParameters(insertIntoMovingModelCommand, movingModel);
-        insertIntoMovingModelCommand.Parameters[ContentParamName].Value = content;
-
-        insertIntoMovingModelCommand.ExecuteNonQuery();
-    }
-
-    /// <inheritdoc cref="WriteMovingModelAsync(MovingModel, Stream, CancellationToken)"/>
-    public async Task WriteMovingModelAsync(MovingModel movingModel, byte[] content, CancellationToken cancellationToken)
-    {
-        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        await using DbCommand insertIntoMovingModelCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoMovingModelCommand(insertIntoMovingModelCommand);
-        await insertIntoMovingModelCommand.PrepareAsync(cancellationToken);
-
-        await InsertIntoMovingModelAsync(insertIntoMovingModelCommand, movingModel, content, cancellationToken);
-    }
-
-    /// <inheritdoc cref="WriteMovingModelAsync(MovingModel, byte[], CancellationToken)"/>
-    /// <remarks>
-    /// <para>
-    /// This is what subclasses should override to customize behavior.
-    /// </para>
-    /// </remarks>
-    /// <param name="insertIntoMovingModelCommand">The prepared statement to use to execute the query.</param>
-    protected internal virtual Task InsertIntoMovingModelAsync(DbCommand insertIntoMovingModelCommand,
-        MovingModel movingModel, byte[] content, CancellationToken cancellationToken)
-    {
-        insertIntoMovingModelCommand.Parameters[CdbParamName].Value = Name;
-        SetMovingModelParameters(insertIntoMovingModelCommand, movingModel);
-        insertIntoMovingModelCommand.Parameters[ContentParamName].Value = content;
-
-        return insertIntoMovingModelCommand.ExecuteNonQueryAsync(cancellationToken);
-    }
-
-    /// <inheritdoc/>
-    public async Task WriteMovingModelAsync(MovingModel movingModel, Stream content, CancellationToken cancellationToken)
-    {
-        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        await using DbCommand insertIntoMovingModelCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoMovingModelCommand(insertIntoMovingModelCommand);
-        await insertIntoMovingModelCommand.PrepareAsync(cancellationToken);
-
-        await InsertIntoMovingModelAsync(insertIntoMovingModelCommand, movingModel, content, cancellationToken);
-    }
-
-    /// <inheritdoc cref="WriteMovingModelAsync(MovingModel, Stream, CancellationToken)"/>
-    /// <remarks>
-    /// <para>
-    /// This is what subclasses should override to customize behavior.
-    /// </para>
-    /// </remarks>
-    /// <param name="insertIntoMovingModelCommand">The prepared statement to use to execute the query.</param>
-    protected internal virtual Task InsertIntoMovingModelAsync(DbCommand insertIntoMovingModelCommand,
-        MovingModel movingModel, Stream content, CancellationToken cancellationToken)
-    {
-        insertIntoMovingModelCommand.Parameters[CdbParamName].Value = Name;
-        SetMovingModelParameters(insertIntoMovingModelCommand, movingModel);
-        insertIntoMovingModelCommand.Parameters[ContentParamName].Value = content;
-
-        return insertIntoMovingModelCommand.ExecuteNonQueryAsync(cancellationToken);
-    }
-
-    #endregion
 
     #region Select
 
@@ -2790,22 +2610,10 @@ public abstract class SQLCDB : ICDB
 
     #endregion
 
-    #endregion
-
-    #region Moving Model LOD
-
-    /// <summary>
-    /// The SQL DDL statement to create the Moving Model Level of Detail table.
-    /// </summary>
-    protected abstract string CreateTableMovingModelLodStatement
-    {
-        get;
-    }
-
     #region Insert
 
     /// <summary>
-    /// The SQL statement to insert a row into the Moving Model Level of Detail table.
+    /// The SQL statement to insert a row into the Moving Model table.
     /// </summary>
     /// <remarks>
     /// <list type="bullet">
@@ -2814,7 +2622,6 @@ public abstract class SQLCDB : ICDB
     ///   <item><description><see cref="DatasetParamName"/></description></item>
     ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
     ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
-    ///   <item><description><see cref="LevelOfDetailParamName"/></description></item>
     ///   <item><description><see cref="DISKindParamName"/></description></item>
     ///   <item><description><see cref="DISDomainParamName"/></description></item>
     ///   <item><description><see cref="DISCountryParamName"/></description></item>
@@ -2826,25 +2633,24 @@ public abstract class SQLCDB : ICDB
     ///   <item><description><see cref="ContentParamName"/></description></item>
     /// </list>
     /// </remarks>
-    protected abstract string InsertIntoMovingModelLodStatement
+    protected abstract string InsertIntoMovingModelStatement
     {
         get;
     }
 
-    internal void InitializeInsertIntoMovingModelLodCommand(DbCommand dbCommand)
+    internal void InitializeInsertIntoMovingModelCommand(DbCommand dbCommand)
     {
-        dbCommand.CommandText = InsertIntoMovingModelLodStatement;
+        dbCommand.CommandText = InsertIntoMovingModelStatement;
         CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
-        CreateAndAttachMovingModelLodParameters(dbCommand);
+        CreateAndAttachMovingModelParameters(dbCommand);
         CreateAndAttachParameter(dbCommand, ContentParamName, DbType.String);
     }
 
-    private void CreateAndAttachMovingModelLodParameters(DbCommand dbCommand)
+    private void CreateAndAttachMovingModelParameters(DbCommand dbCommand)
     {
         CreateAndAttachParameter(dbCommand, DatasetParamName, DbType.Int32);
         CreateAndAttachParameter(dbCommand, ComponentSelector1ParamName, DbType.Int32);
         CreateAndAttachParameter(dbCommand, ComponentSelector2ParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, LevelOfDetailParamName, DbType.Int32);
         CreateAndAttachParameter(dbCommand, DISKindParamName, DbType.Int32);
         CreateAndAttachParameter(dbCommand, DISDomainParamName, DbType.Int32);
         CreateAndAttachParameter(dbCommand, DISCountryParamName, DbType.Int32);
@@ -2855,135 +2661,146 @@ public abstract class SQLCDB : ICDB
         CreateAndAttachParameter(dbCommand, FileTypeParamName, DbType.String);
     }
 
-    private void SetMovingModelLodParameters(DbCommand dbCommand, MovingModelLod movingModelLod)
+    private void SetMovingModelParameters(DbCommand dbCommand, MovingModel movingModel)
     {
-        dbCommand.Parameters[DatasetParamName].Value = movingModelLod.Dataset.Value;
-        dbCommand.Parameters[ComponentSelector1ParamName].Value = movingModelLod.ComponentSelector1;
-        dbCommand.Parameters[ComponentSelector2ParamName].Value = movingModelLod.ComponentSelector2;
-        dbCommand.Parameters[LevelOfDetailParamName].Value = movingModelLod.LevelOfDetail.Value;
-        dbCommand.Parameters[DISKindParamName].Value = movingModelLod.MMDC.Kind;
-        dbCommand.Parameters[DISDomainParamName].Value = movingModelLod.MMDC.Domain;
-        dbCommand.Parameters[DISCountryParamName].Value = movingModelLod.MMDC.Country;
-        dbCommand.Parameters[DISCategoryParamName].Value = movingModelLod.MMDC.Category;
-        dbCommand.Parameters[DISSubcategoryParamName].Value = movingModelLod.MMDC.Subcategory;
-        dbCommand.Parameters[DISSpecificParamName].Value = movingModelLod.MMDC.Specific;
-        dbCommand.Parameters[DISExtraParamName].Value = movingModelLod.MMDC.Extra;
-        dbCommand.Parameters[FileTypeParamName].Value = movingModelLod.FileType;
+        dbCommand.Parameters[DatasetParamName].Value = movingModel.Dataset.Value;
+        dbCommand.Parameters[ComponentSelector1ParamName].Value = movingModel.ComponentSelector1;
+        dbCommand.Parameters[ComponentSelector2ParamName].Value = movingModel.ComponentSelector2;
+        dbCommand.Parameters[DISKindParamName].Value = movingModel.MMDC.Kind;
+        dbCommand.Parameters[DISDomainParamName].Value = movingModel.MMDC.Domain;
+        dbCommand.Parameters[DISCountryParamName].Value = movingModel.MMDC.Country;
+        dbCommand.Parameters[DISCategoryParamName].Value = movingModel.MMDC.Category;
+        dbCommand.Parameters[DISSubcategoryParamName].Value = movingModel.MMDC.Subcategory;
+        dbCommand.Parameters[DISSpecificParamName].Value = movingModel.MMDC.Specific;
+        dbCommand.Parameters[DISExtraParamName].Value = movingModel.MMDC.Extra;
+        dbCommand.Parameters[FileTypeParamName].Value = movingModel.FileType;
     }
 
-    /// <inheritdoc cref="WriteMovingModelLevelOfDetail(MovingModelLod, Stream)"/>
-    public void WriteMovingModelLevelOfDetail(MovingModelLod movingModelLod, byte[] content)
+    /// <inheritdoc cref="WriteMovingModel(MovingModel, Stream)"/>
+    public void WriteMovingModel(MovingModel movingModel, byte[] content)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
-        using DbCommand insertIntoMovingModelLodCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoMovingModelLodCommand(insertIntoMovingModelLodCommand);
-        insertIntoMovingModelLodCommand.Prepare();
+        using DbCommand insertIntoMovingModelCommand = dbConnection.CreateCommand();
+        InitializeInsertIntoMovingModelCommand(insertIntoMovingModelCommand);
+        insertIntoMovingModelCommand.Prepare();
 
-        InsertIntoMovingModelLod(insertIntoMovingModelLodCommand, movingModelLod, content);
+        InsertIntoMovingModel(insertIntoMovingModelCommand, movingModel, content);
     }
 
-    /// <inheritdoc cref="WriteMovingModelLevelOfDetail(MovingModelLod, byte[])"/>
+    /// <inheritdoc cref="WriteMovingModel(MovingModel, byte[])"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
     /// </para>
     /// </remarks>
-    /// <param name="insertIntoMovingModelLodCommand">The prepared statement to use to execute the query.</param>
-    protected internal virtual void InsertIntoMovingModelLod(DbCommand insertIntoMovingModelLodCommand,
-        MovingModelLod movingModelLod, byte[] content)
+    /// <param name="insertIntoMovingModelCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual void InsertIntoMovingModel(DbCommand insertIntoMovingModelCommand,
+        MovingModel movingModel, byte[] content)
     {
-        insertIntoMovingModelLodCommand.Parameters[CdbParamName].Value = Name;
-        SetMovingModelLodParameters(insertIntoMovingModelLodCommand, movingModelLod);
-        insertIntoMovingModelLodCommand.Parameters[ContentParamName].Value = content;
+        insertIntoMovingModelCommand.Parameters[CdbParamName].Value = Name;
+        SetMovingModelParameters(insertIntoMovingModelCommand, movingModel);
+        insertIntoMovingModelCommand.Parameters[ContentParamName].Value = content;
 
-        insertIntoMovingModelLodCommand.ExecuteNonQuery();
+        insertIntoMovingModelCommand.ExecuteNonQuery();
     }
 
     /// <inheritdoc/>
-    public void WriteMovingModelLevelOfDetail(MovingModelLod movingModelLod, Stream content)
+    public void WriteMovingModel(MovingModel movingModel, Stream content)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
-        using DbCommand insertIntoMovingModelLodCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoMovingModelLodCommand(insertIntoMovingModelLodCommand);
-        insertIntoMovingModelLodCommand.Prepare();
+        using DbCommand insertIntoMovingModelCommand = dbConnection.CreateCommand();
+        InitializeInsertIntoMovingModelCommand(insertIntoMovingModelCommand);
+        insertIntoMovingModelCommand.Prepare();
 
-        InsertIntoMovingModelLod(insertIntoMovingModelLodCommand, movingModelLod, content);
+        InsertIntoMovingModel(insertIntoMovingModelCommand, movingModel, content);
     }
 
-    /// <inheritdoc cref="WriteMovingModelLevelOfDetail(MovingModelLod, Stream)"/>
+    /// <inheritdoc cref="WriteMovingModel(MovingModel, Stream)"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
     /// </para>
     /// </remarks>
-    /// <param name="insertIntoMovingModelLodCommand">The prepared statement to use to execute the query.</param>
-    protected internal virtual void InsertIntoMovingModelLod(DbCommand insertIntoMovingModelLodCommand,
-        MovingModelLod movingModelLod, Stream content)
+    /// <param name="insertIntoMovingModelCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual void InsertIntoMovingModel(DbCommand insertIntoMovingModelCommand,
+        MovingModel movingModel, Stream content)
     {
-        insertIntoMovingModelLodCommand.Parameters[CdbParamName].Value = Name;
-        SetMovingModelLodParameters(insertIntoMovingModelLodCommand, movingModelLod);
-        insertIntoMovingModelLodCommand.Parameters[ContentParamName].Value = content;
+        insertIntoMovingModelCommand.Parameters[CdbParamName].Value = Name;
+        SetMovingModelParameters(insertIntoMovingModelCommand, movingModel);
+        insertIntoMovingModelCommand.Parameters[ContentParamName].Value = content;
 
-        insertIntoMovingModelLodCommand.ExecuteNonQuery();
+        insertIntoMovingModelCommand.ExecuteNonQuery();
     }
 
-    /// <inheritdoc cref="WriteMovingModelLevelOfDetailAsync(MovingModelLod, Stream, CancellationToken)"/>
-    public async Task WriteMovingModelLevelOfDetailAsync(MovingModelLod movingModelLod, byte[] content, CancellationToken cancellationToken)
+    /// <inheritdoc cref="WriteMovingModelAsync(MovingModel, Stream, CancellationToken)"/>
+    public async Task WriteMovingModelAsync(MovingModel movingModel, byte[] content, CancellationToken cancellationToken)
     {
         await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        await using DbCommand insertIntoMovingModelLodCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoMovingModelLodCommand(insertIntoMovingModelLodCommand);
-        await insertIntoMovingModelLodCommand.PrepareAsync(cancellationToken);
+        await using DbCommand insertIntoMovingModelCommand = dbConnection.CreateCommand();
+        InitializeInsertIntoMovingModelCommand(insertIntoMovingModelCommand);
+        await insertIntoMovingModelCommand.PrepareAsync(cancellationToken);
 
-        await InsertIntoMovingModelLodAsync(insertIntoMovingModelLodCommand, movingModelLod, content, cancellationToken);
+        await InsertIntoMovingModelAsync(insertIntoMovingModelCommand, movingModel, content, cancellationToken);
     }
 
-    /// <inheritdoc cref="WriteMovingModelLevelOfDetailAsync(MovingModelLod, byte[], CancellationToken)"/>
+    /// <inheritdoc cref="WriteMovingModelAsync(MovingModel, byte[], CancellationToken)"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
     /// </para>
     /// </remarks>
-    /// <param name="insertIntoMovingModelLodCommand">The prepared statement to use to execute the query.</param>
-    protected internal virtual Task InsertIntoMovingModelLodAsync(DbCommand insertIntoMovingModelLodCommand,
-        MovingModelLod movingModelLod, byte[] content, CancellationToken cancellationToken)
+    /// <param name="insertIntoMovingModelCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual Task InsertIntoMovingModelAsync(DbCommand insertIntoMovingModelCommand,
+        MovingModel movingModel, byte[] content, CancellationToken cancellationToken)
     {
-        insertIntoMovingModelLodCommand.Parameters[CdbParamName].Value = Name;
-        SetMovingModelLodParameters(insertIntoMovingModelLodCommand, movingModelLod);
-        insertIntoMovingModelLodCommand.Parameters[ContentParamName].Value = content;
+        insertIntoMovingModelCommand.Parameters[CdbParamName].Value = Name;
+        SetMovingModelParameters(insertIntoMovingModelCommand, movingModel);
+        insertIntoMovingModelCommand.Parameters[ContentParamName].Value = content;
 
-        return insertIntoMovingModelLodCommand.ExecuteNonQueryAsync(cancellationToken);
+        return insertIntoMovingModelCommand.ExecuteNonQueryAsync(cancellationToken);
     }
 
     /// <inheritdoc/>
-    public async Task WriteMovingModelLevelOfDetailAsync(MovingModelLod movingModelLod, Stream content, CancellationToken cancellationToken)
+    public async Task WriteMovingModelAsync(MovingModel movingModel, Stream content, CancellationToken cancellationToken)
     {
         await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        await using DbCommand insertIntoMovingModelLodCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoMovingModelLodCommand(insertIntoMovingModelLodCommand);
-        await insertIntoMovingModelLodCommand.PrepareAsync(cancellationToken);
+        await using DbCommand insertIntoMovingModelCommand = dbConnection.CreateCommand();
+        InitializeInsertIntoMovingModelCommand(insertIntoMovingModelCommand);
+        await insertIntoMovingModelCommand.PrepareAsync(cancellationToken);
 
-        await InsertIntoMovingModelLodAsync(insertIntoMovingModelLodCommand, movingModelLod, content, cancellationToken);
+        await InsertIntoMovingModelAsync(insertIntoMovingModelCommand, movingModel, content, cancellationToken);
     }
 
-    /// <inheritdoc cref="WriteMovingModelLevelOfDetailAsync(MovingModelLod, Stream, CancellationToken)"/>
+    /// <inheritdoc cref="WriteMovingModelAsync(MovingModel, Stream, CancellationToken)"/>
     /// <remarks>
     /// <para>
     /// This is what subclasses should override to customize behavior.
     /// </para>
     /// </remarks>
-    /// <param name="insertIntoMovingModelLodCommand">The prepared statement to use to execute the query.</param>
-    protected internal virtual Task InsertIntoMovingModelLodAsync(DbCommand insertIntoMovingModelLodCommand,
-        MovingModelLod movingModelLod, Stream content, CancellationToken cancellationToken)
+    /// <param name="insertIntoMovingModelCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual Task InsertIntoMovingModelAsync(DbCommand insertIntoMovingModelCommand,
+        MovingModel movingModel, Stream content, CancellationToken cancellationToken)
     {
-        insertIntoMovingModelLodCommand.Parameters[CdbParamName].Value = Name;
-        SetMovingModelLodParameters(insertIntoMovingModelLodCommand, movingModelLod);
-        insertIntoMovingModelLodCommand.Parameters[ContentParamName].Value = content;
+        insertIntoMovingModelCommand.Parameters[CdbParamName].Value = Name;
+        SetMovingModelParameters(insertIntoMovingModelCommand, movingModel);
+        insertIntoMovingModelCommand.Parameters[ContentParamName].Value = content;
 
-        return insertIntoMovingModelLodCommand.ExecuteNonQueryAsync(cancellationToken);
+        return insertIntoMovingModelCommand.ExecuteNonQueryAsync(cancellationToken);
     }
 
     #endregion
+
+    #endregion
+
+    #region Moving Model LOD
+
+    /// <summary>
+    /// The SQL DDL statement to create the Moving Model Level of Detail table.
+    /// </summary>
+    protected abstract string CreateTableMovingModelLodStatement
+    {
+        get;
+    }
 
     #region Select
 
@@ -3170,6 +2987,189 @@ public abstract class SQLCDB : ICDB
 
     #endregion
 
+    #region Insert
+
+    /// <summary>
+    /// The SQL statement to insert a row into the Moving Model Level of Detail table.
+    /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="LevelOfDetailParamName"/></description></item>
+    ///   <item><description><see cref="DISKindParamName"/></description></item>
+    ///   <item><description><see cref="DISDomainParamName"/></description></item>
+    ///   <item><description><see cref="DISCountryParamName"/></description></item>
+    ///   <item><description><see cref="DISCategoryParamName"/></description></item>
+    ///   <item><description><see cref="DISSubcategoryParamName"/></description></item>
+    ///   <item><description><see cref="DISSpecificParamName"/></description></item>
+    ///   <item><description><see cref="DISExtraParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    ///   <item><description><see cref="ContentParamName"/></description></item>
+    /// </list>
+    /// </remarks>
+    protected abstract string InsertIntoMovingModelLodStatement
+    {
+        get;
+    }
+
+    internal void InitializeInsertIntoMovingModelLodCommand(DbCommand dbCommand)
+    {
+        dbCommand.CommandText = InsertIntoMovingModelLodStatement;
+        CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
+        CreateAndAttachMovingModelLodParameters(dbCommand);
+        CreateAndAttachParameter(dbCommand, ContentParamName, DbType.String);
+    }
+
+    private void CreateAndAttachMovingModelLodParameters(DbCommand dbCommand)
+    {
+        CreateAndAttachParameter(dbCommand, DatasetParamName, DbType.Int32);
+        CreateAndAttachParameter(dbCommand, ComponentSelector1ParamName, DbType.Int32);
+        CreateAndAttachParameter(dbCommand, ComponentSelector2ParamName, DbType.Int32);
+        CreateAndAttachParameter(dbCommand, LevelOfDetailParamName, DbType.Int32);
+        CreateAndAttachParameter(dbCommand, DISKindParamName, DbType.Int32);
+        CreateAndAttachParameter(dbCommand, DISDomainParamName, DbType.Int32);
+        CreateAndAttachParameter(dbCommand, DISCountryParamName, DbType.Int32);
+        CreateAndAttachParameter(dbCommand, DISCategoryParamName, DbType.Int32);
+        CreateAndAttachParameter(dbCommand, DISSubcategoryParamName, DbType.Int32);
+        CreateAndAttachParameter(dbCommand, DISSpecificParamName, DbType.Int32);
+        CreateAndAttachParameter(dbCommand, DISExtraParamName, DbType.Int32);
+        CreateAndAttachParameter(dbCommand, FileTypeParamName, DbType.String);
+    }
+
+    private void SetMovingModelLodParameters(DbCommand dbCommand, MovingModelLod movingModelLod)
+    {
+        dbCommand.Parameters[DatasetParamName].Value = movingModelLod.Dataset.Value;
+        dbCommand.Parameters[ComponentSelector1ParamName].Value = movingModelLod.ComponentSelector1;
+        dbCommand.Parameters[ComponentSelector2ParamName].Value = movingModelLod.ComponentSelector2;
+        dbCommand.Parameters[LevelOfDetailParamName].Value = movingModelLod.LevelOfDetail.Value;
+        dbCommand.Parameters[DISKindParamName].Value = movingModelLod.MMDC.Kind;
+        dbCommand.Parameters[DISDomainParamName].Value = movingModelLod.MMDC.Domain;
+        dbCommand.Parameters[DISCountryParamName].Value = movingModelLod.MMDC.Country;
+        dbCommand.Parameters[DISCategoryParamName].Value = movingModelLod.MMDC.Category;
+        dbCommand.Parameters[DISSubcategoryParamName].Value = movingModelLod.MMDC.Subcategory;
+        dbCommand.Parameters[DISSpecificParamName].Value = movingModelLod.MMDC.Specific;
+        dbCommand.Parameters[DISExtraParamName].Value = movingModelLod.MMDC.Extra;
+        dbCommand.Parameters[FileTypeParamName].Value = movingModelLod.FileType;
+    }
+
+    /// <inheritdoc cref="WriteMovingModelLevelOfDetail(MovingModelLod, Stream)"/>
+    public void WriteMovingModelLevelOfDetail(MovingModelLod movingModelLod, byte[] content)
+    {
+        using DbConnection dbConnection = dbDataSource.OpenConnection();
+        using DbCommand insertIntoMovingModelLodCommand = dbConnection.CreateCommand();
+        InitializeInsertIntoMovingModelLodCommand(insertIntoMovingModelLodCommand);
+        insertIntoMovingModelLodCommand.Prepare();
+
+        InsertIntoMovingModelLod(insertIntoMovingModelLodCommand, movingModelLod, content);
+    }
+
+    /// <inheritdoc cref="WriteMovingModelLevelOfDetail(MovingModelLod, byte[])"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoMovingModelLodCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual void InsertIntoMovingModelLod(DbCommand insertIntoMovingModelLodCommand,
+        MovingModelLod movingModelLod, byte[] content)
+    {
+        insertIntoMovingModelLodCommand.Parameters[CdbParamName].Value = Name;
+        SetMovingModelLodParameters(insertIntoMovingModelLodCommand, movingModelLod);
+        insertIntoMovingModelLodCommand.Parameters[ContentParamName].Value = content;
+
+        insertIntoMovingModelLodCommand.ExecuteNonQuery();
+    }
+
+    /// <inheritdoc/>
+    public void WriteMovingModelLevelOfDetail(MovingModelLod movingModelLod, Stream content)
+    {
+        using DbConnection dbConnection = dbDataSource.OpenConnection();
+        using DbCommand insertIntoMovingModelLodCommand = dbConnection.CreateCommand();
+        InitializeInsertIntoMovingModelLodCommand(insertIntoMovingModelLodCommand);
+        insertIntoMovingModelLodCommand.Prepare();
+
+        InsertIntoMovingModelLod(insertIntoMovingModelLodCommand, movingModelLod, content);
+    }
+
+    /// <inheritdoc cref="WriteMovingModelLevelOfDetail(MovingModelLod, Stream)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoMovingModelLodCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual void InsertIntoMovingModelLod(DbCommand insertIntoMovingModelLodCommand,
+        MovingModelLod movingModelLod, Stream content)
+    {
+        insertIntoMovingModelLodCommand.Parameters[CdbParamName].Value = Name;
+        SetMovingModelLodParameters(insertIntoMovingModelLodCommand, movingModelLod);
+        insertIntoMovingModelLodCommand.Parameters[ContentParamName].Value = content;
+
+        insertIntoMovingModelLodCommand.ExecuteNonQuery();
+    }
+
+    /// <inheritdoc cref="WriteMovingModelLevelOfDetailAsync(MovingModelLod, Stream, CancellationToken)"/>
+    public async Task WriteMovingModelLevelOfDetailAsync(MovingModelLod movingModelLod, byte[] content, CancellationToken cancellationToken)
+    {
+        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
+        await using DbCommand insertIntoMovingModelLodCommand = dbConnection.CreateCommand();
+        InitializeInsertIntoMovingModelLodCommand(insertIntoMovingModelLodCommand);
+        await insertIntoMovingModelLodCommand.PrepareAsync(cancellationToken);
+
+        await InsertIntoMovingModelLodAsync(insertIntoMovingModelLodCommand, movingModelLod, content, cancellationToken);
+    }
+
+    /// <inheritdoc cref="WriteMovingModelLevelOfDetailAsync(MovingModelLod, byte[], CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoMovingModelLodCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual Task InsertIntoMovingModelLodAsync(DbCommand insertIntoMovingModelLodCommand,
+        MovingModelLod movingModelLod, byte[] content, CancellationToken cancellationToken)
+    {
+        insertIntoMovingModelLodCommand.Parameters[CdbParamName].Value = Name;
+        SetMovingModelLodParameters(insertIntoMovingModelLodCommand, movingModelLod);
+        insertIntoMovingModelLodCommand.Parameters[ContentParamName].Value = content;
+
+        return insertIntoMovingModelLodCommand.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task WriteMovingModelLevelOfDetailAsync(MovingModelLod movingModelLod, Stream content, CancellationToken cancellationToken)
+    {
+        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
+        await using DbCommand insertIntoMovingModelLodCommand = dbConnection.CreateCommand();
+        InitializeInsertIntoMovingModelLodCommand(insertIntoMovingModelLodCommand);
+        await insertIntoMovingModelLodCommand.PrepareAsync(cancellationToken);
+
+        await InsertIntoMovingModelLodAsync(insertIntoMovingModelLodCommand, movingModelLod, content, cancellationToken);
+    }
+
+    /// <inheritdoc cref="WriteMovingModelLevelOfDetailAsync(MovingModelLod, Stream, CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoMovingModelLodCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual Task InsertIntoMovingModelLodAsync(DbCommand insertIntoMovingModelLodCommand,
+        MovingModelLod movingModelLod, Stream content, CancellationToken cancellationToken)
+    {
+        insertIntoMovingModelLodCommand.Parameters[CdbParamName].Value = Name;
+        SetMovingModelLodParameters(insertIntoMovingModelLodCommand, movingModelLod);
+        insertIntoMovingModelLodCommand.Parameters[ContentParamName].Value = content;
+
+        return insertIntoMovingModelLodCommand.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    #endregion
+
     #endregion
 
     #region Tile
@@ -3181,180 +3181,6 @@ public abstract class SQLCDB : ICDB
     {
         get;
     }
-
-    #region Insert
-
-    /// <summary>
-    /// The SQL statement to insert a row into the Tile table.
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    ///   <listheader><description>Parameters</description></listheader>
-    ///   <item><description><see cref="CdbParamName"/></description></item>
-    ///   <item><description><see cref="LatitudeParamName"/></description></item>
-    ///   <item><description><see cref="LongitudeParamName"/></description></item>
-    ///   <item><description><see cref="DatasetParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
-    ///   <item><description><see cref="LevelOfDetailParamName"/></description></item>
-    ///   <item><description><see cref="UpParamName"/></description></item>
-    ///   <item><description><see cref="RightParamName"/></description></item>
-    ///   <item><description><see cref="FileTypeParamName"/></description></item>
-    ///   <item><description><see cref="ContentParamName"/></description></item>
-    /// </list>
-    /// </remarks>
-    protected abstract string InsertIntoTileStatement
-    {
-        get;
-    }
-
-    internal void InitializeInsertIntoTileCommand(DbCommand dbCommand)
-    {
-        dbCommand.CommandText = InsertIntoTileStatement;
-        CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
-        CreateAndAttachTileParameters(dbCommand);
-        CreateAndAttachParameter(dbCommand, ContentParamName, DbType.Binary);
-    }
-
-    private void CreateAndAttachTileParameters(DbCommand dbCommand)
-    {
-        CreateAndAttachParameter(dbCommand, LatitudeParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, LongitudeParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, DatasetParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, ComponentSelector1ParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, ComponentSelector2ParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, LevelOfDetailParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, UpParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, RightParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, FileTypeParamName, DbType.String);
-    }
-
-    private void SetTileParameters(DbCommand dbCommand, Tile tile)
-    {
-        dbCommand.Parameters[LatitudeParamName].Value = tile.LatitudeValue.Value;
-        dbCommand.Parameters[LongitudeParamName].Value = tile.LongitudeValue.Value;
-        dbCommand.Parameters[DatasetParamName].Value = tile.DatasetValue.Value;
-        dbCommand.Parameters[ComponentSelector1ParamName].Value = tile.ComponentSelector1;
-        dbCommand.Parameters[ComponentSelector2ParamName].Value = tile.ComponentSelector2;
-        dbCommand.Parameters[LevelOfDetailParamName].Value = tile.Level.Value;
-        dbCommand.Parameters[UpParamName].Value = tile.Up;
-        dbCommand.Parameters[RightParamName].Value = tile.Right;
-        dbCommand.Parameters[FileTypeParamName].Value = tile.FileType;
-    }
-
-    /// <inheritdoc cref="WriteTile(Tile, Stream)"/>
-    public void WriteTile(Tile tile, byte[] content)
-    {
-        using DbConnection dbConnection = dbDataSource.OpenConnection();
-        using DbCommand insertIntoTileCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoTileCommand(insertIntoTileCommand);
-        insertIntoTileCommand.Prepare();
-
-        InsertIntoTile(insertIntoTileCommand, tile, content);
-    }
-
-    /// <inheritdoc cref="WriteTile(Tile, byte[])"/>
-    /// <remarks>
-    /// <para>
-    /// This is what subclasses should override to customize behavior.
-    /// </para>
-    /// </remarks>
-    /// <param name="insertIntoTileCommand">The prepared statement to use to execute the query.</param>
-    protected internal virtual void InsertIntoTile(DbCommand insertIntoTileCommand,
-        Tile tile, byte[] content)
-    {
-        insertIntoTileCommand.Parameters[CdbParamName].Value = Name;
-        SetTileParameters(insertIntoTileCommand, tile);
-        insertIntoTileCommand.Parameters[ContentParamName].Value = content;
-
-        insertIntoTileCommand.ExecuteNonQuery();
-    }
-
-    /// <inheritdoc/>
-    public void WriteTile(Tile tile, Stream content)
-    {
-        using DbConnection dbConnection = dbDataSource.OpenConnection();
-        using DbCommand insertIntoTileCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoTileCommand(insertIntoTileCommand);
-        insertIntoTileCommand.Prepare();
-
-        InsertIntoTile(insertIntoTileCommand, tile, content);
-    }
-
-    /// <inheritdoc cref="WriteTile(Tile, Stream)"/>
-    /// <remarks>
-    /// <para>
-    /// This is what subclasses should override to customize behavior.
-    /// </para>
-    /// </remarks>
-    /// <param name="insertIntoTileCommand">The prepared statement to use to execute the query.</param>
-    protected internal virtual void InsertIntoTile(DbCommand insertIntoTileCommand,
-        Tile tile, Stream content)
-    {
-        insertIntoTileCommand.Parameters[CdbParamName].Value = Name;
-        SetTileParameters(insertIntoTileCommand, tile);
-        insertIntoTileCommand.Parameters[ContentParamName].Value = content;
-
-        insertIntoTileCommand.ExecuteNonQuery();
-    }
-
-    /// <inheritdoc cref="WriteTileAsync(Tile, Stream, CancellationToken)"/>
-    public async Task WriteTileAsync(Tile tile, byte[] content, CancellationToken cancellationToken)
-    {
-        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        await using DbCommand insertIntoTileCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoTileCommand(insertIntoTileCommand);
-        await insertIntoTileCommand.PrepareAsync(cancellationToken);
-
-        await InsertIntoTileAsync(insertIntoTileCommand, tile, content, cancellationToken);
-    }
-
-    /// <inheritdoc cref="WriteTileAsync(Tile, byte[], CancellationToken)"/>
-    /// <remarks>
-    /// <para>
-    /// This is what subclasses should override to customize behavior.
-    /// </para>
-    /// </remarks>
-    /// <param name="insertIntoTileCommand">The prepared statement to use to execute the query.</param>
-    protected internal virtual Task InsertIntoTileAsync(DbCommand insertIntoTileCommand,
-        Tile tile, byte[] content, CancellationToken cancellationToken)
-    {
-        insertIntoTileCommand.Parameters[CdbParamName].Value = Name;
-        SetTileParameters(insertIntoTileCommand, tile);
-        insertIntoTileCommand.Parameters[ContentParamName].Value = content;
-
-        return insertIntoTileCommand.ExecuteNonQueryAsync(cancellationToken);
-    }
-
-    /// <inheritdoc/>
-    public async Task WriteTileAsync(Tile tile, Stream content, CancellationToken cancellationToken)
-    {
-        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        await using DbCommand insertIntoTileCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoTileCommand(insertIntoTileCommand);
-        await insertIntoTileCommand.PrepareAsync(cancellationToken);
-
-        await InsertIntoTileAsync(insertIntoTileCommand, tile, content, cancellationToken);
-    }
-
-    /// <inheritdoc cref="WriteTileAsync(Tile, Stream, CancellationToken)"/>
-    /// <remarks>
-    /// <para>
-    /// This is what subclasses should override to customize behavior.
-    /// </para>
-    /// </remarks>
-    /// <param name="insertIntoTileCommand">The prepared statement to use to execute the query.</param>
-    protected internal virtual Task InsertIntoTileAsync(DbCommand insertIntoTileCommand,
-        Tile tile, Stream content, CancellationToken cancellationToken)
-    {
-        insertIntoTileCommand.Parameters[CdbParamName].Value = Name;
-        SetTileParameters(insertIntoTileCommand, tile);
-        insertIntoTileCommand.Parameters[ContentParamName].Value = content;
-
-        return insertIntoTileCommand.ExecuteNonQueryAsync(cancellationToken);
-    }
-
-    #endregion
 
     #region Select
 
@@ -3538,6 +3364,180 @@ public abstract class SQLCDB : ICDB
 
     #endregion
 
+    #region Insert
+
+    /// <summary>
+    /// The SQL statement to insert a row into the Tile table.
+    /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="LatitudeParamName"/></description></item>
+    ///   <item><description><see cref="LongitudeParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="LevelOfDetailParamName"/></description></item>
+    ///   <item><description><see cref="UpParamName"/></description></item>
+    ///   <item><description><see cref="RightParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    ///   <item><description><see cref="ContentParamName"/></description></item>
+    /// </list>
+    /// </remarks>
+    protected abstract string InsertIntoTileStatement
+    {
+        get;
+    }
+
+    internal void InitializeInsertIntoTileCommand(DbCommand dbCommand)
+    {
+        dbCommand.CommandText = InsertIntoTileStatement;
+        CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
+        CreateAndAttachTileParameters(dbCommand);
+        CreateAndAttachParameter(dbCommand, ContentParamName, DbType.Binary);
+    }
+
+    private void CreateAndAttachTileParameters(DbCommand dbCommand)
+    {
+        CreateAndAttachParameter(dbCommand, LatitudeParamName, DbType.Int32);
+        CreateAndAttachParameter(dbCommand, LongitudeParamName, DbType.Int32);
+        CreateAndAttachParameter(dbCommand, DatasetParamName, DbType.Int32);
+        CreateAndAttachParameter(dbCommand, ComponentSelector1ParamName, DbType.Int32);
+        CreateAndAttachParameter(dbCommand, ComponentSelector2ParamName, DbType.Int32);
+        CreateAndAttachParameter(dbCommand, LevelOfDetailParamName, DbType.Int32);
+        CreateAndAttachParameter(dbCommand, UpParamName, DbType.Int32);
+        CreateAndAttachParameter(dbCommand, RightParamName, DbType.Int32);
+        CreateAndAttachParameter(dbCommand, FileTypeParamName, DbType.String);
+    }
+
+    private void SetTileParameters(DbCommand dbCommand, Tile tile)
+    {
+        dbCommand.Parameters[LatitudeParamName].Value = tile.LatitudeValue.Value;
+        dbCommand.Parameters[LongitudeParamName].Value = tile.LongitudeValue.Value;
+        dbCommand.Parameters[DatasetParamName].Value = tile.DatasetValue.Value;
+        dbCommand.Parameters[ComponentSelector1ParamName].Value = tile.ComponentSelector1;
+        dbCommand.Parameters[ComponentSelector2ParamName].Value = tile.ComponentSelector2;
+        dbCommand.Parameters[LevelOfDetailParamName].Value = tile.Level.Value;
+        dbCommand.Parameters[UpParamName].Value = tile.Up;
+        dbCommand.Parameters[RightParamName].Value = tile.Right;
+        dbCommand.Parameters[FileTypeParamName].Value = tile.FileType;
+    }
+
+    /// <inheritdoc cref="WriteTile(Tile, Stream)"/>
+    public void WriteTile(Tile tile, byte[] content)
+    {
+        using DbConnection dbConnection = dbDataSource.OpenConnection();
+        using DbCommand insertIntoTileCommand = dbConnection.CreateCommand();
+        InitializeInsertIntoTileCommand(insertIntoTileCommand);
+        insertIntoTileCommand.Prepare();
+
+        InsertIntoTile(insertIntoTileCommand, tile, content);
+    }
+
+    /// <inheritdoc cref="WriteTile(Tile, byte[])"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoTileCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual void InsertIntoTile(DbCommand insertIntoTileCommand,
+        Tile tile, byte[] content)
+    {
+        insertIntoTileCommand.Parameters[CdbParamName].Value = Name;
+        SetTileParameters(insertIntoTileCommand, tile);
+        insertIntoTileCommand.Parameters[ContentParamName].Value = content;
+
+        insertIntoTileCommand.ExecuteNonQuery();
+    }
+
+    /// <inheritdoc/>
+    public void WriteTile(Tile tile, Stream content)
+    {
+        using DbConnection dbConnection = dbDataSource.OpenConnection();
+        using DbCommand insertIntoTileCommand = dbConnection.CreateCommand();
+        InitializeInsertIntoTileCommand(insertIntoTileCommand);
+        insertIntoTileCommand.Prepare();
+
+        InsertIntoTile(insertIntoTileCommand, tile, content);
+    }
+
+    /// <inheritdoc cref="WriteTile(Tile, Stream)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoTileCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual void InsertIntoTile(DbCommand insertIntoTileCommand,
+        Tile tile, Stream content)
+    {
+        insertIntoTileCommand.Parameters[CdbParamName].Value = Name;
+        SetTileParameters(insertIntoTileCommand, tile);
+        insertIntoTileCommand.Parameters[ContentParamName].Value = content;
+
+        insertIntoTileCommand.ExecuteNonQuery();
+    }
+
+    /// <inheritdoc cref="WriteTileAsync(Tile, Stream, CancellationToken)"/>
+    public async Task WriteTileAsync(Tile tile, byte[] content, CancellationToken cancellationToken)
+    {
+        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
+        await using DbCommand insertIntoTileCommand = dbConnection.CreateCommand();
+        InitializeInsertIntoTileCommand(insertIntoTileCommand);
+        await insertIntoTileCommand.PrepareAsync(cancellationToken);
+
+        await InsertIntoTileAsync(insertIntoTileCommand, tile, content, cancellationToken);
+    }
+
+    /// <inheritdoc cref="WriteTileAsync(Tile, byte[], CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoTileCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual Task InsertIntoTileAsync(DbCommand insertIntoTileCommand,
+        Tile tile, byte[] content, CancellationToken cancellationToken)
+    {
+        insertIntoTileCommand.Parameters[CdbParamName].Value = Name;
+        SetTileParameters(insertIntoTileCommand, tile);
+        insertIntoTileCommand.Parameters[ContentParamName].Value = content;
+
+        return insertIntoTileCommand.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task WriteTileAsync(Tile tile, Stream content, CancellationToken cancellationToken)
+    {
+        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
+        await using DbCommand insertIntoTileCommand = dbConnection.CreateCommand();
+        InitializeInsertIntoTileCommand(insertIntoTileCommand);
+        await insertIntoTileCommand.PrepareAsync(cancellationToken);
+
+        await InsertIntoTileAsync(insertIntoTileCommand, tile, content, cancellationToken);
+    }
+
+    /// <inheritdoc cref="WriteTileAsync(Tile, Stream, CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoTileCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual Task InsertIntoTileAsync(DbCommand insertIntoTileCommand,
+        Tile tile, Stream content, CancellationToken cancellationToken)
+    {
+        insertIntoTileCommand.Parameters[CdbParamName].Value = Name;
+        SetTileParameters(insertIntoTileCommand, tile);
+        insertIntoTileCommand.Parameters[ContentParamName].Value = content;
+
+        return insertIntoTileCommand.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    #endregion
+
     #endregion
 
     #region Tile Archived Feature
@@ -3549,6 +3549,193 @@ public abstract class SQLCDB : ICDB
     {
         get;
     }
+
+    #region Select
+
+    /// <summary>
+    /// The SQL statement to select a row from the TileArchivedFeature table.
+    /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="LatitudeParamName"/></description></item>
+    ///   <item><description><see cref="LongitudeParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="LevelOfDetailParamName"/></description></item>
+    ///   <item><description><see cref="UpParamName"/></description></item>
+    ///   <item><description><see cref="RightParamName"/></description></item>
+    ///   <item><description><see cref="FeatureCategoryParamName"/></description></item>
+    ///   <item><description><see cref="FeatureSubcategoryParamName"/></description></item>
+    ///   <item><description><see cref="FeatureTypeParamName"/></description></item>
+    ///   <item><description><see cref="FeatureSubcodeParamName"/></description></item>
+    ///   <item><description><see cref="ModelNameParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    /// </list>
+    /// <list type="bullet">
+    ///   <listheader><description>Selected Columns</description></listheader>
+    ///   <item><description><see cref="ContentColumnName"/></description></item>
+    /// </list>
+    /// </remarks>
+    protected abstract string SelectFromTileArchivedFeatureStatement
+    {
+        get;
+    }
+
+    internal void InitializeSelectFromTileArchivedFeatureCommand(DbCommand dbCommand)
+    {
+        dbCommand.CommandText = SelectFromTileArchivedFeatureStatement;
+        CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
+        CreateAndAttachTileArchivedFeatureParameters(dbCommand);
+    }
+
+    /// <inheritdoc/>
+    public Stream? ReadTileFeature(TileArchivedFeature tileArchivedFeature)
+    {
+        DbConnection dbConnection = dbDataSource.OpenConnection();
+        try
+        {
+            DbCommand selectFromTileArchivedFeatureCommand = dbConnection.CreateCommand();
+            try
+            {
+                InitializeSelectFromTileArchivedFeatureCommand(selectFromTileArchivedFeatureCommand);
+                selectFromTileArchivedFeatureCommand.Prepare();
+
+                Stream? stream = SelectFromTileArchivedFeature(selectFromTileArchivedFeatureCommand, tileArchivedFeature);
+                if (stream is not null)
+                {
+                    return new WrappedStream(stream, selectFromTileArchivedFeatureCommand, dbConnection);
+                }
+                else
+                {
+                    selectFromTileArchivedFeatureCommand.Dispose();
+                    dbConnection.Dispose();
+                    return null;
+                }
+            }
+            catch (Exception)
+            {
+                selectFromTileArchivedFeatureCommand.Dispose();
+                throw;
+            }
+        }
+        catch (Exception)
+        {
+            dbConnection.Dispose();
+            throw;
+        }
+    }
+
+    /// <inheritdoc cref="ReadTileFeature(TileArchivedFeature)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="selectFromTileArchivedFeatureCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual Stream? SelectFromTileArchivedFeature(DbCommand selectFromTileArchivedFeatureCommand,
+        TileArchivedFeature tileArchivedFeature)
+    {
+        selectFromTileArchivedFeatureCommand.Parameters[CdbParamName].Value = Name;
+        SetTileArchivedFeatureParameters(selectFromTileArchivedFeatureCommand, tileArchivedFeature);
+
+        DbDataReader dbDataReader = selectFromTileArchivedFeatureCommand.ExecuteReader(
+            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow);
+        try
+        {
+            do
+            {
+                while (dbDataReader.Read())
+                {
+                    Stream stream = dbDataReader.GetStream(ContentColumnName);
+                    return new WrappedStream(stream, dbDataReader);
+                }
+            } while (dbDataReader.NextResult());
+            dbDataReader.Dispose();
+            return null;
+        }
+        catch (Exception)
+        {
+            dbDataReader.Dispose();
+            throw;
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task<Stream?> ReadTileFeatureAsync(TileArchivedFeature tileArchivedFeature, CancellationToken cancellationToken)
+    {
+        DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
+        try
+        {
+            DbCommand selectFromTileArchivedFeatureCommand = dbConnection.CreateCommand();
+            try
+            {
+                InitializeSelectFromTileArchivedFeatureCommand(selectFromTileArchivedFeatureCommand);
+                await selectFromTileArchivedFeatureCommand.PrepareAsync(cancellationToken);
+
+                Stream? stream = await SelectFromTileArchivedFeatureAsync(selectFromTileArchivedFeatureCommand, tileArchivedFeature, cancellationToken);
+                if (stream is not null)
+                {
+                    return new WrappedStream(stream, selectFromTileArchivedFeatureCommand, dbConnection);
+                }
+                else
+                {
+                    await selectFromTileArchivedFeatureCommand.DisposeAsync();
+                    await dbConnection.DisposeAsync();
+                    return null;
+                }
+            }
+            catch (Exception)
+            {
+                await selectFromTileArchivedFeatureCommand.DisposeAsync();
+                throw;
+            }
+        }
+        catch (Exception)
+        {
+            await dbConnection.DisposeAsync();
+            throw;
+        }
+    }
+
+    /// <inheritdoc cref="ReadTileFeatureAsync(TileArchivedFeature, CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="selectFromTileArchivedFeatureCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual async Task<Stream?> SelectFromTileArchivedFeatureAsync(DbCommand selectFromTileArchivedFeatureCommand,
+        TileArchivedFeature tileArchivedFeature, CancellationToken cancellationToken)
+    {
+        selectFromTileArchivedFeatureCommand.Parameters[CdbParamName].Value = Name;
+        SetTileArchivedFeatureParameters(selectFromTileArchivedFeatureCommand, tileArchivedFeature);
+
+        DbDataReader dbDataReader = await selectFromTileArchivedFeatureCommand.ExecuteReaderAsync(
+            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow, cancellationToken);
+        try
+        {
+            do
+            {
+                while (await dbDataReader.ReadAsync(cancellationToken))
+                {
+                    Stream stream = dbDataReader.GetStream(ContentColumnName);
+                    return new WrappedStream(stream, dbDataReader);
+                }
+            } while (await dbDataReader.NextResultAsync(cancellationToken));
+            await dbDataReader.DisposeAsync();
+            return null;
+        }
+        catch (Exception)
+        {
+            await dbDataReader.DisposeAsync();
+            throw;
+        }
+    }
+
+    #endregion
 
     #region Insert
 
@@ -3739,193 +3926,6 @@ public abstract class SQLCDB : ICDB
 
     #endregion
 
-    #region Select
-
-    /// <summary>
-    /// The SQL statement to select a row from the TileArchivedFeature table.
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    ///   <listheader><description>Parameters</description></listheader>
-    ///   <item><description><see cref="CdbParamName"/></description></item>
-    ///   <item><description><see cref="LatitudeParamName"/></description></item>
-    ///   <item><description><see cref="LongitudeParamName"/></description></item>
-    ///   <item><description><see cref="DatasetParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
-    ///   <item><description><see cref="LevelOfDetailParamName"/></description></item>
-    ///   <item><description><see cref="UpParamName"/></description></item>
-    ///   <item><description><see cref="RightParamName"/></description></item>
-    ///   <item><description><see cref="FeatureCategoryParamName"/></description></item>
-    ///   <item><description><see cref="FeatureSubcategoryParamName"/></description></item>
-    ///   <item><description><see cref="FeatureTypeParamName"/></description></item>
-    ///   <item><description><see cref="FeatureSubcodeParamName"/></description></item>
-    ///   <item><description><see cref="ModelNameParamName"/></description></item>
-    ///   <item><description><see cref="FileTypeParamName"/></description></item>
-    /// </list>
-    /// <list type="bullet">
-    ///   <listheader><description>Selected Columns</description></listheader>
-    ///   <item><description><see cref="ContentColumnName"/></description></item>
-    /// </list>
-    /// </remarks>
-    protected abstract string SelectFromTileArchivedFeatureStatement
-    {
-        get;
-    }
-
-    internal void InitializeSelectFromTileArchivedFeatureCommand(DbCommand dbCommand)
-    {
-        dbCommand.CommandText = SelectFromTileArchivedFeatureStatement;
-        CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
-        CreateAndAttachTileArchivedFeatureParameters(dbCommand);
-    }
-
-    /// <inheritdoc/>
-    public Stream? ReadTileFeature(TileArchivedFeature tileArchivedFeature)
-    {
-        DbConnection dbConnection = dbDataSource.OpenConnection();
-        try
-        {
-            DbCommand selectFromTileArchivedFeatureCommand = dbConnection.CreateCommand();
-            try
-            {
-                InitializeSelectFromTileArchivedFeatureCommand(selectFromTileArchivedFeatureCommand);
-                selectFromTileArchivedFeatureCommand.Prepare();
-
-                Stream? stream = SelectFromTileArchivedFeature(selectFromTileArchivedFeatureCommand, tileArchivedFeature);
-                if (stream is not null)
-                {
-                    return new WrappedStream(stream, selectFromTileArchivedFeatureCommand, dbConnection);
-                }
-                else
-                {
-                    selectFromTileArchivedFeatureCommand.Dispose();
-                    dbConnection.Dispose();
-                    return null;
-                }
-            }
-            catch (Exception)
-            {
-                selectFromTileArchivedFeatureCommand.Dispose();
-                throw;
-            }
-        }
-        catch (Exception)
-        {
-            dbConnection.Dispose();
-            throw;
-        }
-    }
-
-    /// <inheritdoc cref="ReadTileFeature(TileArchivedFeature)"/>
-    /// <remarks>
-    /// <para>
-    /// This is what subclasses should override to customize behavior.
-    /// </para>
-    /// </remarks>
-    /// <param name="selectFromTileArchivedFeatureCommand">The prepared statement to use to execute the query.</param>
-    protected internal virtual Stream? SelectFromTileArchivedFeature(DbCommand selectFromTileArchivedFeatureCommand,
-        TileArchivedFeature tileArchivedFeature)
-    {
-        selectFromTileArchivedFeatureCommand.Parameters[CdbParamName].Value = Name;
-        SetTileArchivedFeatureParameters(selectFromTileArchivedFeatureCommand, tileArchivedFeature);
-
-        DbDataReader dbDataReader = selectFromTileArchivedFeatureCommand.ExecuteReader(
-            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow);
-        try
-        {
-            do
-            {
-                while (dbDataReader.Read())
-                {
-                    Stream stream = dbDataReader.GetStream(ContentColumnName);
-                    return new WrappedStream(stream, dbDataReader);
-                }
-            } while (dbDataReader.NextResult());
-            dbDataReader.Dispose();
-            return null;
-        }
-        catch (Exception)
-        {
-            dbDataReader.Dispose();
-            throw;
-        }
-    }
-
-    /// <inheritdoc/>
-    public async Task<Stream?> ReadTileFeatureAsync(TileArchivedFeature tileArchivedFeature, CancellationToken cancellationToken)
-    {
-        DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        try
-        {
-            DbCommand selectFromTileArchivedFeatureCommand = dbConnection.CreateCommand();
-            try
-            {
-                InitializeSelectFromTileArchivedFeatureCommand(selectFromTileArchivedFeatureCommand);
-                await selectFromTileArchivedFeatureCommand.PrepareAsync(cancellationToken);
-
-                Stream? stream = await SelectFromTileArchivedFeatureAsync(selectFromTileArchivedFeatureCommand, tileArchivedFeature, cancellationToken);
-                if (stream is not null)
-                {
-                    return new WrappedStream(stream, selectFromTileArchivedFeatureCommand, dbConnection);
-                }
-                else
-                {
-                    await selectFromTileArchivedFeatureCommand.DisposeAsync();
-                    await dbConnection.DisposeAsync();
-                    return null;
-                }
-            }
-            catch (Exception)
-            {
-                await selectFromTileArchivedFeatureCommand.DisposeAsync();
-                throw;
-            }
-        }
-        catch (Exception)
-        {
-            await dbConnection.DisposeAsync();
-            throw;
-        }
-    }
-
-    /// <inheritdoc cref="ReadTileFeatureAsync(TileArchivedFeature, CancellationToken)"/>
-    /// <remarks>
-    /// <para>
-    /// This is what subclasses should override to customize behavior.
-    /// </para>
-    /// </remarks>
-    /// <param name="selectFromTileArchivedFeatureCommand">The prepared statement to use to execute the query.</param>
-    protected internal virtual async Task<Stream?> SelectFromTileArchivedFeatureAsync(DbCommand selectFromTileArchivedFeatureCommand,
-        TileArchivedFeature tileArchivedFeature, CancellationToken cancellationToken)
-    {
-        selectFromTileArchivedFeatureCommand.Parameters[CdbParamName].Value = Name;
-        SetTileArchivedFeatureParameters(selectFromTileArchivedFeatureCommand, tileArchivedFeature);
-
-        DbDataReader dbDataReader = await selectFromTileArchivedFeatureCommand.ExecuteReaderAsync(
-            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow, cancellationToken);
-        try
-        {
-            do
-            {
-                while (await dbDataReader.ReadAsync(cancellationToken))
-                {
-                    Stream stream = dbDataReader.GetStream(ContentColumnName);
-                    return new WrappedStream(stream, dbDataReader);
-                }
-            } while (await dbDataReader.NextResultAsync(cancellationToken));
-            await dbDataReader.DisposeAsync();
-            return null;
-        }
-        catch (Exception)
-        {
-            await dbDataReader.DisposeAsync();
-            throw;
-        }
-    }
-
-    #endregion
-
     #endregion
 
     #region Tile Archived Texture
@@ -3937,183 +3937,6 @@ public abstract class SQLCDB : ICDB
     {
         get;
     }
-
-    #region Insert
-
-    /// <summary>
-    /// The SQL statement to insert a row into the TileArchivedTexture table.
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    ///   <listheader><description>Parameters</description></listheader>
-    ///   <item><description><see cref="CdbParamName"/></description></item>
-    ///   <item><description><see cref="LatitudeParamName"/></description></item>
-    ///   <item><description><see cref="LongitudeParamName"/></description></item>
-    ///   <item><description><see cref="DatasetParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
-    ///   <item><description><see cref="LevelOfDetailParamName"/></description></item>
-    ///   <item><description><see cref="UpParamName"/></description></item>
-    ///   <item><description><see cref="RightParamName"/></description></item>
-    ///   <item><description><see cref="TextureNameParamName"/></description></item>
-    ///   <item><description><see cref="FileTypeParamName"/></description></item>
-    ///   <item><description><see cref="ContentParamName"/></description></item>
-    /// </list>
-    /// </remarks>
-    protected abstract string InsertIntoTileArchivedTextureStatement
-    {
-        get;
-    }
-
-    internal void InitializeInsertIntoTileArchivedTextureCommand(DbCommand dbCommand)
-    {
-        dbCommand.CommandText = InsertIntoTileArchivedTextureStatement;
-        CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
-        CreateAndAttachTileArchivedTextureParameters(dbCommand);
-        CreateAndAttachParameter(dbCommand, ContentParamName, DbType.Binary);
-    }
-
-    private void CreateAndAttachTileArchivedTextureParameters(DbCommand dbCommand)
-    {
-        CreateAndAttachParameter(dbCommand, LatitudeParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, LongitudeParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, DatasetParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, ComponentSelector1ParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, ComponentSelector2ParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, LevelOfDetailParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, UpParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, RightParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, TextureNameParamName, DbType.String);
-        CreateAndAttachParameter(dbCommand, FileTypeParamName, DbType.String);
-    }
-
-    private void SetTileArchivedTextureParameters(DbCommand dbCommand, TileArchivedTexture tileArchivedTexture)
-    {
-        dbCommand.Parameters[LatitudeParamName].Value = tileArchivedTexture.LatitudeValue.Value;
-        dbCommand.Parameters[LongitudeParamName].Value = tileArchivedTexture.LongitudeValue.Value;
-        dbCommand.Parameters[DatasetParamName].Value = tileArchivedTexture.DatasetValue.Value;
-        dbCommand.Parameters[ComponentSelector1ParamName].Value = tileArchivedTexture.ComponentSelector1;
-        dbCommand.Parameters[ComponentSelector2ParamName].Value = tileArchivedTexture.ComponentSelector2;
-        dbCommand.Parameters[LevelOfDetailParamName].Value = tileArchivedTexture.Level.Value;
-        dbCommand.Parameters[UpParamName].Value = tileArchivedTexture.Up;
-        dbCommand.Parameters[RightParamName].Value = tileArchivedTexture.Right;
-        dbCommand.Parameters[TextureNameParamName].Value = tileArchivedTexture.Name;
-        dbCommand.Parameters[FileTypeParamName].Value = tileArchivedTexture.FileType;
-    }
-
-    /// <inheritdoc cref="WriteTileTexture(TileArchivedTexture, Stream)"/>
-    public void WriteTileTexture(TileArchivedTexture tileArchivedTexture, byte[] content)
-    {
-        using DbConnection dbConnection = dbDataSource.OpenConnection();
-        using DbCommand insertIntoTileArchivedTextureCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoTileArchivedTextureCommand(insertIntoTileArchivedTextureCommand);
-        insertIntoTileArchivedTextureCommand.Prepare();
-
-        InsertIntoTileArchivedTexture(insertIntoTileArchivedTextureCommand, tileArchivedTexture, content);
-    }
-
-    /// <inheritdoc cref="WriteTileTextureAsync(TileArchivedTexture, byte[], CancellationToken)"/>
-    /// <remarks>
-    /// <para>
-    /// This is what subclasses should override to customize behavior.
-    /// </para>
-    /// </remarks>
-    /// <param name="insertIntoTileArchivedTextureCommand">The prepared statement to use to execute the query.</param>
-    protected internal virtual void InsertIntoTileArchivedTexture(DbCommand insertIntoTileArchivedTextureCommand,
-        TileArchivedTexture tileArchivedTexture, byte[] content)
-    {
-        insertIntoTileArchivedTextureCommand.Parameters[CdbParamName].Value = Name;
-        SetTileArchivedTextureParameters(insertIntoTileArchivedTextureCommand, tileArchivedTexture);
-        insertIntoTileArchivedTextureCommand.Parameters[ContentParamName].Value = content;
-
-        insertIntoTileArchivedTextureCommand.ExecuteNonQuery();
-    }
-
-    /// <inheritdoc/>
-    public void WriteTileTexture(TileArchivedTexture tileArchivedTexture, Stream content)
-    {
-        using DbConnection dbConnection = dbDataSource.OpenConnection();
-        using DbCommand insertIntoTileArchivedTextureCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoTileArchivedTextureCommand(insertIntoTileArchivedTextureCommand);
-        insertIntoTileArchivedTextureCommand.Prepare();
-
-        InsertIntoTileArchivedTexture(insertIntoTileArchivedTextureCommand, tileArchivedTexture, content);
-    }
-
-    /// <inheritdoc cref="WriteTileTextureAsync(TileArchivedTexture, Stream, CancellationToken)"/>
-    /// <remarks>
-    /// <para>
-    /// This is what subclasses should override to customize behavior.
-    /// </para>
-    /// </remarks>
-    /// <param name="insertIntoTileArchivedTextureCommand">The prepared statement to use to execute the query.</param>
-    protected internal virtual void InsertIntoTileArchivedTexture(DbCommand insertIntoTileArchivedTextureCommand,
-        TileArchivedTexture tileArchivedTexture, Stream content)
-    {
-        insertIntoTileArchivedTextureCommand.Parameters[CdbParamName].Value = Name;
-        SetTileArchivedTextureParameters(insertIntoTileArchivedTextureCommand, tileArchivedTexture);
-        insertIntoTileArchivedTextureCommand.Parameters[ContentParamName].Value = content;
-
-        insertIntoTileArchivedTextureCommand.ExecuteNonQuery();
-    }
-
-    /// <inheritdoc cref="WriteTileTextureAsync(TileArchivedTexture, Stream, CancellationToken)"/>
-    public async Task WriteTileTextureAsync(TileArchivedTexture tileArchivedTexture, byte[] content, CancellationToken cancellationToken)
-    {
-        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        await using DbCommand insertIntoTileArchivedTextureCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoTileArchivedTextureCommand(insertIntoTileArchivedTextureCommand);
-        await insertIntoTileArchivedTextureCommand.PrepareAsync(cancellationToken);
-
-        await InsertIntoTileArchivedTextureAsync(insertIntoTileArchivedTextureCommand, tileArchivedTexture, content, cancellationToken);
-    }
-
-    /// <inheritdoc cref="WriteTileTextureAsync(TileArchivedTexture, byte[], CancellationToken)"/>
-    /// <remarks>
-    /// <para>
-    /// This is what subclasses should override to customize behavior.
-    /// </para>
-    /// </remarks>
-    /// <param name="insertIntoTileArchivedTextureCommand">The prepared statement to use to execute the query.</param>
-    protected internal virtual Task InsertIntoTileArchivedTextureAsync(DbCommand insertIntoTileArchivedTextureCommand,
-        TileArchivedTexture tileArchivedTexture, byte[] content, CancellationToken cancellationToken)
-    {
-        insertIntoTileArchivedTextureCommand.Parameters[CdbParamName].Value = Name;
-        SetTileArchivedTextureParameters(insertIntoTileArchivedTextureCommand, tileArchivedTexture);
-        insertIntoTileArchivedTextureCommand.Parameters[ContentParamName].Value = content;
-
-        return insertIntoTileArchivedTextureCommand.ExecuteNonQueryAsync(cancellationToken);
-    }
-
-    /// <inheritdoc/>
-    public async Task WriteTileTextureAsync(TileArchivedTexture tileArchivedTexture, Stream content, CancellationToken cancellationToken)
-    {
-        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        await using DbCommand insertIntoTileArchivedTextureCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoTileArchivedTextureCommand(insertIntoTileArchivedTextureCommand);
-        await insertIntoTileArchivedTextureCommand.PrepareAsync(cancellationToken);
-
-        await InsertIntoTileArchivedTextureAsync(insertIntoTileArchivedTextureCommand, tileArchivedTexture, content, cancellationToken);
-    }
-
-    /// <inheritdoc cref="WriteTileTextureAsync(TileArchivedTexture, Stream, CancellationToken)"/>
-    /// <remarks>
-    /// <para>
-    /// This is what subclasses should override to customize behavior.
-    /// </para>
-    /// </remarks>
-    /// <param name="insertIntoTileArchivedTextureCommand">The prepared statement to use to execute the query.</param>
-    protected internal virtual Task InsertIntoTileArchivedTextureAsync(DbCommand insertIntoTileArchivedTextureCommand,
-        TileArchivedTexture tileArchivedTexture, Stream content, CancellationToken cancellationToken)
-    {
-        insertIntoTileArchivedTextureCommand.Parameters[CdbParamName].Value = Name;
-        SetTileArchivedTextureParameters(insertIntoTileArchivedTextureCommand, tileArchivedTexture);
-        insertIntoTileArchivedTextureCommand.Parameters[ContentParamName].Value = content;
-
-        return insertIntoTileArchivedTextureCommand.ExecuteNonQueryAsync(cancellationToken);
-    }
-
-    #endregion
 
     #region Select
 
@@ -4298,6 +4121,183 @@ public abstract class SQLCDB : ICDB
 
     #endregion
 
+    #region Insert
+
+    /// <summary>
+    /// The SQL statement to insert a row into the TileArchivedTexture table.
+    /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="LatitudeParamName"/></description></item>
+    ///   <item><description><see cref="LongitudeParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="LevelOfDetailParamName"/></description></item>
+    ///   <item><description><see cref="UpParamName"/></description></item>
+    ///   <item><description><see cref="RightParamName"/></description></item>
+    ///   <item><description><see cref="TextureNameParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    ///   <item><description><see cref="ContentParamName"/></description></item>
+    /// </list>
+    /// </remarks>
+    protected abstract string InsertIntoTileArchivedTextureStatement
+    {
+        get;
+    }
+
+    internal void InitializeInsertIntoTileArchivedTextureCommand(DbCommand dbCommand)
+    {
+        dbCommand.CommandText = InsertIntoTileArchivedTextureStatement;
+        CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
+        CreateAndAttachTileArchivedTextureParameters(dbCommand);
+        CreateAndAttachParameter(dbCommand, ContentParamName, DbType.Binary);
+    }
+
+    private void CreateAndAttachTileArchivedTextureParameters(DbCommand dbCommand)
+    {
+        CreateAndAttachParameter(dbCommand, LatitudeParamName, DbType.Int32);
+        CreateAndAttachParameter(dbCommand, LongitudeParamName, DbType.Int32);
+        CreateAndAttachParameter(dbCommand, DatasetParamName, DbType.Int32);
+        CreateAndAttachParameter(dbCommand, ComponentSelector1ParamName, DbType.Int32);
+        CreateAndAttachParameter(dbCommand, ComponentSelector2ParamName, DbType.Int32);
+        CreateAndAttachParameter(dbCommand, LevelOfDetailParamName, DbType.Int32);
+        CreateAndAttachParameter(dbCommand, UpParamName, DbType.Int32);
+        CreateAndAttachParameter(dbCommand, RightParamName, DbType.Int32);
+        CreateAndAttachParameter(dbCommand, TextureNameParamName, DbType.String);
+        CreateAndAttachParameter(dbCommand, FileTypeParamName, DbType.String);
+    }
+
+    private void SetTileArchivedTextureParameters(DbCommand dbCommand, TileArchivedTexture tileArchivedTexture)
+    {
+        dbCommand.Parameters[LatitudeParamName].Value = tileArchivedTexture.LatitudeValue.Value;
+        dbCommand.Parameters[LongitudeParamName].Value = tileArchivedTexture.LongitudeValue.Value;
+        dbCommand.Parameters[DatasetParamName].Value = tileArchivedTexture.DatasetValue.Value;
+        dbCommand.Parameters[ComponentSelector1ParamName].Value = tileArchivedTexture.ComponentSelector1;
+        dbCommand.Parameters[ComponentSelector2ParamName].Value = tileArchivedTexture.ComponentSelector2;
+        dbCommand.Parameters[LevelOfDetailParamName].Value = tileArchivedTexture.Level.Value;
+        dbCommand.Parameters[UpParamName].Value = tileArchivedTexture.Up;
+        dbCommand.Parameters[RightParamName].Value = tileArchivedTexture.Right;
+        dbCommand.Parameters[TextureNameParamName].Value = tileArchivedTexture.Name;
+        dbCommand.Parameters[FileTypeParamName].Value = tileArchivedTexture.FileType;
+    }
+
+    /// <inheritdoc cref="WriteTileTexture(TileArchivedTexture, Stream)"/>
+    public void WriteTileTexture(TileArchivedTexture tileArchivedTexture, byte[] content)
+    {
+        using DbConnection dbConnection = dbDataSource.OpenConnection();
+        using DbCommand insertIntoTileArchivedTextureCommand = dbConnection.CreateCommand();
+        InitializeInsertIntoTileArchivedTextureCommand(insertIntoTileArchivedTextureCommand);
+        insertIntoTileArchivedTextureCommand.Prepare();
+
+        InsertIntoTileArchivedTexture(insertIntoTileArchivedTextureCommand, tileArchivedTexture, content);
+    }
+
+    /// <inheritdoc cref="WriteTileTextureAsync(TileArchivedTexture, byte[], CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoTileArchivedTextureCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual void InsertIntoTileArchivedTexture(DbCommand insertIntoTileArchivedTextureCommand,
+        TileArchivedTexture tileArchivedTexture, byte[] content)
+    {
+        insertIntoTileArchivedTextureCommand.Parameters[CdbParamName].Value = Name;
+        SetTileArchivedTextureParameters(insertIntoTileArchivedTextureCommand, tileArchivedTexture);
+        insertIntoTileArchivedTextureCommand.Parameters[ContentParamName].Value = content;
+
+        insertIntoTileArchivedTextureCommand.ExecuteNonQuery();
+    }
+
+    /// <inheritdoc/>
+    public void WriteTileTexture(TileArchivedTexture tileArchivedTexture, Stream content)
+    {
+        using DbConnection dbConnection = dbDataSource.OpenConnection();
+        using DbCommand insertIntoTileArchivedTextureCommand = dbConnection.CreateCommand();
+        InitializeInsertIntoTileArchivedTextureCommand(insertIntoTileArchivedTextureCommand);
+        insertIntoTileArchivedTextureCommand.Prepare();
+
+        InsertIntoTileArchivedTexture(insertIntoTileArchivedTextureCommand, tileArchivedTexture, content);
+    }
+
+    /// <inheritdoc cref="WriteTileTextureAsync(TileArchivedTexture, Stream, CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoTileArchivedTextureCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual void InsertIntoTileArchivedTexture(DbCommand insertIntoTileArchivedTextureCommand,
+        TileArchivedTexture tileArchivedTexture, Stream content)
+    {
+        insertIntoTileArchivedTextureCommand.Parameters[CdbParamName].Value = Name;
+        SetTileArchivedTextureParameters(insertIntoTileArchivedTextureCommand, tileArchivedTexture);
+        insertIntoTileArchivedTextureCommand.Parameters[ContentParamName].Value = content;
+
+        insertIntoTileArchivedTextureCommand.ExecuteNonQuery();
+    }
+
+    /// <inheritdoc cref="WriteTileTextureAsync(TileArchivedTexture, Stream, CancellationToken)"/>
+    public async Task WriteTileTextureAsync(TileArchivedTexture tileArchivedTexture, byte[] content, CancellationToken cancellationToken)
+    {
+        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
+        await using DbCommand insertIntoTileArchivedTextureCommand = dbConnection.CreateCommand();
+        InitializeInsertIntoTileArchivedTextureCommand(insertIntoTileArchivedTextureCommand);
+        await insertIntoTileArchivedTextureCommand.PrepareAsync(cancellationToken);
+
+        await InsertIntoTileArchivedTextureAsync(insertIntoTileArchivedTextureCommand, tileArchivedTexture, content, cancellationToken);
+    }
+
+    /// <inheritdoc cref="WriteTileTextureAsync(TileArchivedTexture, byte[], CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoTileArchivedTextureCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual Task InsertIntoTileArchivedTextureAsync(DbCommand insertIntoTileArchivedTextureCommand,
+        TileArchivedTexture tileArchivedTexture, byte[] content, CancellationToken cancellationToken)
+    {
+        insertIntoTileArchivedTextureCommand.Parameters[CdbParamName].Value = Name;
+        SetTileArchivedTextureParameters(insertIntoTileArchivedTextureCommand, tileArchivedTexture);
+        insertIntoTileArchivedTextureCommand.Parameters[ContentParamName].Value = content;
+
+        return insertIntoTileArchivedTextureCommand.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task WriteTileTextureAsync(TileArchivedTexture tileArchivedTexture, Stream content, CancellationToken cancellationToken)
+    {
+        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
+        await using DbCommand insertIntoTileArchivedTextureCommand = dbConnection.CreateCommand();
+        InitializeInsertIntoTileArchivedTextureCommand(insertIntoTileArchivedTextureCommand);
+        await insertIntoTileArchivedTextureCommand.PrepareAsync(cancellationToken);
+
+        await InsertIntoTileArchivedTextureAsync(insertIntoTileArchivedTextureCommand, tileArchivedTexture, content, cancellationToken);
+    }
+
+    /// <inheritdoc cref="WriteTileTextureAsync(TileArchivedTexture, Stream, CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoTileArchivedTextureCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual Task InsertIntoTileArchivedTextureAsync(DbCommand insertIntoTileArchivedTextureCommand,
+        TileArchivedTexture tileArchivedTexture, Stream content, CancellationToken cancellationToken)
+    {
+        insertIntoTileArchivedTextureCommand.Parameters[CdbParamName].Value = Name;
+        SetTileArchivedTextureParameters(insertIntoTileArchivedTextureCommand, tileArchivedTexture);
+        insertIntoTileArchivedTextureCommand.Parameters[ContentParamName].Value = content;
+
+        return insertIntoTileArchivedTextureCommand.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    #endregion
+
     #endregion
 
     #region Navigation
@@ -4309,166 +4309,6 @@ public abstract class SQLCDB : ICDB
     {
         get;
     }
-
-    #region Insert
-
-    /// <summary>
-    /// The SQL statement to insert a row into the Navigation table.
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    ///   <listheader><description>Parameters</description></listheader>
-    ///   <item><description><see cref="CdbParamName"/></description></item>
-    ///   <item><description><see cref="DatasetParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
-    ///   <item><description><see cref="FileTypeParamName"/></description></item>
-    ///   <item><description><see cref="ContentParamName"/></description></item>
-    /// </list>
-    /// </remarks>
-    protected abstract string InsertIntoNavigationStatement
-    {
-        get;
-    }
-
-    internal void InitializeInsertIntoNavigationCommand(DbCommand dbCommand)
-    {
-        dbCommand.CommandText = InsertIntoNavigationStatement;
-        CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
-        CreateAndAttachNavigationParameters(dbCommand);
-        CreateAndAttachParameter(dbCommand, ContentParamName, DbType.Binary);
-    }
-
-    private void CreateAndAttachNavigationParameters(DbCommand dbCommand)
-    {
-        CreateAndAttachParameter(dbCommand, DatasetParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, ComponentSelector1ParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, ComponentSelector2ParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, FileTypeParamName, DbType.String);
-    }
-
-    private void SetNavigationParameters(DbCommand dbCommand, Navigation navigation)
-    {
-        dbCommand.Parameters[DatasetParamName].Value = navigation.Dataset.Value;
-        dbCommand.Parameters[ComponentSelector1ParamName].Value = navigation.ComponentSelector1;
-        dbCommand.Parameters[ComponentSelector2ParamName].Value = navigation.ComponentSelector2;
-        dbCommand.Parameters[FileTypeParamName].Value = navigation.FileType;
-    }
-
-    /// <inheritdoc cref="WriteNavigation(Navigation, Stream)"/>
-    public void WriteNavigation(Navigation navigation, byte[] content)
-    {
-        using DbConnection dbConnection = dbDataSource.OpenConnection();
-        using DbCommand insertIntoNavigationCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoNavigationCommand(insertIntoNavigationCommand);
-        insertIntoNavigationCommand.Prepare();
-
-        InsertIntoNavigation(insertIntoNavigationCommand, navigation, content);
-    }
-
-    /// <inheritdoc cref="WriteNavigation(Navigation, byte[])"/>
-    /// <remarks>
-    /// <para>
-    /// This is what subclasses should override to customize behavior.
-    /// </para>
-    /// </remarks>
-    /// <param name="insertIntoNavigationCommand">The prepared statement to use to execute the query.</param>
-    protected internal virtual void InsertIntoNavigation(DbCommand insertIntoNavigationCommand,
-        Navigation navigation, byte[] content)
-    {
-        insertIntoNavigationCommand.Parameters[CdbParamName].Value = Name;
-        SetNavigationParameters(insertIntoNavigationCommand, navigation);
-        insertIntoNavigationCommand.Parameters[ContentParamName].Value = content;
-
-        insertIntoNavigationCommand.ExecuteNonQuery();
-    }
-
-
-    /// <inheritdoc/>
-    public void WriteNavigation(Navigation navigation, Stream content)
-    {
-        using DbConnection dbConnection = dbDataSource.OpenConnection();
-        using DbCommand insertIntoNavigationCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoNavigationCommand(insertIntoNavigationCommand);
-        insertIntoNavigationCommand.Prepare();
-
-        InsertIntoNavigation(insertIntoNavigationCommand, navigation, content);
-    }
-
-    /// <inheritdoc cref="WriteNavigation(Navigation, Stream)"/>
-    /// <remarks>
-    /// <para>
-    /// This is what subclasses should override to customize behavior.
-    /// </para>
-    /// </remarks>
-    /// <param name="insertIntoNavigationCommand">The prepared statement to use to execute the query.</param>
-    protected internal virtual void InsertIntoNavigation(DbCommand insertIntoNavigationCommand,
-        Navigation navigation, Stream content)
-    {
-        insertIntoNavigationCommand.Parameters[CdbParamName].Value = Name;
-        SetNavigationParameters(insertIntoNavigationCommand, navigation);
-        insertIntoNavigationCommand.Parameters[ContentParamName].Value = content;
-
-        insertIntoNavigationCommand.ExecuteNonQuery();
-    }
-
-    /// <inheritdoc cref="WriteNavigationAsync(Navigation, Stream, CancellationToken)"/>
-    public async Task WriteNavigationAsync(Navigation navigation, byte[] content, CancellationToken cancellationToken)
-    {
-        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        await using DbCommand insertIntoNavigationCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoNavigationCommand(insertIntoNavigationCommand);
-        await insertIntoNavigationCommand.PrepareAsync(cancellationToken);
-
-        await InsertIntoNavigationAsync(insertIntoNavigationCommand, navigation, content, cancellationToken);
-    }
-
-    /// <inheritdoc cref="WriteNavigationAsync(Navigation, byte[], CancellationToken)"/>
-    /// <remarks>
-    /// <para>
-    /// This is what subclasses should override to customize behavior.
-    /// </para>
-    /// </remarks>
-    /// <param name="insertIntoNavigationCommand">The prepared statement to use to execute the query.</param>
-    protected internal virtual Task InsertIntoNavigationAsync(DbCommand insertIntoNavigationCommand,
-        Navigation navigation, byte[] content, CancellationToken cancellationToken)
-    {
-        insertIntoNavigationCommand.Parameters[CdbParamName].Value = Name;
-        SetNavigationParameters(insertIntoNavigationCommand, navigation);
-        insertIntoNavigationCommand.Parameters[ContentParamName].Value = content;
-
-        return insertIntoNavigationCommand.ExecuteNonQueryAsync(cancellationToken);
-    }
-
-    /// <inheritdoc/>
-    public async Task WriteNavigationAsync(Navigation navigation, Stream content, CancellationToken cancellationToken)
-    {
-        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        await using DbCommand insertIntoNavigationCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoNavigationCommand(insertIntoNavigationCommand);
-        await insertIntoNavigationCommand.PrepareAsync(cancellationToken);
-
-        await InsertIntoNavigationAsync(insertIntoNavigationCommand, navigation, content, cancellationToken);
-    }
-
-    /// <inheritdoc cref="WriteNavigationAsync(Navigation, Stream, CancellationToken)"/>
-    /// <remarks>
-    /// <para>
-    /// This is what subclasses should override to customize behavior.
-    /// </para>
-    /// </remarks>
-    /// <param name="insertIntoNavigationCommand">The prepared statement to use to execute the query.</param>
-    protected internal virtual Task InsertIntoNavigationAsync(DbCommand insertIntoNavigationCommand,
-        Navigation navigation, Stream content, CancellationToken cancellationToken)
-    {
-        insertIntoNavigationCommand.Parameters[CdbParamName].Value = Name;
-        SetNavigationParameters(insertIntoNavigationCommand, navigation);
-        insertIntoNavigationCommand.Parameters[ContentParamName].Value = content;
-
-        return insertIntoNavigationCommand.ExecuteNonQueryAsync(cancellationToken);
-    }
-
-    #endregion
 
     #region Select
 
@@ -4643,6 +4483,166 @@ public abstract class SQLCDB : ICDB
             await dbDataReader.DisposeAsync();
             throw;
         }
+    }
+
+    #endregion
+
+    #region Insert
+
+    /// <summary>
+    /// The SQL statement to insert a row into the Navigation table.
+    /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    ///   <item><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><description><see cref="FileTypeParamName"/></description></item>
+    ///   <item><description><see cref="ContentParamName"/></description></item>
+    /// </list>
+    /// </remarks>
+    protected abstract string InsertIntoNavigationStatement
+    {
+        get;
+    }
+
+    internal void InitializeInsertIntoNavigationCommand(DbCommand dbCommand)
+    {
+        dbCommand.CommandText = InsertIntoNavigationStatement;
+        CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
+        CreateAndAttachNavigationParameters(dbCommand);
+        CreateAndAttachParameter(dbCommand, ContentParamName, DbType.Binary);
+    }
+
+    private void CreateAndAttachNavigationParameters(DbCommand dbCommand)
+    {
+        CreateAndAttachParameter(dbCommand, DatasetParamName, DbType.Int32);
+        CreateAndAttachParameter(dbCommand, ComponentSelector1ParamName, DbType.Int32);
+        CreateAndAttachParameter(dbCommand, ComponentSelector2ParamName, DbType.Int32);
+        CreateAndAttachParameter(dbCommand, FileTypeParamName, DbType.String);
+    }
+
+    private void SetNavigationParameters(DbCommand dbCommand, Navigation navigation)
+    {
+        dbCommand.Parameters[DatasetParamName].Value = navigation.Dataset.Value;
+        dbCommand.Parameters[ComponentSelector1ParamName].Value = navigation.ComponentSelector1;
+        dbCommand.Parameters[ComponentSelector2ParamName].Value = navigation.ComponentSelector2;
+        dbCommand.Parameters[FileTypeParamName].Value = navigation.FileType;
+    }
+
+    /// <inheritdoc cref="WriteNavigation(Navigation, Stream)"/>
+    public void WriteNavigation(Navigation navigation, byte[] content)
+    {
+        using DbConnection dbConnection = dbDataSource.OpenConnection();
+        using DbCommand insertIntoNavigationCommand = dbConnection.CreateCommand();
+        InitializeInsertIntoNavigationCommand(insertIntoNavigationCommand);
+        insertIntoNavigationCommand.Prepare();
+
+        InsertIntoNavigation(insertIntoNavigationCommand, navigation, content);
+    }
+
+    /// <inheritdoc cref="WriteNavigation(Navigation, byte[])"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoNavigationCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual void InsertIntoNavigation(DbCommand insertIntoNavigationCommand,
+        Navigation navigation, byte[] content)
+    {
+        insertIntoNavigationCommand.Parameters[CdbParamName].Value = Name;
+        SetNavigationParameters(insertIntoNavigationCommand, navigation);
+        insertIntoNavigationCommand.Parameters[ContentParamName].Value = content;
+
+        insertIntoNavigationCommand.ExecuteNonQuery();
+    }
+
+
+    /// <inheritdoc/>
+    public void WriteNavigation(Navigation navigation, Stream content)
+    {
+        using DbConnection dbConnection = dbDataSource.OpenConnection();
+        using DbCommand insertIntoNavigationCommand = dbConnection.CreateCommand();
+        InitializeInsertIntoNavigationCommand(insertIntoNavigationCommand);
+        insertIntoNavigationCommand.Prepare();
+
+        InsertIntoNavigation(insertIntoNavigationCommand, navigation, content);
+    }
+
+    /// <inheritdoc cref="WriteNavigation(Navigation, Stream)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoNavigationCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual void InsertIntoNavigation(DbCommand insertIntoNavigationCommand,
+        Navigation navigation, Stream content)
+    {
+        insertIntoNavigationCommand.Parameters[CdbParamName].Value = Name;
+        SetNavigationParameters(insertIntoNavigationCommand, navigation);
+        insertIntoNavigationCommand.Parameters[ContentParamName].Value = content;
+
+        insertIntoNavigationCommand.ExecuteNonQuery();
+    }
+
+    /// <inheritdoc cref="WriteNavigationAsync(Navigation, Stream, CancellationToken)"/>
+    public async Task WriteNavigationAsync(Navigation navigation, byte[] content, CancellationToken cancellationToken)
+    {
+        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
+        await using DbCommand insertIntoNavigationCommand = dbConnection.CreateCommand();
+        InitializeInsertIntoNavigationCommand(insertIntoNavigationCommand);
+        await insertIntoNavigationCommand.PrepareAsync(cancellationToken);
+
+        await InsertIntoNavigationAsync(insertIntoNavigationCommand, navigation, content, cancellationToken);
+    }
+
+    /// <inheritdoc cref="WriteNavigationAsync(Navigation, byte[], CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoNavigationCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual Task InsertIntoNavigationAsync(DbCommand insertIntoNavigationCommand,
+        Navigation navigation, byte[] content, CancellationToken cancellationToken)
+    {
+        insertIntoNavigationCommand.Parameters[CdbParamName].Value = Name;
+        SetNavigationParameters(insertIntoNavigationCommand, navigation);
+        insertIntoNavigationCommand.Parameters[ContentParamName].Value = content;
+
+        return insertIntoNavigationCommand.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task WriteNavigationAsync(Navigation navigation, Stream content, CancellationToken cancellationToken)
+    {
+        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
+        await using DbCommand insertIntoNavigationCommand = dbConnection.CreateCommand();
+        InitializeInsertIntoNavigationCommand(insertIntoNavigationCommand);
+        await insertIntoNavigationCommand.PrepareAsync(cancellationToken);
+
+        await InsertIntoNavigationAsync(insertIntoNavigationCommand, navigation, content, cancellationToken);
+    }
+
+    /// <inheritdoc cref="WriteNavigationAsync(Navigation, Stream, CancellationToken)"/>
+    /// <remarks>
+    /// <para>
+    /// This is what subclasses should override to customize behavior.
+    /// </para>
+    /// </remarks>
+    /// <param name="insertIntoNavigationCommand">The prepared statement to use to execute the query.</param>
+    protected internal virtual Task InsertIntoNavigationAsync(DbCommand insertIntoNavigationCommand,
+        Navigation navigation, Stream content, CancellationToken cancellationToken)
+    {
+        insertIntoNavigationCommand.Parameters[CdbParamName].Value = Name;
+        SetNavigationParameters(insertIntoNavigationCommand, navigation);
+        insertIntoNavigationCommand.Parameters[ContentParamName].Value = content;
+
+        return insertIntoNavigationCommand.ExecuteNonQueryAsync(cancellationToken);
     }
 
     #endregion

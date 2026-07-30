@@ -202,138 +202,6 @@ public class FileSystemCDB : ICDB
         }
     }
 
-    /// <inheritdoc/>
-    public Stream? ReadMetadata(Metadata metadata)
-    {
-        return ReadFile(metadata);
-    }
-
-    /// <inheritdoc/>
-    public Task<Stream?> ReadMetadataAsync(Metadata metadata, CancellationToken cancellationToken)
-    {
-        return ReadFileAsync(metadata, cancellationToken);
-    }
-
-    /// <inheritdoc/>
-    public Stream? ReadTexture(Texture texture)
-    {
-        return ReadFile(texture);
-    }
-
-    /// <inheritdoc/>
-    public Task<Stream?> ReadTextureAsync(Texture texture, CancellationToken cancellationToken)
-    {
-        return ReadFileAsync(texture, cancellationToken);
-    }
-
-    /// <inheritdoc/>
-    public Stream? ReadTextureLevelOfDetail(TextureLod textureLod)
-    {
-        return ReadFile(textureLod);
-    }
-
-    /// <inheritdoc/>
-    public Task<Stream?> ReadTextureLevelOfDetailAsync(TextureLod textureLod, CancellationToken cancellationToken)
-    {
-        return ReadFileAsync(textureLod, cancellationToken);
-    }
-
-    /// <inheritdoc/>
-    public Stream? ReadGeotypicalModel(GeotypicalModel geotypicalModel)
-    {
-        return ReadFile(geotypicalModel);
-    }
-
-    /// <inheritdoc/>
-    public Task<Stream?> ReadGeotypicalModelAsync(GeotypicalModel geotypicalModel, CancellationToken cancellationToken)
-    {
-        return ReadFileAsync(geotypicalModel, cancellationToken);
-    }
-
-    /// <inheritdoc/>
-    public Stream? ReadGeotypicalModelLevelOfDetail(GeotypicalModelLod geotypicalModelLod)
-    {
-        return ReadFile(geotypicalModelLod);
-    }
-
-    /// <inheritdoc/>
-    public Task<Stream?> ReadGeotypicalModelLevelOfDetailAsync(GeotypicalModelLod geotypicalModelLod, CancellationToken cancellationToken)
-    {
-        return ReadFileAsync(geotypicalModelLod, cancellationToken);
-    }
-
-    /// <inheritdoc/>
-    public Stream? ReadMovingModel(MovingModel movingModel)
-    {
-        return ReadFile(movingModel);
-    }
-
-    /// <inheritdoc/>
-    public Task<Stream?> ReadMovingModelAsync(MovingModel movingModel, CancellationToken cancellationToken)
-    {
-        return ReadFileAsync(movingModel, cancellationToken);
-    }
-
-    /// <inheritdoc/>
-    public Stream? ReadMovingModelLevelOfDetail(MovingModelLod movingModelLod)
-    {
-        return ReadFile(movingModelLod);
-    }
-
-    /// <inheritdoc/>
-    public Task<Stream?> ReadMovingModelLevelOfDetailAsync(MovingModelLod movingModelLod, CancellationToken cancellationToken)
-    {
-        return ReadFileAsync(movingModelLod, cancellationToken);
-    }
-
-    /// <inheritdoc/>
-    public Stream? ReadTile(Tile tile)
-    {
-        return ReadFile(tile);
-    }
-
-    /// <inheritdoc/>
-    public Task<Stream?> ReadTileAsync(Tile tile, CancellationToken cancellationToken)
-    {
-        return ReadFileAsync(tile, cancellationToken);
-    }
-
-    /// <inheritdoc/>
-    public Stream? ReadTileFeature(TileArchivedFeature tileFeature)
-    {
-        return ReadArchivedFile(tileFeature);
-    }
-
-    /// <inheritdoc/>
-    public Task<Stream?> ReadTileFeatureAsync(TileArchivedFeature tileFeature, CancellationToken cancellationToken)
-    {
-        return ReadArchivedFileAsync(tileFeature, cancellationToken);
-    }
-
-    /// <inheritdoc/>
-    public Stream? ReadTileTexture(TileArchivedTexture tileTexture)
-    {
-        return ReadArchivedFile(tileTexture);
-    }
-
-    /// <inheritdoc/>
-    public Task<Stream?> ReadTileTextureAsync(TileArchivedTexture tileTexture, CancellationToken cancellationToken)
-    {
-        return ReadArchivedFileAsync(tileTexture, cancellationToken);
-    }
-
-    /// <inheritdoc/>
-    public Stream? ReadNavigation(Navigation navigation)
-    {
-        return ReadFile(navigation);
-    }
-
-    /// <inheritdoc/>
-    public Task<Stream?> ReadNavigationAsync(Navigation navigation, CancellationToken cancellationToken)
-    {
-        return ReadFileAsync(navigation, cancellationToken);
-    }
-
     private void WriteFile(ICDBFileIdentifier identifier, Stream content)
     {
         string fullPath = Path.Combine(CdbRoot.FullName, identifier.RelativePath, identifier.Filename);
@@ -399,6 +267,18 @@ public class FileSystemCDB : ICDB
     }
 
     /// <inheritdoc/>
+    public Stream? ReadMetadata(Metadata metadata)
+    {
+        return ReadFile(metadata);
+    }
+
+    /// <inheritdoc/>
+    public Task<Stream?> ReadMetadataAsync(Metadata metadata, CancellationToken cancellationToken)
+    {
+        return ReadFileAsync(metadata, cancellationToken);
+    }
+
+    /// <inheritdoc/>
     public void WriteMetadata(Metadata metadata, Stream content)
     {
         WriteFile(metadata, content);
@@ -408,6 +288,18 @@ public class FileSystemCDB : ICDB
     public Task WriteMetadataAsync(Metadata metadata, Stream content, CancellationToken cancellationToken)
     {
         return WriteFileAsync(metadata, content, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public Stream? ReadTexture(Texture texture)
+    {
+        return ReadFile(texture);
+    }
+
+    /// <inheritdoc/>
+    public Task<Stream?> ReadTextureAsync(Texture texture, CancellationToken cancellationToken)
+    {
+        return ReadFileAsync(texture, cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -423,6 +315,18 @@ public class FileSystemCDB : ICDB
     }
 
     /// <inheritdoc/>
+    public Stream? ReadTextureLevelOfDetail(TextureLod textureLod)
+    {
+        return ReadFile(textureLod);
+    }
+
+    /// <inheritdoc/>
+    public Task<Stream?> ReadTextureLevelOfDetailAsync(TextureLod textureLod, CancellationToken cancellationToken)
+    {
+        return ReadFileAsync(textureLod, cancellationToken);
+    }
+
+    /// <inheritdoc/>
     public void WriteTextureLevelOfDetail(TextureLod textureLod, Stream content)
     {
         WriteFile(textureLod, content);
@@ -432,6 +336,18 @@ public class FileSystemCDB : ICDB
     public Task WriteTextureLevelOfDetailAsync(TextureLod textureLod, Stream content, CancellationToken cancellationToken)
     {
         return WriteFileAsync(textureLod, content, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public Stream? ReadGeotypicalModel(GeotypicalModel geotypicalModel)
+    {
+        return ReadFile(geotypicalModel);
+    }
+
+    /// <inheritdoc/>
+    public Task<Stream?> ReadGeotypicalModelAsync(GeotypicalModel geotypicalModel, CancellationToken cancellationToken)
+    {
+        return ReadFileAsync(geotypicalModel, cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -447,6 +363,18 @@ public class FileSystemCDB : ICDB
     }
 
     /// <inheritdoc/>
+    public Stream? ReadGeotypicalModelLevelOfDetail(GeotypicalModelLod geotypicalModelLod)
+    {
+        return ReadFile(geotypicalModelLod);
+    }
+
+    /// <inheritdoc/>
+    public Task<Stream?> ReadGeotypicalModelLevelOfDetailAsync(GeotypicalModelLod geotypicalModelLod, CancellationToken cancellationToken)
+    {
+        return ReadFileAsync(geotypicalModelLod, cancellationToken);
+    }
+
+    /// <inheritdoc/>
     public void WriteGeotypicalModelLevelOfDetail(GeotypicalModelLod geotypicalModelLod, Stream content)
     {
         WriteFile(geotypicalModelLod, content);
@@ -456,6 +384,18 @@ public class FileSystemCDB : ICDB
     public Task WriteGeotypicalModelLevelOfDetailAsync(GeotypicalModelLod geotypicalModelLod, Stream content, CancellationToken cancellationToken)
     {
         return WriteFileAsync(geotypicalModelLod, content, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public Stream? ReadMovingModel(MovingModel movingModel)
+    {
+        return ReadFile(movingModel);
+    }
+
+    /// <inheritdoc/>
+    public Task<Stream?> ReadMovingModelAsync(MovingModel movingModel, CancellationToken cancellationToken)
+    {
+        return ReadFileAsync(movingModel, cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -471,6 +411,18 @@ public class FileSystemCDB : ICDB
     }
 
     /// <inheritdoc/>
+    public Stream? ReadMovingModelLevelOfDetail(MovingModelLod movingModelLod)
+    {
+        return ReadFile(movingModelLod);
+    }
+
+    /// <inheritdoc/>
+    public Task<Stream?> ReadMovingModelLevelOfDetailAsync(MovingModelLod movingModelLod, CancellationToken cancellationToken)
+    {
+        return ReadFileAsync(movingModelLod, cancellationToken);
+    }
+
+    /// <inheritdoc/>
     public void WriteMovingModelLevelOfDetail(MovingModelLod movingModelLod, Stream content)
     {
         WriteFile(movingModelLod, content);
@@ -480,6 +432,18 @@ public class FileSystemCDB : ICDB
     public Task WriteMovingModelLevelOfDetailAsync(MovingModelLod movingModelLod, Stream content, CancellationToken cancellationToken)
     {
         return WriteFileAsync(movingModelLod, content, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public Stream? ReadTile(Tile tile)
+    {
+        return ReadFile(tile);
+    }
+
+    /// <inheritdoc/>
+    public Task<Stream?> ReadTileAsync(Tile tile, CancellationToken cancellationToken)
+    {
+        return ReadFileAsync(tile, cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -495,6 +459,18 @@ public class FileSystemCDB : ICDB
     }
 
     /// <inheritdoc/>
+    public Stream? ReadTileFeature(TileArchivedFeature tileFeature)
+    {
+        return ReadArchivedFile(tileFeature);
+    }
+
+    /// <inheritdoc/>
+    public Task<Stream?> ReadTileFeatureAsync(TileArchivedFeature tileFeature, CancellationToken cancellationToken)
+    {
+        return ReadArchivedFileAsync(tileFeature, cancellationToken);
+    }
+
+    /// <inheritdoc/>
     public void WriteTileFeature(TileArchivedFeature tileFeature, Stream content)
     {
         WriteArchivedFileEntry(tileFeature, content);
@@ -507,6 +483,18 @@ public class FileSystemCDB : ICDB
     }
 
     /// <inheritdoc/>
+    public Stream? ReadTileTexture(TileArchivedTexture tileTexture)
+    {
+        return ReadArchivedFile(tileTexture);
+    }
+
+    /// <inheritdoc/>
+    public Task<Stream?> ReadTileTextureAsync(TileArchivedTexture tileTexture, CancellationToken cancellationToken)
+    {
+        return ReadArchivedFileAsync(tileTexture, cancellationToken);
+    }
+
+    /// <inheritdoc/>
     public void WriteTileTexture(TileArchivedTexture tileTexture, Stream content)
     {
         WriteArchivedFileEntry(tileTexture, content);
@@ -516,6 +504,18 @@ public class FileSystemCDB : ICDB
     public Task WriteTileTextureAsync(TileArchivedTexture tileTexture, Stream content, CancellationToken cancellationToken)
     {
         return WriteArchivedFileEntryAsync(tileTexture, content, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public Stream? ReadNavigation(Navigation navigation)
+    {
+        return ReadFile(navigation);
+    }
+
+    /// <inheritdoc/>
+    public Task<Stream?> ReadNavigationAsync(Navigation navigation, CancellationToken cancellationToken)
+    {
+        return ReadFileAsync(navigation, cancellationToken);
     }
 
     /// <inheritdoc/>
