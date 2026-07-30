@@ -40,265 +40,265 @@ public class SQLCDB : ICDB
     /// <inheritdoc/>
     public Stream? ReadMetadata(Metadata metadata)
     {
-        return sqlDataStore.ReadMetadata(Name, metadata);
+        return sqlDataStore.ReadMetadata(metadata);
     }
 
     /// <inheritdoc/>
     public Task<Stream?> ReadMetadataAsync(Metadata metadata, CancellationToken cancellationToken)
     {
-        return sqlDataStore.ReadMetadataAsync(Name, metadata, cancellationToken);
+        return sqlDataStore.ReadMetadataAsync(metadata, cancellationToken);
     }
 
     /// <inheritdoc/>
     public Stream? ReadTexture(Texture texture)
     {
-        return sqlDataStore.ReadTexture(Name, texture);
+        return sqlDataStore.ReadTexture(texture);
     }
 
     /// <inheritdoc/>
     public Task<Stream?> ReadTextureAsync(Texture texture, CancellationToken cancellationToken)
     {
-        return sqlDataStore.ReadTextureAsync(Name, texture, cancellationToken);
+        return sqlDataStore.ReadTextureAsync(texture, cancellationToken);
     }
 
     /// <inheritdoc/>
     public Stream? ReadTextureLevelOfDetail(TextureLod textureLod)
     {
-        return sqlDataStore.ReadTextureLevelOfDetail(Name, textureLod);
+        return sqlDataStore.ReadTextureLevelOfDetail(textureLod);
     }
 
     /// <inheritdoc/>
     public Task<Stream?> ReadTextureLevelOfDetailAsync(TextureLod textureLod, CancellationToken cancellationToken)
     {
-        return sqlDataStore.ReadTextureLevelOfDetailAsync(Name, textureLod, cancellationToken);
+        return sqlDataStore.ReadTextureLevelOfDetailAsync(textureLod, cancellationToken);
     }
 
     /// <inheritdoc/>
     public Stream? ReadGeotypicalModel(GeotypicalModel geotypicalModel)
     {
-        return sqlDataStore.ReadGeotypicalModel(Name, geotypicalModel);
+        return sqlDataStore.ReadGeotypicalModel(geotypicalModel);
     }
 
     /// <inheritdoc/>
     public Task<Stream?> ReadGeotypicalModelAsync(GeotypicalModel geotypicalModel, CancellationToken cancellationToken)
     {
-        return sqlDataStore.ReadGeotypicalModelAsync(Name, geotypicalModel, cancellationToken);
+        return sqlDataStore.ReadGeotypicalModelAsync(geotypicalModel, cancellationToken);
     }
 
     /// <inheritdoc/>
     public Stream? ReadGeotypicalModelLevelOfDetail(GeotypicalModelLod geotypicalModelLod)
     {
-        return sqlDataStore.ReadGeotypicalModelLevelOfDetail(Name, geotypicalModelLod);
+        return sqlDataStore.ReadGeotypicalModelLevelOfDetail(geotypicalModelLod);
     }
 
     /// <inheritdoc/>
     public Task<Stream?> ReadGeotypicalModelLevelOfDetailAsync(GeotypicalModelLod geotypicalModelLod, CancellationToken cancellationToken)
     {
-        return sqlDataStore.ReadGeotypicalModelLevelOfDetailAsync(Name, geotypicalModelLod, cancellationToken);
+        return sqlDataStore.ReadGeotypicalModelLevelOfDetailAsync(geotypicalModelLod, cancellationToken);
     }
 
     /// <inheritdoc/>
     public Stream? ReadMovingModel(MovingModel movingModel)
     {
-        return sqlDataStore.ReadMovingModel(Name, movingModel);
+        return sqlDataStore.ReadMovingModel(movingModel);
     }
 
     /// <inheritdoc/>
     public Task<Stream?> ReadMovingModelAsync(MovingModel movingModel, CancellationToken cancellationToken)
     {
-        return sqlDataStore.ReadMovingModelAsync(Name, movingModel, cancellationToken);
+        return sqlDataStore.ReadMovingModelAsync(movingModel, cancellationToken);
     }
 
     /// <inheritdoc/>
     public Stream? ReadMovingModelLevelOfDetail(MovingModelLod movingModelLod)
     {
-        return sqlDataStore.ReadMovingModelLevelOfDetail(Name, movingModelLod);
+        return sqlDataStore.ReadMovingModelLevelOfDetail(movingModelLod);
     }
 
     /// <inheritdoc/>
     public Task<Stream?> ReadMovingModelLevelOfDetailAsync(MovingModelLod movingModelLod, CancellationToken cancellationToken)
     {
-        return sqlDataStore.ReadMovingModelLevelOfDetailAsync(Name, movingModelLod, cancellationToken);
+        return sqlDataStore.ReadMovingModelLevelOfDetailAsync(movingModelLod, cancellationToken);
     }
 
     /// <inheritdoc/>
     public Stream? ReadTile(Tile tile)
     {
-        return sqlDataStore.ReadTile(Name, tile);
+        return sqlDataStore.ReadTile(tile);
     }
 
     /// <inheritdoc/>
     public Task<Stream?> ReadTileAsync(Tile tile, CancellationToken cancellationToken)
     {
-        return sqlDataStore.ReadTileAsync(Name, tile, cancellationToken);
+        return sqlDataStore.ReadTileAsync(tile, cancellationToken);
     }
 
     /// <inheritdoc/>
     public Stream? ReadTileFeature(TileArchivedFeature tileFeature)
     {
-        return sqlDataStore.ReadTileFeature(Name, tileFeature);
+        return sqlDataStore.ReadTileFeature(tileFeature);
     }
 
     /// <inheritdoc/>
     public Task<Stream?> ReadTileFeatureAsync(TileArchivedFeature tileFeature, CancellationToken cancellationToken)
     {
-        return sqlDataStore.ReadTileFeatureAsync(Name, tileFeature, cancellationToken);
+        return sqlDataStore.ReadTileFeatureAsync(tileFeature, cancellationToken);
     }
 
     /// <inheritdoc/>
     public Stream? ReadTileTexture(TileArchivedTexture tileTexture)
     {
-        return sqlDataStore.ReadTileTexture(Name, tileTexture);
+        return sqlDataStore.ReadTileTexture(tileTexture);
     }
 
     /// <inheritdoc/>
     public Task<Stream?> ReadTileTextureAsync(TileArchivedTexture tileTexture, CancellationToken cancellationToken)
     {
-        return sqlDataStore.ReadTileTextureAsync(Name, tileTexture, cancellationToken);
+        return sqlDataStore.ReadTileTextureAsync(tileTexture, cancellationToken);
     }
 
     /// <inheritdoc/>
     public Stream? ReadNavigation(Navigation navigation)
     {
-        return sqlDataStore.ReadNavigation(Name, navigation);
+        return sqlDataStore.ReadNavigation(navigation);
     }
 
     /// <inheritdoc/>
     public Task<Stream?> ReadNavigationAsync(Navigation navigation, CancellationToken cancellationToken)
     {
-        return sqlDataStore.ReadNavigationAsync(Name, navigation, cancellationToken);
+        return sqlDataStore.ReadNavigationAsync(navigation, cancellationToken);
     }
 
     /// <inheritdoc/>
     public void WriteMetadata(Metadata metadata, Stream content)
     {
-        sqlDataStore.WriteMetadata(Name, metadata, content);
+        sqlDataStore.WriteMetadata(metadata, content);
     }
 
     /// <inheritdoc/>
     public Task WriteMetadataAsync(Metadata metadata, Stream content, CancellationToken cancellationToken)
     {
-        return sqlDataStore.WriteMetadataAsync(Name, metadata, content, cancellationToken);
+        return sqlDataStore.WriteMetadataAsync(metadata, content, cancellationToken);
     }
 
     /// <inheritdoc/>
     public void WriteTexture(Texture texture, Stream content)
     {
-        sqlDataStore.WriteTexture(Name, texture, content);
+        sqlDataStore.WriteTexture(texture, content);
     }
 
     /// <inheritdoc/>
     public Task WriteTextureAsync(Texture texture, Stream content, CancellationToken cancellationToken)
     {
-        return sqlDataStore.WriteTextureAsync(Name, texture, content, cancellationToken);
+        return sqlDataStore.WriteTextureAsync(texture, content, cancellationToken);
     }
 
     /// <inheritdoc/>
     public void WriteTextureLevelOfDetail(TextureLod textureLod, Stream content)
     {
-        sqlDataStore.WriteTextureLevelOfDetail(Name, textureLod, content);
+        sqlDataStore.WriteTextureLevelOfDetail(textureLod, content);
     }
 
     /// <inheritdoc/>
     public Task WriteTextureLevelOfDetailAsync(TextureLod textureLod, Stream content, CancellationToken cancellationToken)
     {
-        return sqlDataStore.WriteTextureLevelOfDetailAsync(Name, textureLod, content, cancellationToken);
+        return sqlDataStore.WriteTextureLevelOfDetailAsync(textureLod, content, cancellationToken);
     }
 
     /// <inheritdoc/>
     public void WriteGeotypicalModel(GeotypicalModel geotypicalModel, Stream content)
     {
-        sqlDataStore.WriteGeotypicalModel(Name, geotypicalModel, content);
+        sqlDataStore.WriteGeotypicalModel(geotypicalModel, content);
     }
 
     /// <inheritdoc/>
     public Task WriteGeotypicalModelAsync(GeotypicalModel geotypicalModel, Stream content, CancellationToken cancellationToken)
     {
-        return sqlDataStore.WriteGeotypicalModelAsync(Name, geotypicalModel, content, cancellationToken);
+        return sqlDataStore.WriteGeotypicalModelAsync(geotypicalModel, content, cancellationToken);
     }
 
     /// <inheritdoc/>
     public void WriteGeotypicalModelLevelOfDetail(GeotypicalModelLod geotypicalModelLod, Stream content)
     {
-        sqlDataStore.WriteGeotypicalModelLevelOfDetail(Name, geotypicalModelLod, content);
+        sqlDataStore.WriteGeotypicalModelLevelOfDetail(geotypicalModelLod, content);
     }
 
     /// <inheritdoc/>
     public Task WriteGeotypicalModelLevelOfDetailAsync(GeotypicalModelLod geotypicalModelLod, Stream content, CancellationToken cancellationToken)
     {
-        return sqlDataStore.WriteGeotypicalModelLevelOfDetailAsync(Name, geotypicalModelLod, content, cancellationToken);
+        return sqlDataStore.WriteGeotypicalModelLevelOfDetailAsync(geotypicalModelLod, content, cancellationToken);
     }
 
     /// <inheritdoc/>
     public void WriteMovingModel(MovingModel movingModel, Stream content)
     {
-        sqlDataStore.WriteMovingModel(Name, movingModel, content);
+        sqlDataStore.WriteMovingModel(movingModel, content);
     }
 
     /// <inheritdoc/>
     public Task WriteMovingModelAsync(MovingModel movingModel, Stream content, CancellationToken cancellationToken)
     {
-        return sqlDataStore.WriteMovingModelAsync(Name, movingModel, content, cancellationToken);
+        return sqlDataStore.WriteMovingModelAsync(movingModel, content, cancellationToken);
     }
 
     /// <inheritdoc/>
     public void WriteMovingModelLevelOfDetail(MovingModelLod movingModelLod, Stream content)
     {
-        sqlDataStore.WriteMovingModelLevelOfDetail(Name, movingModelLod, content);
+        sqlDataStore.WriteMovingModelLevelOfDetail(movingModelLod, content);
     }
 
     /// <inheritdoc/>
     public Task WriteMovingModelLevelOfDetailAsync(MovingModelLod movingModelLod, Stream content, CancellationToken cancellationToken)
     {
-        return sqlDataStore.WriteMovingModelLevelOfDetailAsync(Name, movingModelLod, content, cancellationToken);
+        return sqlDataStore.WriteMovingModelLevelOfDetailAsync(movingModelLod, content, cancellationToken);
     }
 
     /// <inheritdoc/>
     public void WriteTile(Tile tile, Stream content)
     {
-        sqlDataStore.WriteTile(Name, tile, content);
+        sqlDataStore.WriteTile(tile, content);
     }
 
     /// <inheritdoc/>
     public Task WriteTileAsync(Tile tile, Stream content, CancellationToken cancellationToken)
     {
-        return sqlDataStore.WriteTileAsync(Name, tile, content, cancellationToken);
+        return sqlDataStore.WriteTileAsync(tile, content, cancellationToken);
     }
 
     /// <inheritdoc/>
     public void WriteTileFeature(TileArchivedFeature tileFeature, Stream content)
     {
-        sqlDataStore.WriteTileFeature(Name, tileFeature, content);
+        sqlDataStore.WriteTileFeature(tileFeature, content);
     }
 
     /// <inheritdoc/>
     public Task WriteTileFeatureAsync(TileArchivedFeature tileFeature, Stream content, CancellationToken cancellationToken)
     {
-        return sqlDataStore.WriteTileFeatureAsync(Name, tileFeature, content, cancellationToken);
+        return sqlDataStore.WriteTileFeatureAsync(tileFeature, content, cancellationToken);
     }
 
     /// <inheritdoc/>
     public void WriteTileTexture(TileArchivedTexture tileTexture, Stream content)
     {
-        sqlDataStore.WriteTileTexture(Name, tileTexture, content);
+        sqlDataStore.WriteTileTexture(tileTexture, content);
     }
 
     /// <inheritdoc/>
     public Task WriteTileTextureAsync(TileArchivedTexture tileTexture, Stream content, CancellationToken cancellationToken)
     {
-        return sqlDataStore.WriteTileTextureAsync(Name, tileTexture, content, cancellationToken);
+        return sqlDataStore.WriteTileTextureAsync(tileTexture, content, cancellationToken);
     }
 
     /// <inheritdoc/>
     public void WriteNavigation(Navigation navigation, Stream content)
     {
-        sqlDataStore.WriteNavigation(Name, navigation, content);
+        sqlDataStore.WriteNavigation(navigation, content);
     }
 
     /// <inheritdoc/>
     public Task WriteNavigationAsync(Navigation navigation, Stream content, CancellationToken cancellationToken)
     {
-        return sqlDataStore.WriteNavigationAsync(Name, navigation, content, cancellationToken);
+        return sqlDataStore.WriteNavigationAsync(navigation, content, cancellationToken);
     }
 
     #region Dispose Pattern
