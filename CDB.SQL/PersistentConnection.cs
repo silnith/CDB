@@ -153,13 +153,13 @@ public class PersistentConnection : ISQLDataStore
     #region Insert
 
     /// <inheritdoc/>
-    public int InsertIntoCDB(string cdbName)
+    public void InsertIntoCDB(string cdbName)
     {
-        return sqlDataStore.InsertIntoCDB(insertIntoCDBCommand, cdbName);
+        sqlDataStore.InsertIntoCDB(insertIntoCDBCommand, cdbName);
     }
 
     /// <inheritdoc/>
-    public Task<int> InsertIntoCDBAsync(string cdbName, CancellationToken cancellationToken)
+    public Task InsertIntoCDBAsync(string cdbName, CancellationToken cancellationToken)
     {
         return sqlDataStore.InsertIntoCDBAsync(insertIntoCDBCommand, cdbName, cancellationToken);
     }
@@ -192,25 +192,25 @@ public class PersistentConnection : ISQLDataStore
     #region Insert
 
     /// <inheritdoc/>
-    public int WriteMetadata(Metadata metadata, byte[] content)
+    public void WriteMetadata(Metadata metadata, byte[] content)
     {
-        return sqlDataStore.InsertIntoMetadata(insertIntoMetadataCommand, metadata, content);
+        sqlDataStore.InsertIntoMetadata(insertIntoMetadataCommand, metadata, content);
     }
 
     /// <inheritdoc/>
-    public int WriteMetadata(Metadata metadata, Stream content)
+    public void WriteMetadata(Metadata metadata, Stream content)
     {
-        return sqlDataStore.InsertIntoMetadata(insertIntoMetadataCommand, metadata, content);
+        sqlDataStore.InsertIntoMetadata(insertIntoMetadataCommand, metadata, content);
     }
 
     /// <inheritdoc/>
-    public Task<int> WriteMetadataAsync(Metadata metadata, byte[] content, CancellationToken cancellationToken)
+    public Task WriteMetadataAsync(Metadata metadata, byte[] content, CancellationToken cancellationToken)
     {
         return sqlDataStore.InsertIntoMetadataAsync(insertIntoMetadataCommand, metadata, content, cancellationToken);
     }
 
     /// <inheritdoc/>
-    public Task<int> WriteMetadataAsync(Metadata metadata, Stream content, CancellationToken cancellationToken)
+    public Task WriteMetadataAsync(Metadata metadata, Stream content, CancellationToken cancellationToken)
     {
         return sqlDataStore.InsertIntoMetadataAsync(insertIntoMetadataCommand, metadata, content, cancellationToken);
     }
@@ -240,25 +240,25 @@ public class PersistentConnection : ISQLDataStore
     #region Insert
 
     /// <inheritdoc/>
-    public int WriteTexture(Texture texture, byte[] content)
+    public void WriteTexture(Texture texture, byte[] content)
     {
-        return sqlDataStore.InsertIntoTexture(insertIntoTextureCommand, texture, content);
+        sqlDataStore.InsertIntoTexture(insertIntoTextureCommand, texture, content);
     }
 
     /// <inheritdoc/>
-    public int WriteTexture(Texture texture, Stream content)
+    public void WriteTexture(Texture texture, Stream content)
     {
-        return sqlDataStore.InsertIntoTexture(insertIntoTextureCommand, texture, content);
+        sqlDataStore.InsertIntoTexture(insertIntoTextureCommand, texture, content);
     }
 
     /// <inheritdoc/>
-    public Task<int> WriteTextureAsync(Texture texture, byte[] content, CancellationToken cancellationToken)
+    public Task WriteTextureAsync(Texture texture, byte[] content, CancellationToken cancellationToken)
     {
         return sqlDataStore.InsertIntoTextureAsync(insertIntoTextureCommand, texture, content, cancellationToken);
     }
 
     /// <inheritdoc/>
-    public Task<int> WriteTextureAsync(Texture texture, Stream content, CancellationToken cancellationToken)
+    public Task WriteTextureAsync(Texture texture, Stream content, CancellationToken cancellationToken)
     {
         return sqlDataStore.InsertIntoTextureAsync(insertIntoTextureCommand, texture, content, cancellationToken);
     }
@@ -288,25 +288,25 @@ public class PersistentConnection : ISQLDataStore
     #region Insert
 
     /// <inheritdoc/>
-    public int WriteTextureLevelOfDetail(TextureLod textureLod, byte[] content)
+    public void WriteTextureLevelOfDetail(TextureLod textureLod, byte[] content)
     {
-        return sqlDataStore.InsertIntoTextureLod(insertIntoTextureLodCommand, textureLod, content);
+        sqlDataStore.InsertIntoTextureLod(insertIntoTextureLodCommand, textureLod, content);
     }
 
     /// <inheritdoc/>
-    public int WriteTextureLevelOfDetail(TextureLod textureLod, Stream content)
+    public void WriteTextureLevelOfDetail(TextureLod textureLod, Stream content)
     {
-        return sqlDataStore.InsertIntoTextureLod(insertIntoTextureLodCommand, textureLod, content);
+        sqlDataStore.InsertIntoTextureLod(insertIntoTextureLodCommand, textureLod, content);
     }
 
     /// <inheritdoc/>
-    public Task<int> WriteTextureLevelOfDetailAsync(TextureLod textureLod, byte[] content, CancellationToken cancellationToken)
+    public Task WriteTextureLevelOfDetailAsync(TextureLod textureLod, byte[] content, CancellationToken cancellationToken)
     {
         return sqlDataStore.InsertIntoTextureLodAsync(insertIntoTextureLodCommand, textureLod, content, cancellationToken);
     }
 
     /// <inheritdoc/>
-    public Task<int> WriteTextureLevelOfDetailAsync(TextureLod textureLod, Stream content, CancellationToken cancellationToken)
+    public Task WriteTextureLevelOfDetailAsync(TextureLod textureLod, Stream content, CancellationToken cancellationToken)
     {
         return sqlDataStore.InsertIntoTextureLodAsync(insertIntoTextureLodCommand, textureLod, content, cancellationToken);
     }
@@ -336,25 +336,25 @@ public class PersistentConnection : ISQLDataStore
     #region Insert
 
     /// <inheritdoc/>
-    public int WriteGeotypicalModel(GeotypicalModel geotypicalModel, byte[] content)
+    public void WriteGeotypicalModel(GeotypicalModel geotypicalModel, byte[] content)
     {
-        return sqlDataStore.InsertIntoGeotypicalModel(insertIntoGeotypicalModelCommand, geotypicalModel, content);
+        sqlDataStore.InsertIntoGeotypicalModel(insertIntoGeotypicalModelCommand, geotypicalModel, content);
     }
 
     /// <inheritdoc/>
-    public int WriteGeotypicalModel(GeotypicalModel geotypicalModel, Stream content)
+    public void WriteGeotypicalModel(GeotypicalModel geotypicalModel, Stream content)
     {
-        return sqlDataStore.InsertIntoGeotypicalModel(insertIntoGeotypicalModelCommand, geotypicalModel, content);
+        sqlDataStore.InsertIntoGeotypicalModel(insertIntoGeotypicalModelCommand, geotypicalModel, content);
     }
 
     /// <inheritdoc/>
-    public Task<int> WriteGeotypicalModelAsync(GeotypicalModel geotypicalModel, byte[] content, CancellationToken cancellationToken)
+    public Task WriteGeotypicalModelAsync(GeotypicalModel geotypicalModel, byte[] content, CancellationToken cancellationToken)
     {
         return sqlDataStore.InsertIntoGeotypicalModelAsync(insertIntoGeotypicalModelCommand, geotypicalModel, content, cancellationToken);
     }
 
     /// <inheritdoc/>
-    public Task<int> WriteGeotypicalModelAsync(GeotypicalModel geotypicalModel, Stream content, CancellationToken cancellationToken)
+    public Task WriteGeotypicalModelAsync(GeotypicalModel geotypicalModel, Stream content, CancellationToken cancellationToken)
     {
         return sqlDataStore.InsertIntoGeotypicalModelAsync(insertIntoGeotypicalModelCommand, geotypicalModel, content, cancellationToken);
     }
@@ -384,25 +384,25 @@ public class PersistentConnection : ISQLDataStore
     #region Insert
 
     /// <inheritdoc/>
-    public int WriteGeotypicalModelLevelOfDetail(GeotypicalModelLod geotypicalModelLod, byte[] content)
+    public void WriteGeotypicalModelLevelOfDetail(GeotypicalModelLod geotypicalModelLod, byte[] content)
     {
-        return sqlDataStore.InsertIntoGeotypicalModelLod(insertIntoGeotypicalModelLodCommand, geotypicalModelLod, content);
+        sqlDataStore.InsertIntoGeotypicalModelLod(insertIntoGeotypicalModelLodCommand, geotypicalModelLod, content);
     }
 
     /// <inheritdoc/>
-    public int WriteGeotypicalModelLevelOfDetail(GeotypicalModelLod geotypicalModelLod, Stream content)
+    public void WriteGeotypicalModelLevelOfDetail(GeotypicalModelLod geotypicalModelLod, Stream content)
     {
-        return sqlDataStore.InsertIntoGeotypicalModelLod(insertIntoGeotypicalModelLodCommand, geotypicalModelLod, content);
+        sqlDataStore.InsertIntoGeotypicalModelLod(insertIntoGeotypicalModelLodCommand, geotypicalModelLod, content);
     }
 
     /// <inheritdoc/>
-    public Task<int> WriteGeotypicalModelLevelOfDetailAsync(GeotypicalModelLod geotypicalModelLod, byte[] content, CancellationToken cancellationToken)
+    public Task WriteGeotypicalModelLevelOfDetailAsync(GeotypicalModelLod geotypicalModelLod, byte[] content, CancellationToken cancellationToken)
     {
         return sqlDataStore.InsertIntoGeotypicalModelLodAsync(insertIntoGeotypicalModelLodCommand, geotypicalModelLod, content, cancellationToken);
     }
 
     /// <inheritdoc/>
-    public Task<int> WriteGeotypicalModelLevelOfDetailAsync(GeotypicalModelLod geotypicalModelLod, Stream content, CancellationToken cancellationToken)
+    public Task WriteGeotypicalModelLevelOfDetailAsync(GeotypicalModelLod geotypicalModelLod, Stream content, CancellationToken cancellationToken)
     {
         return sqlDataStore.InsertIntoGeotypicalModelLodAsync(insertIntoGeotypicalModelLodCommand, geotypicalModelLod, content, cancellationToken);
     }
@@ -432,25 +432,25 @@ public class PersistentConnection : ISQLDataStore
     #region Insert
 
     /// <inheritdoc/>
-    public int WriteMovingModel(MovingModel movingModel, byte[] content)
+    public void WriteMovingModel(MovingModel movingModel, byte[] content)
     {
-        return sqlDataStore.InsertIntoMovingModel(insertIntoMovingModelCommand, movingModel, content);
+        sqlDataStore.InsertIntoMovingModel(insertIntoMovingModelCommand, movingModel, content);
     }
 
     /// <inheritdoc/>
-    public int WriteMovingModel(MovingModel movingModel, Stream content)
+    public void WriteMovingModel(MovingModel movingModel, Stream content)
     {
-        return sqlDataStore.InsertIntoMovingModel(insertIntoMovingModelCommand, movingModel, content);
+        sqlDataStore.InsertIntoMovingModel(insertIntoMovingModelCommand, movingModel, content);
     }
 
     /// <inheritdoc/>
-    public Task<int> WriteMovingModelAsync(MovingModel movingModel, byte[] content, CancellationToken cancellationToken)
+    public Task WriteMovingModelAsync(MovingModel movingModel, byte[] content, CancellationToken cancellationToken)
     {
         return sqlDataStore.InsertIntoMovingModelAsync(insertIntoMovingModelCommand, movingModel, content, cancellationToken);
     }
 
     /// <inheritdoc/>
-    public Task<int> WriteMovingModelAsync(MovingModel movingModel, Stream content, CancellationToken cancellationToken)
+    public Task WriteMovingModelAsync(MovingModel movingModel, Stream content, CancellationToken cancellationToken)
     {
         return sqlDataStore.InsertIntoMovingModelAsync(insertIntoMovingModelCommand, movingModel, content, cancellationToken);
     }
@@ -480,25 +480,25 @@ public class PersistentConnection : ISQLDataStore
     #region Insert
 
     /// <inheritdoc/>
-    public int WriteMovingModelLevelOfDetail(MovingModelLod movingModelLod, byte[] content)
+    public void WriteMovingModelLevelOfDetail(MovingModelLod movingModelLod, byte[] content)
     {
-        return sqlDataStore.InsertIntoMovingModelLod(insertIntoMovingModelLodCommand, movingModelLod, content);
+        sqlDataStore.InsertIntoMovingModelLod(insertIntoMovingModelLodCommand, movingModelLod, content);
     }
 
     /// <inheritdoc/>
-    public int WriteMovingModelLevelOfDetail(MovingModelLod movingModelLod, Stream content)
+    public void WriteMovingModelLevelOfDetail(MovingModelLod movingModelLod, Stream content)
     {
-        return sqlDataStore.InsertIntoMovingModelLod(insertIntoMovingModelLodCommand, movingModelLod, content);
+        sqlDataStore.InsertIntoMovingModelLod(insertIntoMovingModelLodCommand, movingModelLod, content);
     }
 
     /// <inheritdoc/>
-    public Task<int> WriteMovingModelLevelOfDetailAsync(MovingModelLod movingModelLod, byte[] content, CancellationToken cancellationToken)
+    public Task WriteMovingModelLevelOfDetailAsync(MovingModelLod movingModelLod, byte[] content, CancellationToken cancellationToken)
     {
         return sqlDataStore.InsertIntoMovingModelLodAsync(insertIntoMovingModelLodCommand, movingModelLod, content, cancellationToken);
     }
 
     /// <inheritdoc/>
-    public Task<int> WriteMovingModelLevelOfDetailAsync(MovingModelLod movingModelLod, Stream content, CancellationToken cancellationToken)
+    public Task WriteMovingModelLevelOfDetailAsync(MovingModelLod movingModelLod, Stream content, CancellationToken cancellationToken)
     {
         return sqlDataStore.InsertIntoMovingModelLodAsync(insertIntoMovingModelLodCommand, movingModelLod, content, cancellationToken);
     }
@@ -528,25 +528,25 @@ public class PersistentConnection : ISQLDataStore
     #region Insert
 
     /// <inheritdoc/>
-    public int WriteTile(Tile tile, byte[] content)
+    public void WriteTile(Tile tile, byte[] content)
     {
-        return sqlDataStore.InsertIntoTile(insertIntoTileCommand, tile, content);
+        sqlDataStore.InsertIntoTile(insertIntoTileCommand, tile, content);
     }
 
     /// <inheritdoc/>
-    public int WriteTile(Tile tile, Stream content)
+    public void WriteTile(Tile tile, Stream content)
     {
-        return sqlDataStore.InsertIntoTile(insertIntoTileCommand, tile, content);
+        sqlDataStore.InsertIntoTile(insertIntoTileCommand, tile, content);
     }
 
     /// <inheritdoc/>
-    public Task<int> WriteTileAsync(Tile tile, byte[] content, CancellationToken cancellationToken)
+    public Task WriteTileAsync(Tile tile, byte[] content, CancellationToken cancellationToken)
     {
         return sqlDataStore.InsertIntoTileAsync(insertIntoTileCommand, tile, content, cancellationToken);
     }
 
     /// <inheritdoc/>
-    public Task<int> WriteTileAsync(Tile tile, Stream content, CancellationToken cancellationToken)
+    public Task WriteTileAsync(Tile tile, Stream content, CancellationToken cancellationToken)
     {
         return sqlDataStore.InsertIntoTileAsync(insertIntoTileCommand, tile, content, cancellationToken);
     }
@@ -576,25 +576,25 @@ public class PersistentConnection : ISQLDataStore
     #region Insert
 
     /// <inheritdoc/>
-    public int WriteTileFeature(TileArchivedFeature tileArchivedFeature, byte[] content)
+    public void WriteTileFeature(TileArchivedFeature tileArchivedFeature, byte[] content)
     {
-        return sqlDataStore.InsertIntoTileArchivedFeature(insertIntoTileArchivedFeatureCommand, tileArchivedFeature, content);
+        sqlDataStore.InsertIntoTileArchivedFeature(insertIntoTileArchivedFeatureCommand, tileArchivedFeature, content);
     }
 
     /// <inheritdoc/>
-    public int WriteTileFeature(TileArchivedFeature tileArchivedFeature, Stream content)
+    public void WriteTileFeature(TileArchivedFeature tileArchivedFeature, Stream content)
     {
-        return sqlDataStore.InsertIntoTileArchivedFeature(insertIntoTileArchivedFeatureCommand, tileArchivedFeature, content);
+        sqlDataStore.InsertIntoTileArchivedFeature(insertIntoTileArchivedFeatureCommand, tileArchivedFeature, content);
     }
 
     /// <inheritdoc/>
-    public Task<int> WriteTileFeatureAsync(TileArchivedFeature tileArchivedFeature, byte[] content, CancellationToken cancellationToken)
+    public Task WriteTileFeatureAsync(TileArchivedFeature tileArchivedFeature, byte[] content, CancellationToken cancellationToken)
     {
         return sqlDataStore.InsertIntoTileArchivedFeatureAsync(insertIntoTileArchivedFeatureCommand, tileArchivedFeature, content, cancellationToken);
     }
 
     /// <inheritdoc/>
-    public Task<int> WriteTileFeatureAsync(TileArchivedFeature tileArchivedFeature, Stream content, CancellationToken cancellationToken)
+    public Task WriteTileFeatureAsync(TileArchivedFeature tileArchivedFeature, Stream content, CancellationToken cancellationToken)
     {
         return sqlDataStore.InsertIntoTileArchivedFeatureAsync(insertIntoTileArchivedFeatureCommand, tileArchivedFeature, content, cancellationToken);
     }
@@ -624,26 +624,26 @@ public class PersistentConnection : ISQLDataStore
     #region Insert
 
     /// <inheritdoc/>
-    public int WriteTileTexture(TileArchivedTexture tileArchivedTexture, byte[] content)
+    public void WriteTileTexture(TileArchivedTexture tileArchivedTexture, byte[] content)
     {
-        return sqlDataStore.InsertIntoTileArchivedTexture(insertIntoTileArchivedTextureCommand, tileArchivedTexture, content);
+        sqlDataStore.InsertIntoTileArchivedTexture(insertIntoTileArchivedTextureCommand, tileArchivedTexture, content);
     }
 
     /// <inheritdoc/>
-    public int WriteTileTexture(TileArchivedTexture tileArchivedTexture, Stream content)
+    public void WriteTileTexture(TileArchivedTexture tileArchivedTexture, Stream content)
     {
-        return sqlDataStore.InsertIntoTileArchivedTexture(insertIntoTileArchivedTextureCommand, tileArchivedTexture, content);
+        sqlDataStore.InsertIntoTileArchivedTexture(insertIntoTileArchivedTextureCommand, tileArchivedTexture, content);
     }
 
     /// <inheritdoc/>
-    public Task<int> WriteTileTextureAsync(TileArchivedTexture tileArchivedTexture, byte[] content, CancellationToken cancellationToken)
+    public Task WriteTileTextureAsync(TileArchivedTexture tileArchivedTexture, byte[] content, CancellationToken cancellationToken)
     {
         return sqlDataStore.InsertIntoTileArchivedTextureAsync(insertIntoTileArchivedTextureCommand,
             tileArchivedTexture, content, cancellationToken);
     }
 
     /// <inheritdoc/>
-    public Task<int> WriteTileTextureAsync(TileArchivedTexture tileArchivedTexture, Stream content, CancellationToken cancellationToken)
+    public Task WriteTileTextureAsync(TileArchivedTexture tileArchivedTexture, Stream content, CancellationToken cancellationToken)
     {
         return sqlDataStore.InsertIntoTileArchivedTextureAsync(insertIntoTileArchivedTextureCommand,
             tileArchivedTexture, content, cancellationToken);
@@ -674,25 +674,25 @@ public class PersistentConnection : ISQLDataStore
     #region Insert
 
     /// <inheritdoc/>
-    public int WriteNavigation(Navigation navigation, byte[] content)
+    public void WriteNavigation(Navigation navigation, byte[] content)
     {
-        return sqlDataStore.InsertIntoNavigation(insertIntoNavigationCommand, navigation, content);
+        sqlDataStore.InsertIntoNavigation(insertIntoNavigationCommand, navigation, content);
     }
 
     /// <inheritdoc/>
-    public int WriteNavigation(Navigation navigation, Stream content)
+    public void WriteNavigation(Navigation navigation, Stream content)
     {
-        return sqlDataStore.InsertIntoNavigation(insertIntoNavigationCommand, navigation, content);
+        sqlDataStore.InsertIntoNavigation(insertIntoNavigationCommand, navigation, content);
     }
 
     /// <inheritdoc/>
-    public Task<int> WriteNavigationAsync(Navigation navigation, byte[] content, CancellationToken cancellationToken)
+    public Task WriteNavigationAsync(Navigation navigation, byte[] content, CancellationToken cancellationToken)
     {
         return sqlDataStore.InsertIntoNavigationAsync(insertIntoNavigationCommand, navigation, content, cancellationToken);
     }
 
     /// <inheritdoc/>
-    public Task<int> WriteNavigationAsync(Navigation navigation, Stream content, CancellationToken cancellationToken)
+    public Task WriteNavigationAsync(Navigation navigation, Stream content, CancellationToken cancellationToken)
     {
         return sqlDataStore.InsertIntoNavigationAsync(insertIntoNavigationCommand, navigation, content, cancellationToken);
     }

@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
+﻿using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -15,7 +13,7 @@ namespace Silnith.CDB.SQL;
 /// behavior, it seemed an appropriate time to extract an interface.
 /// </para>
 /// </remarks>
-public interface ISQLDataStore : IDisposable, IAsyncDisposable
+public interface ISQLDataStore : ICDB
 {
     /// <summary>
     /// A simple identifier for the CDB data store.
@@ -32,8 +30,6 @@ public interface ISQLDataStore : IDisposable, IAsyncDisposable
 
     #region CDB
 
-    #region Insert
-
     /// <summary>
     /// Inserts a name into the table identifying all the unique data stores
     /// contained in the database.
@@ -45,8 +41,7 @@ public interface ISQLDataStore : IDisposable, IAsyncDisposable
     /// </para>
     /// </remarks>
     /// <param name="cdbName">The name of a new CDB data store.</param>
-    /// <returns>The number of database rows affected.</returns>
-    public int InsertIntoCDB(string cdbName);
+    public void InsertIntoCDB(string cdbName);
 
     /// <summary>
     /// Inserts a name into the table identifying all the unique data stores
@@ -60,13 +55,8 @@ public interface ISQLDataStore : IDisposable, IAsyncDisposable
     /// </remarks>
     /// <param name="cdbName">The name of a new CDB data store.</param>
     /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The number of database rows affected.</returns>
-    public Task<int> InsertIntoCDBAsync(string cdbName,
+    public Task InsertIntoCDBAsync(string cdbName,
         CancellationToken cancellationToken = default);
-
-    #endregion
-
-    #region Select
 
     /// <summary>
     /// Returns all CDB data store names in the database.
@@ -83,677 +73,113 @@ public interface ISQLDataStore : IDisposable, IAsyncDisposable
 
     #endregion
 
-    #endregion
-
     #region Metadata
 
-    #region Insert
+    /// <inheritdoc cref="ICDB.WriteMetadata(Metadata, System.IO.Stream)"/>
+    public void WriteMetadata(Metadata metadata, byte[] content);
 
-    /// <summary>
-    /// Inserts a metadata file into the database.
-    /// </summary>
-    /// <param name="metadata">The metadata identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <returns>The number of rows affected.</returns>
-    public int WriteMetadata(Metadata metadata, byte[] content);
-
-    /// <summary>
-    /// Inserts a metadata file into the database.
-    /// </summary>
-    /// <param name="metadata">The metadata identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <returns>The number of rows affected.</returns>
-    public int WriteMetadata(Metadata metadata, Stream content);
-
-    /// <summary>
-    /// Inserts a metadata file into the database.
-    /// </summary>
-    /// <param name="metadata">The metadata identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The number of rows affected.</returns>
-    public Task<int> WriteMetadataAsync(Metadata metadata, byte[] content, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Inserts a metadata file into the database.
-    /// </summary>
-    /// <param name="metadata">The metadata identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The number of rows affected.</returns>
-    public Task<int> WriteMetadataAsync(Metadata metadata, Stream content, CancellationToken cancellationToken = default);
-
-    #endregion
-
-    #region Select
-
-    /// <summary>
-    /// Returns a metadata file from the database.
-    /// </summary>
-    /// <param name="metadata">The metadata identifier.</param>
-    /// <returns>A stream containing the file contents, or <see langword="null"/> if the file was not found.</returns>
-    public Stream? ReadMetadata(Metadata metadata);
-
-    /// <summary>
-    /// Returns a metadata file from the database.
-    /// </summary>
-    /// <param name="metadata">The metadata identifier.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>A stream containing the file contents, or <see langword="null"/> if the file was not found.</returns>
-    public Task<Stream?> ReadMetadataAsync(Metadata metadata, CancellationToken cancellationToken = default);
-
-    #endregion
+    /// <inheritdoc cref="ICDB.WriteMetadataAsync(Metadata, System.IO.Stream, CancellationToken)"/>
+    public Task WriteMetadataAsync(Metadata metadata, byte[] content, CancellationToken cancellationToken = default);
 
     #endregion
 
     #region Texture
 
-    #region Insert
+    /// <inheritdoc cref="ICDB.WriteTexture(Texture, System.IO.Stream)"/>
+    public void WriteTexture(Texture texture, byte[] content);
 
-    /// <summary>
-    /// Inserts a texture file into the database.
-    /// </summary>
-    /// <param name="texture">The texture identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <returns>The number of rows affected.</returns>
-    public int WriteTexture(Texture texture, byte[] content);
-
-    /// <summary>
-    /// Inserts a texture file into the database.
-    /// </summary>
-    /// <param name="texture">The texture identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <returns>The number of rows affected.</returns>
-    public int WriteTexture(Texture texture, Stream content);
-
-    /// <summary>
-    /// Inserts a texture file into the database.
-    /// </summary>
-    /// <param name="texture">The texture identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The number of rows affected.</returns>
-    public Task<int> WriteTextureAsync(Texture texture, byte[] content, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Inserts a texture file into the database.
-    /// </summary>
-    /// <param name="texture">The texture identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The number of rows affected.</returns>
-    public Task<int> WriteTextureAsync(Texture texture, Stream content, CancellationToken cancellationToken = default);
-
-    #endregion
-
-    #region Select
-
-    /// <summary>
-    /// Returns a texture file from the database.
-    /// </summary>
-    /// <param name="texture">The texture identifier.</param>
-    /// 
-    /// <returns>A stream containing the file contents, or <see langword="null"/> if the file was not found.</returns>
-    public Stream? ReadTexture(Texture texture);
-
-    /// <summary>
-    /// Returns a texture file from the database.
-    /// </summary>
-    /// <param name="texture">The texture identifier.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>A stream containing the file contents, or <see langword="null"/> if the file was not found.</returns>
-    public Task<Stream?> ReadTextureAsync(Texture texture, CancellationToken cancellationToken = default);
-
-    #endregion
+    /// <inheritdoc cref="ICDB.WriteTextureAsync(Texture, System.IO.Stream, CancellationToken)"/>
+    public Task WriteTextureAsync(Texture texture, byte[] content, CancellationToken cancellationToken = default);
 
     #endregion
 
     #region Texture LOD
 
-    #region Insert
+    /// <inheritdoc cref="ICDB.WriteTextureLevelOfDetail(TextureLod, System.IO.Stream)"/>
+    public void WriteTextureLevelOfDetail(TextureLod textureLod, byte[] content);
 
-    /// <summary>
-    /// Inserts a texture mipmap file into the database.
-    /// </summary>
-    /// <param name="textureLod">The texture mipmap identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <returns>The number of rows affected.</returns>
-    public int WriteTextureLevelOfDetail(TextureLod textureLod, byte[] content);
-
-    /// <summary>
-    /// Inserts a texture mipmap file into the database.
-    /// </summary>
-    /// <param name="textureLod">The texture mipmap identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <returns>The number of rows affected.</returns>
-    public int WriteTextureLevelOfDetail(TextureLod textureLod, Stream content);
-
-    /// <summary>
-    /// Inserts a texture mipmap file into the database.
-    /// </summary>
-    /// <param name="textureLod">The texture mipmap identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The number of rows affected.</returns>
-    public Task<int> WriteTextureLevelOfDetailAsync(TextureLod textureLod, byte[] content, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Inserts a texture mipmap file into the database.
-    /// </summary>
-    /// <param name="textureLod">The texture mipmap identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The number of rows affected.</returns>
-    public Task<int> WriteTextureLevelOfDetailAsync(TextureLod textureLod, Stream content, CancellationToken cancellationToken = default);
-
-    #endregion
-
-    #region Select
-
-    /// <summary>
-    /// Returns a texture level of detail file from the database.
-    /// </summary>
-    /// <param name="textureLod">The texture level of detail identifier.</param>
-    /// <returns>A stream containing the file contents, or <see langword="null"/> if the file was not found.</returns>
-    public Stream? ReadTextureLevelOfDetail(TextureLod textureLod);
-
-    /// <summary>
-    /// Returns a texture level of detail file from the database.
-    /// </summary>
-    /// <param name="textureLod">The texture level of detail identifier.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>A stream containing the file contents, or <see langword="null"/> if the file was not found.</returns>
-    public Task<Stream?> ReadTextureLevelOfDetailAsync(TextureLod textureLod, CancellationToken cancellationToken = default);
-
-    #endregion
+    /// <inheritdoc cref="ICDB.WriteTextureLevelOfDetailAsync(TextureLod, System.IO.Stream, CancellationToken)"/>
+    public Task WriteTextureLevelOfDetailAsync(TextureLod textureLod, byte[] content, CancellationToken cancellationToken = default);
 
     #endregion
 
     #region Geotypical Model
 
-    #region Insert
+    /// <inheritdoc cref="ICDB.WriteGeotypicalModel(GeotypicalModel, System.IO.Stream)"/>
+    public void WriteGeotypicalModel(GeotypicalModel geotypicalModel, byte[] content);
 
-    /// <summary>
-    /// Inserts a geotypical model file into the database.
-    /// </summary>
-    /// <param name="geotypicalModel">The geotypical model identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <returns>The number of rows affected.</returns>
-    public int WriteGeotypicalModel(GeotypicalModel geotypicalModel, byte[] content);
-
-    /// <summary>
-    /// Inserts a geotypical model file into the database.
-    /// </summary>
-    /// <param name="geotypicalModel">The geotypical model identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <returns>The number of rows affected.</returns>
-    public int WriteGeotypicalModel(GeotypicalModel geotypicalModel, Stream content);
-
-    /// <summary>
-    /// Inserts a geotypical model file into the database.
-    /// </summary>
-    /// <param name="geotypicalModel">The geotypical model identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The number of rows affected.</returns>
-    public Task<int> WriteGeotypicalModelAsync(GeotypicalModel geotypicalModel, byte[] content, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Inserts a geotypical model file into the database.
-    /// </summary>
-    /// <param name="geotypicalModel">The geotypical model identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The number of rows affected.</returns>
-    public Task<int> WriteGeotypicalModelAsync(GeotypicalModel geotypicalModel, Stream content, CancellationToken cancellationToken = default);
-
-    #endregion
-
-    #region Select
-
-    /// <summary>
-    /// Returns a geotypical model file from the database.
-    /// </summary>
-    /// <param name="geotypicalModel">The geotypical model identifier.</param>
-    /// <returns>A stream containing the file contents, or <see langword="null"/> if the file was not found.</returns>
-    public Stream? ReadGeotypicalModel(GeotypicalModel geotypicalModel);
-
-    /// <summary>
-    /// Returns a geotypical model file from the database.
-    /// </summary>
-    /// <param name="geotypicalModel">The geotypical model identifier.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>A stream containing the file contents, or <see langword="null"/> if the file was not found.</returns>
-    public Task<Stream?> ReadGeotypicalModelAsync(GeotypicalModel geotypicalModel, CancellationToken cancellationToken = default);
-
-    #endregion
+    /// <inheritdoc cref="ICDB.WriteGeotypicalModelAsync(GeotypicalModel, System.IO.Stream, CancellationToken)"/>
+    public Task WriteGeotypicalModelAsync(GeotypicalModel geotypicalModel, byte[] content, CancellationToken cancellationToken = default);
 
     #endregion
 
     #region Geotypical Model LOD
 
-    #region Insert
+    /// <inheritdoc cref="ICDB.WriteGeotypicalModelLevelOfDetail(GeotypicalModelLod, System.IO.Stream)"/>
+    public void WriteGeotypicalModelLevelOfDetail(GeotypicalModelLod geotypicalModelLod, byte[] content);
 
-    /// <summary>
-    /// Inserts a geotypical model level of detail file into the database.
-    /// </summary>
-    /// <param name="geotypicalModelLod">The geotypical model level of detail identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <returns>The number of rows affected.</returns>
-    public int WriteGeotypicalModelLevelOfDetail(GeotypicalModelLod geotypicalModelLod, byte[] content);
-
-    /// <summary>
-    /// Inserts a geotypical model level of detail file into the database.
-    /// </summary>
-    /// <param name="geotypicalModelLod">The geotypical model level of detail identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <returns>The number of rows affected.</returns>
-    public int WriteGeotypicalModelLevelOfDetail(GeotypicalModelLod geotypicalModelLod, Stream content);
-
-    /// <summary>
-    /// Inserts a geotypical model level of detail file into the database.
-    /// </summary>
-    /// <param name="geotypicalModelLod">The geotypical model level of detail identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The number of rows affected.</returns>
-    public Task<int> WriteGeotypicalModelLevelOfDetailAsync(GeotypicalModelLod geotypicalModelLod, byte[] content, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Inserts a geotypical model level of detail file into the database.
-    /// </summary>
-    /// <param name="geotypicalModelLod">The geotypical model level of detail identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The number of rows affected.</returns>
-    public Task<int> WriteGeotypicalModelLevelOfDetailAsync(GeotypicalModelLod geotypicalModelLod, Stream content, CancellationToken cancellationToken = default);
-
-    #endregion
-
-    #region Select
-
-    /// <summary>
-    /// Returns a geotypical model level of detail file from the database.
-    /// </summary>
-    /// <param name="geotypicalModelLod">The geotypical model level of detail identifier.</param>
-    /// <returns>A stream containing the file contents, or <see langword="null"/> if the file was not found.</returns>
-    public Stream? ReadGeotypicalModelLevelOfDetail(GeotypicalModelLod geotypicalModelLod);
-
-    /// <summary>
-    /// Returns a geotypical model level of detail file from the database.
-    /// </summary>
-    /// <param name="geotypicalModelLod">The geotypical model level of detail identifier.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>A stream containing the file contents, or <see langword="null"/> if the file was not found.</returns>
-    public Task<Stream?> ReadGeotypicalModelLevelOfDetailAsync(GeotypicalModelLod geotypicalModelLod, CancellationToken cancellationToken = default);
-
-    #endregion
+    /// <inheritdoc cref="ICDB.WriteGeotypicalModelLevelOfDetailAsync(GeotypicalModelLod, System.IO.Stream, CancellationToken)"/>
+    public Task WriteGeotypicalModelLevelOfDetailAsync(GeotypicalModelLod geotypicalModelLod, byte[] content, CancellationToken cancellationToken = default);
 
     #endregion
 
     #region Moving Model
 
-    #region Insert
+    /// <inheritdoc cref="ICDB.WriteMovingModel(MovingModel, System.IO.Stream)"/>
+    public void WriteMovingModel(MovingModel movingModel, byte[] content);
 
-    /// <summary>
-    /// Inserts a moving model file into the database.
-    /// </summary>
-    /// <param name="movingModel">The moving model identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <returns>The number of rows affected.</returns>
-    public int WriteMovingModel(MovingModel movingModel, byte[] content);
-
-    /// <summary>
-    /// Inserts a moving model file into the database.
-    /// </summary>
-    /// <param name="movingModel">The moving model identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <returns>The number of rows affected.</returns>
-    public int WriteMovingModel(MovingModel movingModel, Stream content);
-
-    /// <summary>
-    /// Inserts a moving model file into the database.
-    /// </summary>
-    /// <param name="movingModel">The moving model identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The number of rows affected.</returns>
-    public Task<int> WriteMovingModelAsync(MovingModel movingModel, byte[] content, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Inserts a moving model file into the database.
-    /// </summary>
-    /// <param name="movingModel">The moving model identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The number of rows affected.</returns>
-    public Task<int> WriteMovingModelAsync(MovingModel movingModel, Stream content, CancellationToken cancellationToken = default);
-
-    #endregion
-
-    #region Select
-
-    /// <summary>
-    /// Returns a moving model file from the database.
-    /// </summary>
-    /// <param name="movingModel">The moving model identifier.</param>
-    /// <returns>A stream containing the file contents, or <see langword="null"/> if the file was not found.</returns>
-    public Stream? ReadMovingModel(MovingModel movingModel);
-
-    /// <summary>
-    /// Returns a moving model file from the database.
-    /// </summary>
-    /// <param name="movingModel">The moving model identifier.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>A stream containing the file contents, or <see langword="null"/> if the file was not found.</returns>
-    public Task<Stream?> ReadMovingModelAsync(MovingModel movingModel, CancellationToken cancellationToken = default);
-
-    #endregion
+    /// <inheritdoc cref="ICDB.WriteMovingModelAsync(MovingModel, System.IO.Stream, CancellationToken)"/>
+    public Task WriteMovingModelAsync(MovingModel movingModel, byte[] content, CancellationToken cancellationToken = default);
 
     #endregion
 
     #region Moving Model LOD
 
-    #region Insert
+    /// <inheritdoc cref="ICDB.WriteMovingModelLevelOfDetail(MovingModelLod, System.IO.Stream)"/>
+    public void WriteMovingModelLevelOfDetail(MovingModelLod movingModelLod, byte[] content);
 
-    /// <summary>
-    /// Inserts a moving model level of detail file into the database.
-    /// </summary>
-    /// <param name="movingModelLod">The moving model level of detail identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <returns>The number of rows affected.</returns>
-    public int WriteMovingModelLevelOfDetail(MovingModelLod movingModelLod, byte[] content);
-
-    /// <summary>
-    /// Inserts a moving model level of detail file into the database.
-    /// </summary>
-    /// <param name="movingModelLod">The moving model level of detail identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <returns>The number of rows affected.</returns>
-    public int WriteMovingModelLevelOfDetail(MovingModelLod movingModelLod, Stream content);
-
-    /// <summary>
-    /// Inserts a moving model level of detail file into the database.
-    /// </summary>
-    /// <param name="movingModelLod">The moving model level of detail identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The number of rows affected.</returns>
-    public Task<int> WriteMovingModelLevelOfDetailAsync(MovingModelLod movingModelLod, byte[] content, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Inserts a moving model level of detail file into the database.
-    /// </summary>
-    /// <param name="movingModelLod">The moving model level of detail identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The number of rows affected.</returns>
-    public Task<int> WriteMovingModelLevelOfDetailAsync(MovingModelLod movingModelLod, Stream content, CancellationToken cancellationToken = default);
-
-    #endregion
-
-    #region Select
-
-    /// <summary>
-    /// Returns a moving model level of detail file from the database.
-    /// </summary>
-    /// <param name="movingModelLod">The moving model level of detail identifier.</param>
-    /// <returns>A stream containing the file contents, or <see langword="null"/> if the file was not found.</returns>
-    public Stream? ReadMovingModelLevelOfDetail(MovingModelLod movingModelLod);
-
-    /// <summary>
-    /// Returns a moving model level of detail file from the database.
-    /// </summary>
-    /// <param name="movingModelLod">The moving model level of detail identifier.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>A stream containing the file contents, or <see langword="null"/> if the file was not found.</returns>
-    public Task<Stream?> ReadMovingModelLevelOfDetailAsync(MovingModelLod movingModelLod, CancellationToken cancellationToken = default);
-
-    #endregion
+    /// <inheritdoc cref="ICDB.WriteMovingModelLevelOfDetailAsync(MovingModelLod, System.IO.Stream, CancellationToken)"/>
+    public Task WriteMovingModelLevelOfDetailAsync(MovingModelLod movingModelLod, byte[] content, CancellationToken cancellationToken = default);
 
     #endregion
 
     #region Tile
 
-    #region Insert
+    /// <inheritdoc cref="ICDB.WriteTile(Tile, System.IO.Stream)"/>
+    public void WriteTile(Tile tile, byte[] content);
 
-    /// <summary>
-    /// Inserts a tiled dataset file into the database.
-    /// </summary>
-    /// <param name="tile">The tile identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <returns>The number of rows affected.</returns>
-    public int WriteTile(Tile tile, byte[] content);
-
-    /// <summary>
-    /// Inserts a tiled dataset file into the database.
-    /// </summary>
-    /// <param name="tile">The tile identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <returns>The number of rows affected.</returns>
-    public int WriteTile(Tile tile, Stream content);
-
-    /// <summary>
-    /// Inserts a tiled dataset file into the database.
-    /// </summary>
-    /// <param name="tile">The tile identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The number of rows affected.</returns>
-    public Task<int> WriteTileAsync(Tile tile, byte[] content, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Inserts a tiled dataset file into the database.
-    /// </summary>
-    /// <param name="tile">The tile identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The number of rows affected.</returns>
-    public Task<int> WriteTileAsync(Tile tile, Stream content, CancellationToken cancellationToken = default);
-
-    #endregion
-
-    #region Select
-
-    /// <summary>
-    /// Returns a tiled dataset file from the database.
-    /// </summary>
-    /// <param name="tile">The tile identifier.</param>
-    /// <returns>A stream containing the file contents, or <see langword="null"/> if the file was not found.</returns>
-    public Stream? ReadTile(Tile tile);
-
-    /// <summary>
-    /// Returns a tiled dataset file from the database.
-    /// </summary>
-    /// <param name="tile">The tile identifier.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>A stream containing the file contents, or <see langword="null"/> if the file was not found.</returns>
-    public Task<Stream?> ReadTileAsync(Tile tile, CancellationToken cancellationToken = default);
-
-    #endregion
+    /// <inheritdoc cref="ICDB.WriteTileAsync(Tile, System.IO.Stream, CancellationToken)"/>
+    public Task WriteTileAsync(Tile tile, byte[] content, CancellationToken cancellationToken = default);
 
     #endregion
 
     #region Tile Archived Feature
 
-    #region Insert
+    /// <inheritdoc cref="ICDB.WriteTileFeature(TileArchivedFeature, System.IO.Stream)"/>
+    public void WriteTileFeature(TileArchivedFeature tileArchivedFeature, byte[] content);
 
-    /// <summary>
-    /// Inserts an un-archived tiled dataset feature file into the database.
-    /// </summary>
-    /// <param name="tileArchivedFeature">The un-archived tiled dataset feature identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <returns>The number of rows affected.</returns>
-    public int WriteTileFeature(TileArchivedFeature tileArchivedFeature, byte[] content);
-
-    /// <summary>
-    /// Inserts an un-archived tiled dataset feature file into the database.
-    /// </summary>
-    /// <param name="tileArchivedFeature">The un-archived tiled dataset feature identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <returns>The number of rows affected.</returns>
-    public int WriteTileFeature(TileArchivedFeature tileArchivedFeature, Stream content);
-
-    /// <summary>
-    /// Inserts an un-archived tiled dataset feature file into the database.
-    /// </summary>
-    /// <param name="tileArchivedFeature">The un-archived tiled dataset feature identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The number of rows affected.</returns>
-    public Task<int> WriteTileFeatureAsync(TileArchivedFeature tileArchivedFeature, byte[] content, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Inserts an un-archived tiled dataset feature file into the database.
-    /// </summary>
-    /// <param name="tileArchivedFeature">The un-archived tiled dataset feature identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The number of rows affected.</returns>
-    public Task<int> WriteTileFeatureAsync(TileArchivedFeature tileArchivedFeature, Stream content, CancellationToken cancellationToken = default);
-
-    #endregion
-
-    #region Select
-
-    /// <summary>
-    /// Returns an un-archived tiled dataset feature file from the database.
-    /// </summary>
-    /// <param name="tileArchivedFeature">The tiled dataset feature identifier.</param>
-    /// <returns>A stream containing the file contents, or <see langword="null"/> if the file was not found.</returns>
-    public Stream? ReadTileFeature(TileArchivedFeature tileArchivedFeature);
-
-    /// <summary>
-    /// Returns an un-archived tiled dataset feature file from the database.
-    /// </summary>
-    /// <param name="tileArchivedFeature">The tiled dataset feature identifier.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>A stream containing the file contents, or <see langword="null"/> if the file was not found.</returns>
-    public Task<Stream?> ReadTileFeatureAsync(TileArchivedFeature tileArchivedFeature, CancellationToken cancellationToken = default);
-
-    #endregion
+    /// <inheritdoc cref="ICDB.WriteTileFeatureAsync(TileArchivedFeature, System.IO.Stream, CancellationToken)"/>
+    public Task WriteTileFeatureAsync(TileArchivedFeature tileArchivedFeature, byte[] content, CancellationToken cancellationToken = default);
 
     #endregion
 
     #region Tile Archived Texture
 
-    #region Insert
+    /// <inheritdoc cref="ICDB.WriteTileTexture(TileArchivedTexture, System.IO.Stream)"/>
+    public void WriteTileTexture(TileArchivedTexture tileArchivedTexture, byte[] content);
 
-    /// <summary>
-    /// Inserts an un-archived tiled dataset texture file into the database.
-    /// </summary>
-    /// <param name="tileArchivedTexture">The un-archived tiled dataset texture identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <returns>The number of rows affected.</returns>
-    public int WriteTileTexture(TileArchivedTexture tileArchivedTexture, byte[] content);
-
-    /// <summary>
-    /// Inserts an un-archived tiled dataset texture file into the database.
-    /// </summary>
-    /// <param name="tileArchivedTexture">The un-archived tiled dataset texture identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <returns>The number of rows affected.</returns>
-    public int WriteTileTexture(TileArchivedTexture tileArchivedTexture, Stream content);
-
-    /// <summary>
-    /// Inserts an un-archived tiled dataset texture file into the database.
-    /// </summary>
-    /// <param name="tileArchivedTexture">The un-archived tiled dataset texture identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The number of rows affected.</returns>
-    public Task<int> WriteTileTextureAsync(TileArchivedTexture tileArchivedTexture, byte[] content, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Inserts an un-archived tiled dataset texture file into the database.
-    /// </summary>
-    /// <param name="tileArchivedTexture">The un-archived tiled dataset texture identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The number of rows affected.</returns>
-    public Task<int> WriteTileTextureAsync(TileArchivedTexture tileArchivedTexture, Stream content, CancellationToken cancellationToken = default);
-
-    #endregion
-
-    #region Select
-
-    /// <summary>
-    /// Returns an un-archived tiled dataset texture file from the database.
-    /// </summary>
-    /// <param name="tileArchivedTexture">The tiled dataset texture identifier.</param>
-    /// <returns>A stream containing the file contents, or <see langword="null"/> if the file was not found.</returns>
-    public Stream? ReadTileTexture(TileArchivedTexture tileArchivedTexture);
-
-    /// <summary>
-    /// Returns an un-archived tiled dataset texture file from the database.
-    /// </summary>
-    /// <param name="tileArchivedTexture">The tiled dataset texture identifier.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>A stream containing the file contents, or <see langword="null"/> if the file was not found.</returns>
-    public Task<Stream?> ReadTileTextureAsync(TileArchivedTexture tileArchivedTexture, CancellationToken cancellationToken = default);
-
-    #endregion
+    /// <inheritdoc cref="ICDB.WriteTileTextureAsync(TileArchivedTexture, System.IO.Stream, CancellationToken)"/>
+    public Task WriteTileTextureAsync(TileArchivedTexture tileArchivedTexture, byte[] content, CancellationToken cancellationToken = default);
 
     #endregion
 
     #region Navigation
 
-    #region Insert
+    /// <inheritdoc cref="ICDB.WriteNavigation(Navigation, System.IO.Stream)"/>
+    public void WriteNavigation(Navigation navigation, byte[] content);
 
-    /// <summary>
-    /// Inserts a navigation file into the database.
-    /// </summary>
-    /// <param name="navigation">The navigation identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <returns>The number of rows affected.</returns>
-    public int WriteNavigation(Navigation navigation, byte[] content);
-
-    /// <summary>
-    /// Inserts a navigation file into the database.
-    /// </summary>
-    /// <param name="navigation">The navigation identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <returns>The number of rows affected.</returns>
-    public int WriteNavigation(Navigation navigation, Stream content);
-
-    /// <summary>
-    /// Inserts a navigation file into the database.
-    /// </summary>
-    /// <param name="navigation">The navigation identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The number of rows affected.</returns>
-    public Task<int> WriteNavigationAsync(Navigation navigation, byte[] content, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Inserts a navigation file into the database.
-    /// </summary>
-    /// <param name="navigation">The navigation identifier.</param>
-    /// <param name="content">The file contents.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>The number of rows affected.</returns>
-    public Task<int> WriteNavigationAsync(Navigation navigation, Stream content, CancellationToken cancellationToken = default);
-
-    #endregion
-
-    #region Select
-
-    /// <summary>
-    /// Returns a navigation file from the database.
-    /// </summary>
-    /// <param name="navigation">The navigation identifier.</param>
-    /// <returns>A stream containing the file contents, or <see langword="null"/> if the file was not found.</returns>
-    public Stream? ReadNavigation(Navigation navigation);
-
-    /// <summary>
-    /// Returns a navigation file from the database.
-    /// </summary>
-    /// <param name="navigation">The navigation identifier.</param>
-    /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>A stream containing the file contents, or <see langword="null"/> if the file was not found.</returns>
-    public Task<Stream?> ReadNavigationAsync(Navigation navigation, CancellationToken cancellationToken = default);
-
-    #endregion
+    /// <inheritdoc cref="ICDB.WriteNavigationAsync(Navigation, System.IO.Stream, CancellationToken)"/>
+    public Task WriteNavigationAsync(Navigation navigation, byte[] content, CancellationToken cancellationToken = default);
 
     #endregion
 
