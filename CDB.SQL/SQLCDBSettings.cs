@@ -5,7 +5,7 @@ namespace Silnith.CDB.SQL;
 /// <summary>
 /// Configuration settings for an SQL-based CDB data store.
 /// </summary>
-public class SQLDataStoreSettings
+public class SQLCDBSettings
 {
     /// <summary>
     /// A simple identifier for the CDB data store.

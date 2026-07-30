@@ -3,6 +3,6 @@
 /// <summary>
 /// Configuration settings for the Oracle data store.
 /// </summary>
-public class OracleDataStoreSettings : SQLDataStoreSettings
+public class OracleCDBSettings : SQLCDBSettings
 {
 }

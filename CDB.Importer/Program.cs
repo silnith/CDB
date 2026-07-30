@@ -2,13 +2,11 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Silnith.CDB.FileSystem;
 using Silnith.CDB.FileSystem.Visitor;
 using Silnith.CDB.SQL;
 using Silnith.CDB.SQL.SQLite;
 using System;
-using System.Data;
 using System.Data.Common;
 using System.IO;
 
@@ -51,8 +49,8 @@ internal class Program
             };
         });
         hostApplicationBuilder.Services.AddSingleton<DbDataSource, SQLiteDataSource>();
-        hostApplicationBuilder.Services.AddSingleton<SQLDataStore, SQLiteDataStore>();
-        hostApplicationBuilder.Services.AddOptions<SQLiteDataStoreSettings>()
+        hostApplicationBuilder.Services.AddSingleton<SQLCDB, SQLiteCDB>();
+        hostApplicationBuilder.Services.AddOptions<SQLiteCDBSettings>()
             .Configure(settings =>
             {
                 settings.Name = "CDB";
@@ -68,27 +66,25 @@ internal class Program
 
         ILogger logger = host.Services.GetRequiredService<ILogger<Program>>();
 
-        SQLDataStore sqlDataStore = host.Services.GetRequiredService<SQLDataStore>();
+        SQLCDB sqlCDB = host.Services.GetRequiredService<SQLCDB>();
 
         using (StreamWriter streamWriter = File.CreateText("schema.txt"))
         {
-            sqlDataStore.DumpStatements(streamWriter);
+            sqlCDB.DumpStatements(streamWriter);
         }
 
         FileSystemCDB fileSystemCDB = host.Services.GetRequiredService<FileSystemCDB>();
 
-        //using PersistentConnection persistentConnection = sqlDataStore.GetPersistentConnection();
+        using PersistentConnection persistentConnection = sqlCDB.GetPersistentConnection();
 
         DateTimeOffset start = DateTimeOffset.UtcNow;
 
-        //using DbTransaction dbTransaction = persistentConnection.DbConnection.BeginTransaction(IsolationLevel.Serializable);
-
         foreach ((ICDBIdentifier id, Stream stream) in fileSystemCDB.EnumerateFiles())
         {
-            id.WriteToCDB(sqlDataStore, stream);
+            id.WriteToCDB(persistentConnection, stream);
         }
 
-        //dbTransaction.Commit();
+        persistentConnection.Commit();
 
         DateTimeOffset end = DateTimeOffset.UtcNow;
 

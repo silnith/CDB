@@ -43,8 +43,8 @@ public class Program
             return sqliteConnection;
         });
         builder.Services.AddSingleton<DbDataSource, SQLiteDataSource>();
-        builder.Services.AddSingleton<SQLDataStore, SQLiteDataStore>();
-        builder.Services.AddOptions<SQLiteDataStoreSettings>()
+        builder.Services.AddSingleton<SQLCDB, SQLiteCDB>();
+        builder.Services.AddOptions<SQLiteCDBSettings>()
             .Configure(settings =>
             {
                 settings.Name = "CDB";

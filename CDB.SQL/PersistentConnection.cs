@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Data.Common;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -8,11 +9,19 @@ using System.Threading.Tasks;
 
 namespace Silnith.CDB.SQL;
 
+/// <summary>
+/// A wrapper around <see cref="SQLCDB"/> that allows transactions.
+/// </summary>
 public class PersistentConnection : ICDB
 {
-    private readonly SQLDataStore sqlDataStore;
+    private readonly SQLCDB sqlDataStore;
 
     public DbConnection DbConnection
+    {
+        get;
+    }
+
+    public DbTransaction DbTransaction
     {
         get;
     }
@@ -42,10 +51,12 @@ public class PersistentConnection : ICDB
     private readonly DbCommand insertIntoNavigationCommand;
     private readonly DbCommand selectFromNavigationCommand;
 
-    public PersistentConnection(SQLDataStore sqlDataStore)
+    public PersistentConnection(SQLCDB sqlDataStore)
     {
         this.sqlDataStore = sqlDataStore;
         DbConnection = this.sqlDataStore.dbDataSource.OpenConnection();
+
+        DbTransaction = DbConnection.BeginTransaction(IsolationLevel.Serializable);
 
         insertIntoCDBCommand = DbConnection.CreateCommand();
         sqlDataStore.InitializeInsertIntoCDBCommand(insertIntoCDBCommand);
@@ -145,8 +156,18 @@ public class PersistentConnection : ICDB
 
     }
 
-    /// <inheritdoc cref="SQLDataStore.Name"/>
+    /// <inheritdoc cref="SQLCDB.Name"/>
     public string Name => sqlDataStore.Name;
+
+    public void Commit()
+    {
+        DbTransaction.Commit();
+    }
+
+    public Task CommitAsync(CancellationToken cancellationToken)
+    {
+        return DbTransaction.CommitAsync(cancellationToken);
+    }
 
     #region CDB
 
@@ -760,6 +781,8 @@ public class PersistentConnection : ICDB
                 selectFromCDBCommand.Dispose();
                 insertIntoCDBCommand.Dispose();
 
+                DbTransaction.Dispose();
+
                 DbConnection.Dispose();
             }
 
@@ -810,6 +833,8 @@ public class PersistentConnection : ICDB
             insertIntoMetadataCommand.DisposeAsync().AsTask(),
             selectFromCDBCommand.DisposeAsync().AsTask(),
             insertIntoCDBCommand.DisposeAsync().AsTask());
+
+        await DbTransaction.DisposeAsync();
 
         await DbConnection.DisposeAsync();
     }

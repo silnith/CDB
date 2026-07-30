@@ -3,6 +3,6 @@
 /// <summary>
 /// Configuration settings for the PostgreSQL data store.
 /// </summary>
-public class PostgreSQLDataStoreSettings : SQLDataStoreSettings
+public class PostgreSQLCDBSettings : SQLCDBSettings
 {
 }

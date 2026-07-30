@@ -3,6 +3,6 @@
 /// <summary>
 /// Configuration settings for the SQLite data store.
 /// </summary>
-public class SQLiteDataStoreSettings : SQLDataStoreSettings
+public class SQLiteCDBSettings : SQLCDBSettings
 {
 }

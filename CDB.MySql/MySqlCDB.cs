@@ -1,13 +1,13 @@
 ﻿using Microsoft.Extensions.Options;
 using System.Data.Common;
 
-namespace Silnith.CDB.SQL.Oracle;
+namespace Silnith.CDB.SQL.MySql;
 
 /// <summary>
-/// A client for an Oracle database that uses a schema designed for storing
+/// A client for a MySql database that uses a schema designed for storing
 /// files from a CDB data store.
 /// </summary>
-public class OracleDataStore : SQLDataStore
+public class MySqlCDB : SQLCDB
 {
 
     #region Column Types
@@ -71,31 +71,31 @@ public class OracleDataStore : SQLDataStore
 
     #region SQL Parameters
 
-    private const string cdbParamName = ":cdb";
-    private const string metadataNameParamName = ":metadata_name";
-    private const string datasetParamName = ":dataset";
-    private const string cs1ParamName = ":component_selector_1";
-    private const string cs2ParamName = ":component_selector_2";
-    private const string textureNameParamName = ":texture_name";
-    private const string lodParamName = ":level_of_detail";
-    private const string featureCategoryParamName = ":feature_category";
-    private const string featureSubcategoryParamName = ":feature_subcategory";
-    private const string featureTypeParamName = ":feature_type";
-    private const string featureSubcodeParamName = ":feature_subcode";
-    private const string modelNameParamName = ":model_name";
-    private const string disKindParamName = ":dis_kind";
-    private const string disDomainParamName = ":dis_domain";
-    private const string disCountryParamName = ":dis_country";
-    private const string disCategoryParamName = ":dis_category";
-    private const string disSubcategoryParamName = ":dis_subcategory";
-    private const string disSpecificParamName = ":dis_specific";
-    private const string disExtraParamName = ":dis_extra";
-    private const string latitudeParamName = ":latitude";
-    private const string longitudeParamName = ":longitude";
-    private const string upParamName = ":up";
-    private const string rightParamName = ":right";
-    private const string fileTypeParamName = ":file_type";
-    private const string contentParamName = ":content";
+    private const string cdbParamName = "@cdb";
+    private const string metadataNameParamName = "@metadata_name";
+    private const string datasetParamName = "@dataset";
+    private const string cs1ParamName = "@component_selector_1";
+    private const string cs2ParamName = "@component_selector_2";
+    private const string textureNameParamName = "@texture_name";
+    private const string lodParamName = "@level_of_detail";
+    private const string featureCategoryParamName = "@feature_category";
+    private const string featureSubcategoryParamName = "@feature_subcategory";
+    private const string featureTypeParamName = "@feature_type";
+    private const string featureSubcodeParamName = "@feature_subcode";
+    private const string modelNameParamName = "@model_name";
+    private const string disKindParamName = "@dis_kind";
+    private const string disDomainParamName = "@dis_domain";
+    private const string disCountryParamName = "@dis_country";
+    private const string disCategoryParamName = "@dis_category";
+    private const string disSubcategoryParamName = "@dis_subcategory";
+    private const string disSpecificParamName = "@dis_specific";
+    private const string disExtraParamName = "@dis_extra";
+    private const string latitudeParamName = "@latitude";
+    private const string longitudeParamName = "@longitude";
+    private const string upParamName = "@up";
+    private const string rightParamName = "@right";
+    private const string fileTypeParamName = "@file_type";
+    private const string contentParamName = "@content";
 
     #endregion
 
@@ -924,11 +924,11 @@ public class OracleDataStore : SQLDataStore
     #endregion
 
     /// <summary>
-    /// Creates a new SQL data store using the provided Oracle data source.
+    /// Creates a new SQL data store using the provided MySql data source.
     /// </summary>
     /// <param name="dbDataSource">The data source.</param>
     /// <param name="options">Configurable settings.</param>
-    public OracleDataStore(DbDataSource dbDataSource, IOptions<OracleDataStoreSettings> options)
+    public MySqlCDB(DbDataSource dbDataSource, IOptions<MySqlCDBSettings> options)
         : base(dbDataSource, options)
     {
     }

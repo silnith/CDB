@@ -1,56 +1,24 @@
 ﻿using Microsoft.Extensions.Options;
 using System.Data.Common;
-using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
 
-namespace Silnith.CDB.SQL.SQLite;
+namespace Silnith.CDB.SQL.Oracle;
 
 /// <summary>
-/// An encapsulated SQLite database that uses a schema designed for storing
+/// A client for an Oracle database that uses a schema designed for storing
 /// files from a CDB data store.
 /// </summary>
-/// <remarks>
-/// <para>
-/// SQLite cannot handle a stream as an input object.  Therefore this
-/// implementation must override all the insert methods that take
-/// <see cref="Stream"/> parameters and convert them to byte arrays.
-/// </para>
-/// <para>
-/// If a select statement for a column of type blob also includes the implicit
-/// <c>rowid</c> column, then the SQLite driver will return the blob column as
-/// type <see cref="Microsoft.Data.Sqlite.SqliteBlob"/>, which supports streaming the blob contents.
-/// </para>
-/// <para>
-/// If not, the driver will return the entire blob as a
-/// <see cref="MemoryStream"/>, which is fully buffered in memory.
-/// </para>
-/// <para>
-/// Therefore, this implementation appends the implicit <c>rowid</c> column to
-/// all of the <c>select</c> statements.  The additional column comes after the
-/// expected <see cref="ContentColumnName"/> so the query logic does not need
-/// to be modified.  The additional row is never actually read.
-/// </para>
-/// <para>
-/// Because SQLite is an embedded database, all of the logic for querying and
-/// modifying it happens in-process, in the thread that called it.  Therefore
-/// there is no efficiency gained by using the <c>async</c> API.  It is
-/// faster and more efficient to use the synchronous API.
-/// </para>
-/// </remarks>
-/// <seealso href="https://learn.microsoft.com/en-us/dotnet/standard/data/sqlite/blob-io"/>
-public class SQLiteDataStore : SQLDataStore
+public class OracleCDB : SQLCDB
 {
 
     #region Column Types
 
-    private const string varcharColumnType = "text";
-    private const string varchar32ColumnType = "text";
-    private const string char1ColumnType = "text";
-    private const string numeric2ColumnType = "integer";
-    private const string numeric3ColumnType = "integer";
-    private const string numeric7ColumnType = "integer";
-    private const string blobColumnType = "blob";
+    private const string varcharColumnType = "national character varying";
+    private const string varchar32ColumnType = "national character varying(32)";
+    private const string char1ColumnType = "national character(1)";
+    private const string numeric2ColumnType = "numeric(2,0)";
+    private const string numeric3ColumnType = "numeric(3,0)";
+    private const string numeric7ColumnType = "numeric(7,0)";
+    private const string blobColumnType = "longblob";
 
     #endregion
 
@@ -98,37 +66,36 @@ public class SQLiteDataStore : SQLDataStore
     private const string rightColumnName = "right";
     private const string fileTypeColumnName = "file_type";
     private const string contentColumnName = "content";
-    private const string rowidColumnName = "rowid";
 
     #endregion
 
     #region SQL Parameters
 
-    private const string cdbParamName = "$cdb";
-    private const string metadataNameParamName = "$metadata_name";
-    private const string datasetParamName = "$dataset";
-    private const string cs1ParamName = "$component_selector_1";
-    private const string cs2ParamName = "$component_selector_2";
-    private const string textureNameParamName = "$texture_name";
-    private const string lodParamName = "$level_of_detail";
-    private const string featureCategoryParamName = "$feature_category";
-    private const string featureSubcategoryParamName = "$feature_subcategory";
-    private const string featureTypeParamName = "$feature_type";
-    private const string featureSubcodeParamName = "$feature_subcode";
-    private const string modelNameParamName = "$model_name";
-    private const string disKindParamName = "$dis_kind";
-    private const string disDomainParamName = "$dis_domain";
-    private const string disCountryParamName = "$dis_country";
-    private const string disCategoryParamName = "$dis_category";
-    private const string disSubcategoryParamName = "$dis_subcategory";
-    private const string disSpecificParamName = "$dis_specific";
-    private const string disExtraParamName = "$dis_extra";
-    private const string latitudeParamName = "$latitude";
-    private const string longitudeParamName = "$longitude";
-    private const string upParamName = "$up";
-    private const string rightParamName = "$right";
-    private const string fileTypeParamName = "$file_type";
-    private const string contentParamName = "$content";
+    private const string cdbParamName = ":cdb";
+    private const string metadataNameParamName = ":metadata_name";
+    private const string datasetParamName = ":dataset";
+    private const string cs1ParamName = ":component_selector_1";
+    private const string cs2ParamName = ":component_selector_2";
+    private const string textureNameParamName = ":texture_name";
+    private const string lodParamName = ":level_of_detail";
+    private const string featureCategoryParamName = ":feature_category";
+    private const string featureSubcategoryParamName = ":feature_subcategory";
+    private const string featureTypeParamName = ":feature_type";
+    private const string featureSubcodeParamName = ":feature_subcode";
+    private const string modelNameParamName = ":model_name";
+    private const string disKindParamName = ":dis_kind";
+    private const string disDomainParamName = ":dis_domain";
+    private const string disCountryParamName = ":dis_country";
+    private const string disCategoryParamName = ":dis_category";
+    private const string disSubcategoryParamName = ":dis_subcategory";
+    private const string disSpecificParamName = ":dis_specific";
+    private const string disExtraParamName = ":dis_extra";
+    private const string latitudeParamName = ":latitude";
+    private const string longitudeParamName = ":longitude";
+    private const string upParamName = ":up";
+    private const string rightParamName = ":right";
+    private const string fileTypeParamName = ":file_type";
+    private const string contentParamName = ":content";
 
     #endregion
 
@@ -187,8 +154,7 @@ public class SQLiteDataStore : SQLDataStore
 
     private const string selectFromMetadata = $"""
         select
-            "{contentColumnName}",
-            {rowidColumnName}
+            "{contentColumnName}"
         from "{metadataTableName}"
         where "{cdbNameColumnName}" = {cdbParamName}
             and "{metadataNameColumnName}" = {metadataNameParamName}
@@ -241,8 +207,7 @@ public class SQLiteDataStore : SQLDataStore
 
     private const string selectFromTexture = $"""
         select
-            "{contentColumnName}",
-            {rowidColumnName}
+            "{contentColumnName}"
         from "{textureTableName}"
         where "{cdbNameColumnName}" = {cdbParamName}
             and "{datasetColumnName}" = {datasetParamName}
@@ -302,8 +267,7 @@ public class SQLiteDataStore : SQLDataStore
 
     private const string selectFromTextureLod = $"""
         select
-            "{contentColumnName}",
-            {rowidColumnName}
+            "{contentColumnName}"
         from "{textureLodTableName}"
         where "{cdbNameColumnName}" = {cdbParamName}
             and "{datasetColumnName}" = {datasetParamName}
@@ -376,8 +340,7 @@ public class SQLiteDataStore : SQLDataStore
 
     private const string selectFromGeotypicalModel = $"""
         select
-            "{contentColumnName}",
-            {rowidColumnName}
+            "{contentColumnName}"
         from "{geotypicalModelTableName}"
         where "{cdbNameColumnName}" = {cdbParamName}
             and "{datasetColumnName}" = {datasetParamName}
@@ -457,8 +420,7 @@ public class SQLiteDataStore : SQLDataStore
 
     private const string selectFromGeotypicalModelLod = $"""
         select
-            "{contentColumnName}",
-            {rowidColumnName}
+            "{contentColumnName}"
         from "{geotypicalModelLodTableName}"
         where "{cdbNameColumnName}" = {cdbParamName}
             and "{datasetColumnName}" = {datasetParamName}
@@ -543,8 +505,7 @@ public class SQLiteDataStore : SQLDataStore
 
     private const string selectFromMovingModel = $"""
         select
-            "{contentColumnName}",
-            {rowidColumnName}
+            "{contentColumnName}"
         from "{movingModelTableName}"
         where "{cdbNameColumnName}" = {cdbParamName}
             and "{datasetColumnName}" = {datasetParamName}
@@ -634,8 +595,7 @@ public class SQLiteDataStore : SQLDataStore
 
     private const string selectFromMovingModelLod = $"""
         select
-            "{contentColumnName}",
-            {rowidColumnName}
+            "{contentColumnName}"
         from "{movingModelLodTableName}"
         where "{cdbNameColumnName}" = {cdbParamName}
             and "{datasetColumnName}" = {datasetParamName}
@@ -714,8 +674,7 @@ public class SQLiteDataStore : SQLDataStore
 
     private const string selectFromTile = $"""
         select
-            "{contentColumnName}",
-            {rowidColumnName}
+            "{contentColumnName}"
         from "{tileTableName}"
         where "{cdbNameColumnName}" = {cdbParamName}
             and "{latitudeColumnName}" = {latitudeParamName}
@@ -811,8 +770,7 @@ public class SQLiteDataStore : SQLDataStore
 
     private const string selectFromTileArchivedFeature = $"""
         select
-            "{contentColumnName}",
-            {rowidColumnName}
+            "{contentColumnName}"
         from "{tileArchivedFeatureTableName}"
         where "{cdbNameColumnName}" = {cdbParamName}
             and "{latitudeColumnName}" = {latitudeParamName}
@@ -897,8 +855,7 @@ public class SQLiteDataStore : SQLDataStore
 
     private const string selectFromTileArchivedTexture = $"""
         select
-            "{contentColumnName}",
-            {rowidColumnName}
+            "{contentColumnName}"
         from "{tileArchivedTextureTableName}"
         where "{cdbNameColumnName}" = {cdbParamName}
             and "{latitudeColumnName}" = {latitudeParamName}
@@ -955,8 +912,7 @@ public class SQLiteDataStore : SQLDataStore
 
     private const string selectFromNavigation = $"""
         select
-            "{contentColumnName}",
-            {rowidColumnName}
+            "{contentColumnName}"
         from "{navigationTableName}"
         where "{cdbNameColumnName}" = {cdbParamName}
             and "{datasetColumnName}" = {datasetParamName}
@@ -968,16 +924,11 @@ public class SQLiteDataStore : SQLDataStore
     #endregion
 
     /// <summary>
-    /// Creates a new SQL data store using the provided SQLite data source.
+    /// Creates a new SQL data store using the provided Oracle data source.
     /// </summary>
-    /// <remarks>
-    /// <para>
-    /// SQLite does not provide a data source.  So we will need to write one.
-    /// </para>
-    /// </remarks>
     /// <param name="dbDataSource">The data source.</param>
     /// <param name="options">Configurable settings.</param>
-    public SQLiteDataStore(DbDataSource dbDataSource, IOptions<SQLiteDataStoreSettings> options)
+    public OracleCDB(DbDataSource dbDataSource, IOptions<OracleCDBSettings> options)
         : base(dbDataSource, options)
     {
     }
@@ -1172,186 +1123,6 @@ public class SQLiteDataStore : SQLDataStore
 
     /// <inheritdoc/>
     protected override string SelectFromNavigationStatement => selectFromNavigation;
-
-    #endregion
-
-    #region Overridden Methods Taking Stream Parameters
-
-    /// <inheritdoc/>
-    protected override void InsertIntoMetadata(DbCommand dbCommand, Metadata metadata, Stream content)
-    {
-        using MemoryStream memoryStream = new();
-        content.CopyTo(memoryStream);
-        InsertIntoMetadata(dbCommand, metadata, memoryStream.ToArray());
-    }
-
-    /// <inheritdoc/>
-    protected override async Task InsertIntoMetadataAsync(DbCommand dbCommand, Metadata metadata, Stream content, CancellationToken cancellationToken)
-    {
-        await using MemoryStream memoryStream = new();
-        await content.CopyToAsync(memoryStream, cancellationToken);
-        await InsertIntoMetadataAsync(dbCommand, metadata, memoryStream.ToArray(), cancellationToken);
-    }
-
-    /// <inheritdoc/>
-    protected override void InsertIntoTexture(DbCommand dbCommand, Texture texture, Stream content)
-    {
-        using MemoryStream memoryStream = new();
-        content.CopyTo(memoryStream);
-        InsertIntoTexture(dbCommand, texture, memoryStream.ToArray());
-    }
-
-    /// <inheritdoc/>
-    protected override async Task InsertIntoTextureAsync(DbCommand dbCommand, Texture texture, Stream content, CancellationToken cancellationToken)
-    {
-        await using MemoryStream memoryStream = new();
-        await content.CopyToAsync(memoryStream, cancellationToken);
-        await InsertIntoTextureAsync(dbCommand, texture, memoryStream.ToArray(), cancellationToken);
-    }
-
-    /// <inheritdoc/>
-    protected override void InsertIntoTextureLod(DbCommand dbCommand, TextureLod textureLod, Stream content)
-    {
-        using MemoryStream memoryStream = new();
-        content.CopyTo(memoryStream);
-        InsertIntoTextureLod(dbCommand, textureLod, memoryStream.ToArray());
-    }
-
-    /// <inheritdoc/>
-    protected override async Task InsertIntoTextureLodAsync(DbCommand dbCommand, TextureLod textureLod, Stream content, CancellationToken cancellationToken)
-    {
-        await using MemoryStream memoryStream = new();
-        await content.CopyToAsync(memoryStream, cancellationToken);
-        await InsertIntoTextureLodAsync(dbCommand, textureLod, memoryStream.ToArray(), cancellationToken);
-    }
-
-    /// <inheritdoc/>
-    protected override void InsertIntoGeotypicalModel(DbCommand dbCommand, GeotypicalModel geotypicalModel, Stream content)
-    {
-        using MemoryStream memoryStream = new();
-        content.CopyTo(memoryStream);
-        InsertIntoGeotypicalModel(dbCommand, geotypicalModel, memoryStream.ToArray());
-    }
-
-    /// <inheritdoc/>
-    protected override async Task InsertIntoGeotypicalModelAsync(DbCommand dbCommand, GeotypicalModel geotypicalModel, Stream content, CancellationToken cancellationToken)
-    {
-        await using MemoryStream memoryStream = new();
-        await content.CopyToAsync(memoryStream, cancellationToken);
-        await InsertIntoGeotypicalModelAsync(dbCommand, geotypicalModel, memoryStream.ToArray(), cancellationToken);
-    }
-
-    /// <inheritdoc/>
-    protected override void InsertIntoGeotypicalModelLod(DbCommand dbCommand, GeotypicalModelLod geotypicalModelLod, Stream content)
-    {
-        using MemoryStream memoryStream = new();
-        content.CopyTo(memoryStream);
-        InsertIntoGeotypicalModelLod(dbCommand, geotypicalModelLod, memoryStream.ToArray());
-    }
-
-    /// <inheritdoc/>
-    protected override async Task InsertIntoGeotypicalModelLodAsync(DbCommand dbCommand, GeotypicalModelLod geotypicalModelLod, Stream content, CancellationToken cancellationToken)
-    {
-        await using MemoryStream memoryStream = new();
-        await content.CopyToAsync(memoryStream, cancellationToken);
-        await InsertIntoGeotypicalModelLodAsync(dbCommand, geotypicalModelLod, memoryStream.ToArray(), cancellationToken);
-    }
-
-    /// <inheritdoc/>
-    protected override void InsertIntoMovingModel(DbCommand dbCommand, MovingModel movingModel, Stream content)
-    {
-        using MemoryStream memoryStream = new();
-        content.CopyTo(memoryStream);
-        InsertIntoMovingModel(dbCommand, movingModel, memoryStream.ToArray());
-    }
-
-    /// <inheritdoc/>
-    protected override async Task InsertIntoMovingModelAsync(DbCommand dbCommand, MovingModel movingModel, Stream content, CancellationToken cancellationToken)
-    {
-        await using MemoryStream memoryStream = new();
-        await content.CopyToAsync(memoryStream, cancellationToken);
-        await InsertIntoMovingModelAsync(dbCommand, movingModel, memoryStream.ToArray(), cancellationToken);
-    }
-
-    /// <inheritdoc/>
-    protected override void InsertIntoMovingModelLod(DbCommand dbCommand, MovingModelLod movingModelLod, Stream content)
-    {
-        using MemoryStream memoryStream = new();
-        content.CopyTo(memoryStream);
-        InsertIntoMovingModelLod(dbCommand, movingModelLod, memoryStream.ToArray());
-    }
-
-    /// <inheritdoc/>
-    protected override async Task InsertIntoMovingModelLodAsync(DbCommand dbCommand, MovingModelLod movingModelLod, Stream content, CancellationToken cancellationToken)
-    {
-        await using MemoryStream memoryStream = new();
-        await content.CopyToAsync(memoryStream, cancellationToken);
-        await InsertIntoMovingModelLodAsync(dbCommand, movingModelLod, memoryStream.ToArray(), cancellationToken);
-    }
-
-    /// <inheritdoc/>
-    protected override void InsertIntoTile(DbCommand dbCommand, Tile tile, Stream content)
-    {
-        using MemoryStream memoryStream = new();
-        content.CopyTo(memoryStream);
-        InsertIntoTile(dbCommand, tile, memoryStream.ToArray());
-    }
-
-    /// <inheritdoc/>
-    protected override async Task InsertIntoTileAsync(DbCommand dbCommand, Tile tile, Stream content, CancellationToken cancellationToken)
-    {
-        await using MemoryStream memoryStream = new();
-        await content.CopyToAsync(memoryStream, cancellationToken);
-        await InsertIntoTileAsync(dbCommand, tile, memoryStream.ToArray(), cancellationToken);
-    }
-
-    /// <inheritdoc/>
-    protected override void InsertIntoTileArchivedFeature(DbCommand dbCommand, TileArchivedFeature tileArchivedFeature, Stream content)
-    {
-        using MemoryStream memoryStream = new();
-        content.CopyTo(memoryStream);
-        InsertIntoTileArchivedFeature(dbCommand, tileArchivedFeature, memoryStream.ToArray());
-    }
-
-    /// <inheritdoc/>
-    protected override async Task InsertIntoTileArchivedFeatureAsync(DbCommand dbCommand, TileArchivedFeature tileArchivedFeature, Stream content, CancellationToken cancellationToken)
-    {
-        await using MemoryStream memoryStream = new();
-        await content.CopyToAsync(memoryStream, cancellationToken);
-        await InsertIntoTileArchivedFeatureAsync(dbCommand, tileArchivedFeature, memoryStream.ToArray(), cancellationToken);
-    }
-
-    /// <inheritdoc/>
-    protected override void InsertIntoTileArchivedTexture(DbCommand dbCommand, TileArchivedTexture tileArchivedTexture, Stream content)
-    {
-        using MemoryStream memoryStream = new();
-        content.CopyTo(memoryStream);
-        InsertIntoTileArchivedTexture(dbCommand, tileArchivedTexture, memoryStream.ToArray());
-    }
-
-    /// <inheritdoc/>
-    protected override async Task InsertIntoTileArchivedTextureAsync(DbCommand dbCommand, TileArchivedTexture tileArchivedTexture, Stream content, CancellationToken cancellationToken)
-    {
-        await using MemoryStream memoryStream = new();
-        await content.CopyToAsync(memoryStream, cancellationToken);
-        await InsertIntoTileArchivedTextureAsync(dbCommand, tileArchivedTexture, memoryStream.ToArray(), cancellationToken);
-    }
-
-    /// <inheritdoc/>
-    protected override void InsertIntoNavigation(DbCommand dbCommand, Navigation navigation, Stream content)
-    {
-        using MemoryStream memoryStream = new();
-        content.CopyTo(memoryStream);
-        InsertIntoNavigation(dbCommand, navigation, memoryStream.ToArray());
-    }
-
-    /// <inheritdoc/>
-    protected override async Task InsertIntoNavigationAsync(DbCommand dbCommand, Navigation navigation, Stream content, CancellationToken cancellationToken)
-    {
-        await using MemoryStream memoryStream = new();
-        await content.CopyToAsync(memoryStream, cancellationToken);
-        await InsertIntoNavigationAsync(dbCommand, navigation, memoryStream.ToArray(), cancellationToken);
-    }
 
     #endregion
 

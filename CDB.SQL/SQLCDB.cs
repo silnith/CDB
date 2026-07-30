@@ -22,7 +22,7 @@ namespace Silnith.CDB.SQL;
 /// projects.
 /// </para>
 /// </remarks>
-public abstract class SQLDataStore : ICDB
+public abstract class SQLCDB : ICDB
 {
     /// <summary>
     /// Creates a parameter for a database command, sets the name and type of
@@ -49,7 +49,7 @@ public abstract class SQLDataStore : ICDB
     /// </summary>
     /// <param name="dbDataSource">The data source.</param>
     /// <param name="options">Configurable settings.</param>
-    protected SQLDataStore(DbDataSource dbDataSource, IOptions<SQLDataStoreSettings> options)
+    protected SQLCDB(DbDataSource dbDataSource, IOptions<SQLCDBSettings> options)
     {
         ArgumentNullException.ThrowIfNull(dbDataSource);
         ArgumentNullException.ThrowIfNull(options);
@@ -64,7 +64,14 @@ public abstract class SQLDataStore : ICDB
         }
     }
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// A simple identifier for the CDB data store.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This must match one of the values stored in the <c>CDB</c> table.
+    /// </para>
+    /// </remarks>
     public string Name
     {
         get;
@@ -438,7 +445,17 @@ public abstract class SQLDataStore : ICDB
         CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
     }
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Inserts a name into the table identifying all the unique data stores
+    /// contained in the database.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// An <see cref="SQLCDB"/> is capable of holding multiple CDB data stores.
+    /// Each distinct data store is identified by a name.
+    /// </para>
+    /// </remarks>
+    /// <param name="cdbName">The name of a new CDB data store.</param>
     public void InsertIntoCDB(string cdbName)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
@@ -464,7 +481,18 @@ public abstract class SQLDataStore : ICDB
         insertIntoCDBCommand.ExecuteNonQuery();
     }
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Inserts a name into the table identifying all the unique data stores
+    /// contained in the database.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// An <see cref="SQLCDB"/> is capable of holding multiple CDB data stores.
+    /// Each distinct data store is identified by a name.
+    /// </para>
+    /// </remarks>
+    /// <param name="cdbName">The name of a new CDB data store.</param>
+    /// <param name="cancellationToken">A cancellation token.</param>
     public async Task InsertIntoCDBAsync(string cdbName, CancellationToken cancellationToken)
     {
         await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
@@ -516,7 +544,10 @@ public abstract class SQLDataStore : ICDB
         dbCommand.CommandText = SelectFromCDBStatement;
     }
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Returns all CDB data store names in the database.
+    /// </summary>
+    /// <returns>All the names of the distinct CDB data stores in the database.</returns>
     public IEnumerable<string> SelectFromCDB()
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
@@ -548,7 +579,11 @@ public abstract class SQLDataStore : ICDB
         } while (dbDataReader.NextResult());
     }
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Returns all CDB data store names in the database.
+    /// </summary>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    /// <returns>All the names of the distinct CDB data stores in the database.</returns>
     public async IAsyncEnumerable<string> SelectFromCDBAsync([EnumeratorCancellation] CancellationToken cancellationToken)
     {
         await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
@@ -637,7 +672,7 @@ public abstract class SQLDataStore : ICDB
         CreateAndAttachParameter(dbCommand, ContentParamName, DbType.Binary);
     }
 
-    /// <inheritdoc/>
+    /// <inheritdoc cref="WriteMetadata(Metadata, System.IO.Stream)"/>
     public void WriteMetadata(Metadata metadata, byte[] content)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
@@ -693,7 +728,7 @@ public abstract class SQLDataStore : ICDB
         insertIntoMetadataCommand.ExecuteNonQuery();
     }
 
-    /// <inheritdoc/>
+    /// <inheritdoc cref="WriteMetadataAsync(Metadata, System.IO.Stream, CancellationToken)"/>
     public async Task WriteMetadataAsync(Metadata metadata, byte[] content, CancellationToken cancellationToken)
     {
         await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
@@ -986,7 +1021,7 @@ public abstract class SQLDataStore : ICDB
         dbCommand.Parameters[FileTypeParamName].Value = texture.FileType;
     }
 
-    /// <inheritdoc/>
+    /// <inheritdoc cref="WriteTexture(Texture, System.IO.Stream)"/>
     public void WriteTexture(Texture texture, byte[] content)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
@@ -1042,7 +1077,7 @@ public abstract class SQLDataStore : ICDB
         insertIntoTextureCommand.ExecuteNonQuery();
     }
 
-    /// <inheritdoc/>
+    /// <inheritdoc cref="WriteTextureAsync(Texture, System.IO.Stream, CancellationToken)"/>
     public async Task WriteTextureAsync(Texture texture, byte[] content, CancellationToken cancellationToken)
     {
         await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
@@ -1341,7 +1376,7 @@ public abstract class SQLDataStore : ICDB
         dbCommand.Parameters[FileTypeParamName].Value = textureLod.FileType;
     }
 
-    /// <inheritdoc/>
+    /// <inheritdoc cref="WriteTextureLevelOfDetail(TextureLod, System.IO.Stream)"/>
     public void WriteTextureLevelOfDetail(TextureLod textureLod, byte[] content)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
@@ -1397,7 +1432,7 @@ public abstract class SQLDataStore : ICDB
         insertIntoTextureLodCommand.ExecuteNonQuery();
     }
 
-    /// <inheritdoc/>
+    /// <inheritdoc cref="WriteTextureLevelOfDetailAsync(TextureLod, System.IO.Stream, CancellationToken)"/>
     public async Task WriteTextureLevelOfDetailAsync(TextureLod textureLod, byte[] content, CancellationToken cancellationToken)
     {
         await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
@@ -1706,7 +1741,7 @@ public abstract class SQLDataStore : ICDB
         dbCommand.Parameters[FileTypeParamName].Value = geotypicalModel.FileType;
     }
 
-    /// <inheritdoc/>
+    /// <inheritdoc cref="WriteGeotypicalModel(GeotypicalModel, System.IO.Stream)"/>
     public void WriteGeotypicalModel(GeotypicalModel geotypicalModel, byte[] content)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
@@ -1762,7 +1797,7 @@ public abstract class SQLDataStore : ICDB
         insertIntoGeotypicalModelCommand.ExecuteNonQuery();
     }
 
-    /// <inheritdoc/>
+    /// <inheritdoc cref="WriteGeotypicalModelAsync(GeotypicalModel, System.IO.Stream, CancellationToken)"/>
     public async Task WriteGeotypicalModelAsync(GeotypicalModel geotypicalModel, byte[] content, CancellationToken cancellationToken)
     {
         await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
@@ -2077,7 +2112,7 @@ public abstract class SQLDataStore : ICDB
         dbCommand.Parameters[FileTypeParamName].Value = geotypicalModelLod.FileType;
     }
 
-    /// <inheritdoc/>
+    /// <inheritdoc cref="WriteGeotypicalModelLevelOfDetail(GeotypicalModelLod, System.IO.Stream)"/>
     public void WriteGeotypicalModelLevelOfDetail(GeotypicalModelLod geotypicalModelLod, byte[] content)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
@@ -2133,7 +2168,7 @@ public abstract class SQLDataStore : ICDB
         insertIntoGeotypicalModelLodCommand.ExecuteNonQuery();
     }
 
-    /// <inheritdoc/>
+    /// <inheritdoc cref="WriteGeotypicalModelLevelOfDetailAsync(GeotypicalModelLod, System.IO.Stream, CancellationToken)"/>
     public async Task WriteGeotypicalModelLevelOfDetailAsync(GeotypicalModelLod geotypicalModelLod, byte[] content, CancellationToken cancellationToken)
     {
         await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
@@ -2452,7 +2487,7 @@ public abstract class SQLDataStore : ICDB
         dbCommand.Parameters[FileTypeParamName].Value = movingModel.FileType;
     }
 
-    /// <inheritdoc/>
+    /// <inheritdoc cref="WriteMovingModel(MovingModel, System.IO.Stream)"/>
     public void WriteMovingModel(MovingModel movingModel, byte[] content)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
@@ -2508,7 +2543,7 @@ public abstract class SQLDataStore : ICDB
         insertIntoMovingModelCommand.ExecuteNonQuery();
     }
 
-    /// <inheritdoc/>
+    /// <inheritdoc cref="WriteMovingModelAsync(MovingModel, System.IO.Stream, CancellationToken)"/>
     public async Task WriteMovingModelAsync(MovingModel movingModel, byte[] content, CancellationToken cancellationToken)
     {
         await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
@@ -2831,7 +2866,7 @@ public abstract class SQLDataStore : ICDB
         dbCommand.Parameters[FileTypeParamName].Value = movingModelLod.FileType;
     }
 
-    /// <inheritdoc/>
+    /// <inheritdoc cref="WriteMovingModelLevelOfDetail(MovingModelLod, System.IO.Stream)"/>
     public void WriteMovingModelLevelOfDetail(MovingModelLod movingModelLod, byte[] content)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
@@ -2887,7 +2922,7 @@ public abstract class SQLDataStore : ICDB
         insertIntoMovingModelLodCommand.ExecuteNonQuery();
     }
 
-    /// <inheritdoc/>
+    /// <inheritdoc cref="WriteMovingModelLevelOfDetailAsync(MovingModelLod, System.IO.Stream, CancellationToken)"/>
     public async Task WriteMovingModelLevelOfDetailAsync(MovingModelLod movingModelLod, byte[] content, CancellationToken cancellationToken)
     {
         await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
@@ -3202,7 +3237,7 @@ public abstract class SQLDataStore : ICDB
         dbCommand.Parameters[FileTypeParamName].Value = tile.FileType;
     }
 
-    /// <inheritdoc/>
+    /// <inheritdoc cref="WriteTile(Tile, System.IO.Stream)"/>
     public void WriteTile(Tile tile, byte[] content)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
@@ -3258,7 +3293,7 @@ public abstract class SQLDataStore : ICDB
         insertIntoTileCommand.ExecuteNonQuery();
     }
 
-    /// <inheritdoc/>
+    /// <inheritdoc cref="WriteTileAsync(Tile, System.IO.Stream, CancellationToken)"/>
     public async Task WriteTileAsync(Tile tile, byte[] content, CancellationToken cancellationToken)
     {
         await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
@@ -3585,7 +3620,7 @@ public abstract class SQLDataStore : ICDB
         dbCommand.Parameters[FileTypeParamName].Value = tileArchivedFeature.FileType;
     }
 
-    /// <inheritdoc/>
+    /// <inheritdoc cref="WriteTileFeature(TileArchivedFeature, System.IO.Stream)"/>
     public void WriteTileFeature(TileArchivedFeature tileArchivedFeature, byte[] content)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
@@ -3641,7 +3676,7 @@ public abstract class SQLDataStore : ICDB
         insertIntoTileArchivedFeatureCommand.ExecuteNonQuery();
     }
 
-    /// <inheritdoc/>
+    /// <inheritdoc cref="WriteTileFeatureAsync(TileArchivedFeature, System.IO.Stream, CancellationToken)"/>
     public async Task WriteTileFeatureAsync(TileArchivedFeature tileArchivedFeature, byte[] content, CancellationToken cancellationToken)
     {
         await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
@@ -3961,7 +3996,7 @@ public abstract class SQLDataStore : ICDB
         dbCommand.Parameters[FileTypeParamName].Value = tileArchivedTexture.FileType;
     }
 
-    /// <inheritdoc/>
+    /// <inheritdoc cref="WriteTileTexture(TileArchivedTexture, System.IO.Stream)"/>
     public void WriteTileTexture(TileArchivedTexture tileArchivedTexture, byte[] content)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
@@ -4017,7 +4052,7 @@ public abstract class SQLDataStore : ICDB
         insertIntoTileArchivedTextureCommand.ExecuteNonQuery();
     }
 
-    /// <inheritdoc/>
+    /// <inheritdoc cref="WriteTileTextureAsync(TileArchivedTexture, System.IO.Stream, CancellationToken)"/>
     public async Task WriteTileTextureAsync(TileArchivedTexture tileArchivedTexture, byte[] content, CancellationToken cancellationToken)
     {
         await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
@@ -4315,7 +4350,7 @@ public abstract class SQLDataStore : ICDB
         dbCommand.Parameters[FileTypeParamName].Value = navigation.FileType;
     }
 
-    /// <inheritdoc/>
+    /// <inheritdoc cref="WriteNavigation(Navigation, System.IO.Stream)"/>
     public void WriteNavigation(Navigation navigation, byte[] content)
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
@@ -4372,7 +4407,7 @@ public abstract class SQLDataStore : ICDB
         insertIntoNavigationCommand.ExecuteNonQuery();
     }
 
-    /// <inheritdoc/>
+    /// <inheritdoc cref="WriteNavigationAsync(Navigation, System.IO.Stream, CancellationToken)"/>
     public async Task WriteNavigationAsync(Navigation navigation, byte[] content, CancellationToken cancellationToken)
     {
         await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);

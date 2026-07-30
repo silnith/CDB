@@ -7,7 +7,7 @@ namespace Silnith.CDB.SQL.PostgreSQL;
 /// A client for a PostgreSQL database that uses a schema designed for storing
 /// files from a CDB data store.
 /// </summary>
-public class PostgreSQLDataStore : SQLDataStore
+public class PostgreSQLCDB : SQLCDB
 {
 
     #region Column Types
@@ -928,7 +928,7 @@ public class PostgreSQLDataStore : SQLDataStore
     /// </summary>
     /// <param name="dbDataSource">The data source.</param>
     /// <param name="options">Configurable settings.</param>
-    public PostgreSQLDataStore(DbDataSource dbDataSource, IOptions<PostgreSQLDataStoreSettings> options)
+    public PostgreSQLCDB(DbDataSource dbDataSource, IOptions<PostgreSQLCDBSettings> options)
         : base(dbDataSource, options)
     {
     }
