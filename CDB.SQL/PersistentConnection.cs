@@ -30,6 +30,7 @@ public class PersistentConnection : ICDB
     public DbTransaction DbTransaction
     {
         get;
+        private set;
     }
 
     private readonly DbCommand selectFromCDBCommand;
@@ -171,15 +172,21 @@ public class PersistentConnection : ICDB
     public void Commit()
     {
         DbTransaction.Commit();
+        DbTransaction.Dispose();
+
+        DbTransaction = DbConnection.BeginTransaction(IsolationLevel.Serializable);
     }
 
     /// <summary>
     /// Commits all the writes that have happened using this connection.
     /// </summary>
     /// <param name="cancellationToken">A cancellation token.</param>
-    public Task CommitAsync(CancellationToken cancellationToken)
+    public async Task CommitAsync(CancellationToken cancellationToken)
     {
-        return DbTransaction.CommitAsync(cancellationToken);
+        await DbTransaction.CommitAsync(cancellationToken);
+        await DbTransaction.DisposeAsync();
+
+        DbTransaction = DbConnection.BeginTransaction(IsolationLevel.Serializable);
     }
 
     #region CDB
