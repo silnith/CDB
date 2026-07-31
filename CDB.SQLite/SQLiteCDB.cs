@@ -1211,185 +1211,19 @@ public class SQLiteCDB : SQLCDB
 
     #endregion
 
-    #region Overridden Methods Taking Stream Parameters
-
     /// <inheritdoc/>
-    protected override void InsertIntoMetadata(DbCommand dbCommand, Metadata metadata, Stream content)
+    /// <remarks>
+    /// <para>
+    /// SQLite does not know how to read a stream.  Therefore we need to
+    /// extract the stream contents into a byte array.
+    /// </para>
+    /// </remarks>
+    protected override void SetContentParameter(DbCommand dbCommand, Stream content)
     {
         using MemoryStream memoryStream = new();
         content.CopyTo(memoryStream);
-        InsertIntoMetadata(dbCommand, metadata, memoryStream.ToArray());
+        dbCommand.Parameters[ContentParamName].Value = memoryStream.ToArray();
     }
-
-    /// <inheritdoc/>
-    protected override async Task InsertIntoMetadataAsync(DbCommand dbCommand, Metadata metadata, Stream content, CancellationToken cancellationToken)
-    {
-        await using MemoryStream memoryStream = new();
-        await content.CopyToAsync(memoryStream, cancellationToken);
-        await InsertIntoMetadataAsync(dbCommand, metadata, memoryStream.ToArray(), cancellationToken);
-    }
-
-    /// <inheritdoc/>
-    protected override void InsertIntoTexture(DbCommand dbCommand, Texture texture, Stream content)
-    {
-        using MemoryStream memoryStream = new();
-        content.CopyTo(memoryStream);
-        InsertIntoTexture(dbCommand, texture, memoryStream.ToArray());
-    }
-
-    /// <inheritdoc/>
-    protected override async Task InsertIntoTextureAsync(DbCommand dbCommand, Texture texture, Stream content, CancellationToken cancellationToken)
-    {
-        await using MemoryStream memoryStream = new();
-        await content.CopyToAsync(memoryStream, cancellationToken);
-        await InsertIntoTextureAsync(dbCommand, texture, memoryStream.ToArray(), cancellationToken);
-    }
-
-    /// <inheritdoc/>
-    protected override void InsertIntoTextureLod(DbCommand dbCommand, TextureLod textureLod, Stream content)
-    {
-        using MemoryStream memoryStream = new();
-        content.CopyTo(memoryStream);
-        InsertIntoTextureLod(dbCommand, textureLod, memoryStream.ToArray());
-    }
-
-    /// <inheritdoc/>
-    protected override async Task InsertIntoTextureLodAsync(DbCommand dbCommand, TextureLod textureLod, Stream content, CancellationToken cancellationToken)
-    {
-        await using MemoryStream memoryStream = new();
-        await content.CopyToAsync(memoryStream, cancellationToken);
-        await InsertIntoTextureLodAsync(dbCommand, textureLod, memoryStream.ToArray(), cancellationToken);
-    }
-
-    /// <inheritdoc/>
-    protected override void InsertIntoGeotypicalModel(DbCommand dbCommand, GeotypicalModel geotypicalModel, Stream content)
-    {
-        using MemoryStream memoryStream = new();
-        content.CopyTo(memoryStream);
-        InsertIntoGeotypicalModel(dbCommand, geotypicalModel, memoryStream.ToArray());
-    }
-
-    /// <inheritdoc/>
-    protected override async Task InsertIntoGeotypicalModelAsync(DbCommand dbCommand, GeotypicalModel geotypicalModel, Stream content, CancellationToken cancellationToken)
-    {
-        await using MemoryStream memoryStream = new();
-        await content.CopyToAsync(memoryStream, cancellationToken);
-        await InsertIntoGeotypicalModelAsync(dbCommand, geotypicalModel, memoryStream.ToArray(), cancellationToken);
-    }
-
-    /// <inheritdoc/>
-    protected override void InsertIntoGeotypicalModelLod(DbCommand dbCommand, GeotypicalModelLod geotypicalModelLod, Stream content)
-    {
-        using MemoryStream memoryStream = new();
-        content.CopyTo(memoryStream);
-        InsertIntoGeotypicalModelLod(dbCommand, geotypicalModelLod, memoryStream.ToArray());
-    }
-
-    /// <inheritdoc/>
-    protected override async Task InsertIntoGeotypicalModelLodAsync(DbCommand dbCommand, GeotypicalModelLod geotypicalModelLod, Stream content, CancellationToken cancellationToken)
-    {
-        await using MemoryStream memoryStream = new();
-        await content.CopyToAsync(memoryStream, cancellationToken);
-        await InsertIntoGeotypicalModelLodAsync(dbCommand, geotypicalModelLod, memoryStream.ToArray(), cancellationToken);
-    }
-
-    /// <inheritdoc/>
-    protected override void InsertIntoMovingModel(DbCommand dbCommand, MovingModel movingModel, Stream content)
-    {
-        using MemoryStream memoryStream = new();
-        content.CopyTo(memoryStream);
-        InsertIntoMovingModel(dbCommand, movingModel, memoryStream.ToArray());
-    }
-
-    /// <inheritdoc/>
-    protected override async Task InsertIntoMovingModelAsync(DbCommand dbCommand, MovingModel movingModel, Stream content, CancellationToken cancellationToken)
-    {
-        await using MemoryStream memoryStream = new();
-        await content.CopyToAsync(memoryStream, cancellationToken);
-        await InsertIntoMovingModelAsync(dbCommand, movingModel, memoryStream.ToArray(), cancellationToken);
-    }
-
-    /// <inheritdoc/>
-    protected override void InsertIntoMovingModelLod(DbCommand dbCommand, MovingModelLod movingModelLod, Stream content)
-    {
-        using MemoryStream memoryStream = new();
-        content.CopyTo(memoryStream);
-        InsertIntoMovingModelLod(dbCommand, movingModelLod, memoryStream.ToArray());
-    }
-
-    /// <inheritdoc/>
-    protected override async Task InsertIntoMovingModelLodAsync(DbCommand dbCommand, MovingModelLod movingModelLod, Stream content, CancellationToken cancellationToken)
-    {
-        await using MemoryStream memoryStream = new();
-        await content.CopyToAsync(memoryStream, cancellationToken);
-        await InsertIntoMovingModelLodAsync(dbCommand, movingModelLod, memoryStream.ToArray(), cancellationToken);
-    }
-
-    /// <inheritdoc/>
-    protected override void InsertIntoTile(DbCommand dbCommand, Tile tile, Stream content)
-    {
-        using MemoryStream memoryStream = new();
-        content.CopyTo(memoryStream);
-        InsertIntoTile(dbCommand, tile, memoryStream.ToArray());
-    }
-
-    /// <inheritdoc/>
-    protected override async Task InsertIntoTileAsync(DbCommand dbCommand, Tile tile, Stream content, CancellationToken cancellationToken)
-    {
-        await using MemoryStream memoryStream = new();
-        await content.CopyToAsync(memoryStream, cancellationToken);
-        await InsertIntoTileAsync(dbCommand, tile, memoryStream.ToArray(), cancellationToken);
-    }
-
-    /// <inheritdoc/>
-    protected override void InsertIntoTileArchivedFeature(DbCommand dbCommand, TileArchivedFeature tileArchivedFeature, Stream content)
-    {
-        using MemoryStream memoryStream = new();
-        content.CopyTo(memoryStream);
-        InsertIntoTileArchivedFeature(dbCommand, tileArchivedFeature, memoryStream.ToArray());
-    }
-
-    /// <inheritdoc/>
-    protected override async Task InsertIntoTileArchivedFeatureAsync(DbCommand dbCommand, TileArchivedFeature tileArchivedFeature, Stream content, CancellationToken cancellationToken)
-    {
-        await using MemoryStream memoryStream = new();
-        await content.CopyToAsync(memoryStream, cancellationToken);
-        await InsertIntoTileArchivedFeatureAsync(dbCommand, tileArchivedFeature, memoryStream.ToArray(), cancellationToken);
-    }
-
-    /// <inheritdoc/>
-    protected override void InsertIntoTileArchivedTexture(DbCommand dbCommand, TileArchivedTexture tileArchivedTexture, Stream content)
-    {
-        using MemoryStream memoryStream = new();
-        content.CopyTo(memoryStream);
-        InsertIntoTileArchivedTexture(dbCommand, tileArchivedTexture, memoryStream.ToArray());
-    }
-
-    /// <inheritdoc/>
-    protected override async Task InsertIntoTileArchivedTextureAsync(DbCommand dbCommand, TileArchivedTexture tileArchivedTexture, Stream content, CancellationToken cancellationToken)
-    {
-        await using MemoryStream memoryStream = new();
-        await content.CopyToAsync(memoryStream, cancellationToken);
-        await InsertIntoTileArchivedTextureAsync(dbCommand, tileArchivedTexture, memoryStream.ToArray(), cancellationToken);
-    }
-
-    /// <inheritdoc/>
-    protected override void InsertIntoNavigation(DbCommand dbCommand, Navigation navigation, Stream content)
-    {
-        using MemoryStream memoryStream = new();
-        content.CopyTo(memoryStream);
-        InsertIntoNavigation(dbCommand, navigation, memoryStream.ToArray());
-    }
-
-    /// <inheritdoc/>
-    protected override async Task InsertIntoNavigationAsync(DbCommand dbCommand, Navigation navigation, Stream content, CancellationToken cancellationToken)
-    {
-        await using MemoryStream memoryStream = new();
-        await content.CopyToAsync(memoryStream, cancellationToken);
-        await InsertIntoNavigationAsync(dbCommand, navigation, memoryStream.ToArray(), cancellationToken);
-    }
-
-    #endregion
 
     /*
      * No additional resources to dispose, so no need to override the dispose virtual methods.

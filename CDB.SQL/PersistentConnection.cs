@@ -58,6 +58,10 @@ public class PersistentConnection : ICDB
     private readonly DbCommand selectFromNavigationCommand;
     private readonly DbCommand insertIntoNavigationCommand;
 
+    /// <summary>
+    /// Creates a connection that allows batching operations into transactions.
+    /// </summary>
+    /// <param name="sqlCDB">The CDB to connect to.</param>
     public PersistentConnection(SQLCDB sqlCDB)
     {
         this.sqlCDB = sqlCDB;
