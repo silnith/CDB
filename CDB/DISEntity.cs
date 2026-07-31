@@ -89,7 +89,7 @@ public record DISEntity(
     public static DISEntity FromDirectoryMatch(Match match)
     {
         return new(
-            int.Parse(match.Groups["category"].Value, CultureInfo.InvariantCulture),
+            int.Parse(match.Groups["kind"].Value, CultureInfo.InvariantCulture),
             int.Parse(match.Groups["domain"].Value, CultureInfo.InvariantCulture),
             int.Parse(match.Groups["country"].Value, CultureInfo.InvariantCulture),
             int.Parse(match.Groups["category"].Value, CultureInfo.InvariantCulture),
