@@ -91,11 +91,6 @@ public abstract class SQLCDB : ICDB
     {
         using DbConnection dbConnection = dbDataSource.OpenConnection();
 
-        CreateSchema(dbConnection);
-    }
-
-    protected internal virtual void CreateSchema(DbConnection dbConnection)
-    {
         using DbTransaction dbTransaction = dbConnection.BeginTransaction(IsolationLevel.Serializable);
 
         using DbCommand dbCommand = dbConnection.CreateCommand();
@@ -148,6 +143,12 @@ public abstract class SQLCDB : ICDB
 
         dbCommand.CommandText = CreateTableNavigationStatement;
         _ = dbCommand.ExecuteNonQuery();
+
+        foreach (string createIndexStatement in CreateIndexStatements)
+        {
+            dbCommand.CommandText = createIndexStatement;
+            _ = dbCommand.ExecuteNonQuery();
+        }
 
         dbTransaction.Commit();
     }
@@ -4650,6 +4651,15 @@ public abstract class SQLCDB : ICDB
     #endregion
 
     /// <summary>
+    /// Any SQL DDL statements to create indexes necessary for queries to run
+    /// efficiently.
+    /// </summary>
+    protected abstract IEnumerable<string> CreateIndexStatements
+    {
+        get;
+    }
+
+    /// <summary>
     /// Dumps the raw SQL statements that the data store uses.
     /// </summary>
     /// <remarks>
@@ -4745,6 +4755,12 @@ public abstract class SQLCDB : ICDB
         textWriter.WriteLine(';');
         textWriter.Write(SelectFromNavigationStatement);
         textWriter.WriteLine(';');
+        textWriter.WriteLine();
+        foreach (string createIndexStatement in CreateIndexStatements)
+        {
+            textWriter.Write(createIndexStatement);
+            textWriter.WriteLine(';');
+        }
     }
 
     #region Dispose Pattern

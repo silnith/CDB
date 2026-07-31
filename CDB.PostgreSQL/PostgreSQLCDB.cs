@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Options;
+using System.Collections.Generic;
 using System.Data.Common;
 
 namespace Silnith.CDB.SQL.PostgreSQL;
@@ -616,6 +617,15 @@ public class PostgreSQLCDB : SQLCDB
 
     #region Tile
 
+    private const string createIndexTileLatitudeLongitude = $"""
+        create index "{tileTableName}LatitudeLongitude"
+        on "{tileTableName}" (
+            "{cdbNameColumnName}",
+            "{latitudeColumnName}",
+            "{longitudeColumnName}"
+        )
+        """;
+
     private const string createTableTile = $"""
         create table "{tileTableName}" (
             "{cdbNameColumnName}" {varcharColumnType} not null references "{cdbTableName}"("{cdbNameColumnName}") on delete cascade on update cascade,
@@ -691,6 +701,15 @@ public class PostgreSQLCDB : SQLCDB
     #endregion
 
     #region Tile Archived Feature
+
+    private const string createIndexTileArchivedFeatureLatitudeLongitude = $"""
+        create index "{tileArchivedFeatureTableName}LatitudeLongitude"
+        on "{tileArchivedFeatureTableName}" (
+            "{cdbNameColumnName}",
+            "{latitudeColumnName}",
+            "{longitudeColumnName}"
+        )
+        """;
 
     private const string createTableTileArchivedFeature = $"""
         create table "{tileArchivedFeatureTableName}" (
@@ -792,6 +811,15 @@ public class PostgreSQLCDB : SQLCDB
     #endregion
 
     #region Tile Archived Texture
+
+    private const string createIndexTileArchivedTextureLatitudeLongitude = $"""
+        create index "{tileArchivedTextureTableName}LatitudeLongitude"
+        on "{tileArchivedTextureTableName}" (
+            "{cdbNameColumnName}",
+            "{latitudeColumnName}",
+            "{longitudeColumnName}"
+        )
+        """;
 
     private const string createTableTileArchivedTexture = $"""
         create table "{tileArchivedTextureTableName}" (
@@ -1123,6 +1151,14 @@ public class PostgreSQLCDB : SQLCDB
 
     /// <inheritdoc/>
     protected override string SelectFromNavigationStatement => selectFromNavigation;
+
+    /// <inheritdoc/>
+    protected override IEnumerable<string> CreateIndexStatements => new List<string>()
+    {
+        createIndexTileLatitudeLongitude,
+        createIndexTileArchivedFeatureLatitudeLongitude,
+        createIndexTileArchivedTextureLatitudeLongitude,
+    };
 
     #endregion
 
