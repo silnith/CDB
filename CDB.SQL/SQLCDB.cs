@@ -23,351 +23,6 @@ namespace Silnith.CDB.SQL;
 public abstract class SQLCDB : ICDB
 {
     /// <summary>
-    /// A generic accessor that provides common boilerplate code for the most
-    /// common access scenarios.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// All of the tables emulating filesystem storage of CDB files follow the
-    /// same pattern.  The first column is the identifier for the CDB.  The
-    /// last column before the file contents is the file type (extension).  In
-    /// between are all the parameters extracted from the file name.
-    /// </para>
-    /// <para>
-    /// The most common access patterns are reading a file and writing a file.
-    /// Both of these involve taking all of the parameters from the filename
-    /// and either inserting or retrieving the file contents.  The code to call
-    /// the select or insert statement is the same across all the tables, the
-    /// only difference is how to map the file identifier to the columns.
-    /// </para>
-    /// <para>
-    /// This provides that common code, and abstract methods for mapping the
-    /// specific identifier to the columns of the specific table.  Subclasses
-    /// can provide these mappings and reuse the code that handles the database
-    /// access.
-    /// </para>
-    /// </remarks>
-    /// <typeparam name="T">The type of identifier that holds all the data
-    /// necessary to uniquely identify a row in the specific table for that
-    /// file type.</typeparam>
-    internal abstract class TableAccessor<T>
-    {
-        protected readonly SQLCDB sqlCDB;
-
-        private readonly string selectStatement;
-
-        private readonly string insertStatement;
-
-        internal TableAccessor(SQLCDB sqlCDB, string selectStatement, string insertStatement)
-        {
-            this.sqlCDB = sqlCDB;
-            this.selectStatement = selectStatement;
-            this.insertStatement = insertStatement;
-        }
-
-        /// <summary>
-        /// Creates the parameters appropriate for an object of type
-        /// <typeparamref name="T"/> and attaches them to the prepared statement.
-        /// </summary>
-        /// <param name="dbCommand">The command to create the parameters for.</param>
-        internal abstract void CreateAndAttachObjectParameter(DbCommand dbCommand);
-
-        /// <summary>
-        /// Sets the parameters according to the members of an object of type
-        /// <typeparamref name="T"/>.
-        /// </summary>
-        /// <param name="dbCommand">The prepared statement to set the parameter for.</param>
-        /// <param name="obj">The object from which to get all the parameter values.</param>
-        internal abstract void SetObjectParameters(DbCommand dbCommand, T obj);
-
-        /// <summary>
-        /// Initializes a prepared statement to be a <c>select</c> query for
-        /// the appropriate table with parameters matching all the columns that
-        /// make up the composite primary key.
-        /// </summary>
-        /// <param name="dbCommand">The command to initialize.</param>
-        internal void InitializeSelectCommand(DbCommand dbCommand)
-        {
-            dbCommand.CommandText = selectStatement;
-            sqlCDB.CreateAndAttachCdbParameter(dbCommand);
-            CreateAndAttachObjectParameter(dbCommand);
-        }
-
-        /// <summary>
-        /// Executes a <c>select</c> query using the provided prepared statement
-        /// and input.
-        /// </summary>
-        /// <remarks>
-        /// <para>
-        /// This takes the prepared statement as a parameter to support multiple
-        /// use cases.  Typical calls will get a database connection to read a
-        /// single file, disposing afterwards.  Bulk import scenarios will want
-        /// to maintain a persistent connection and provide transaction support.
-        /// </para>
-        /// <para>
-        /// The prepared statement must have been initialized by <see cref="InitializeSelectCommand(DbCommand)"/>.
-        /// </para>
-        /// </remarks>
-        /// <param name="dbCommand">The prepared statement.</param>
-        /// <param name="obj">The object containing all the necessary members for uniquely identifying a row.</param>
-        /// <returns>The contents of the <see cref="ContentColumnName"/> column, or <see langword="null"/>.</returns>
-        internal Stream? SelectUsingPreparedStatement(DbCommand dbCommand, T obj)
-        {
-            sqlCDB.SetCdbParameter(dbCommand);
-            SetObjectParameters(dbCommand, obj);
-
-            DbDataReader dbDataReader = dbCommand.ExecuteReader(
-                CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow);
-            try
-            {
-                do
-                {
-                    while (dbDataReader.Read())
-                    {
-                        Stream stream = dbDataReader.GetStream(sqlCDB.ContentColumnName);
-                        return new WrappedStream(stream, dbDataReader);
-                    }
-                } while (dbDataReader.NextResult());
-                dbDataReader.Dispose();
-                return null;
-            }
-            catch (Exception)
-            {
-                dbDataReader.Dispose();
-                throw;
-            }
-        }
-
-        /// <summary>
-        /// Executes a select query using the provided prepared statement and input.
-        /// </summary>
-        /// <remarks>
-        /// <para>
-        /// This takes the prepared statement as a parameter to support multiple
-        /// use cases.  Typical calls will get a database connection to read a
-        /// single file, disposing afterwards.  Bulk import scenarios will want
-        /// to maintain a persistent connection and provide transaction support.
-        /// </para>
-        /// <para>
-        /// The prepared statement must have been initialized by <see cref="InitializeSelectCommand(DbCommand)"/>.
-        /// </para>
-        /// </remarks>
-        /// <param name="dbCommand">The prepared statement.</param>
-        /// <param name="obj">The object containing all the necessary members for uniquely identifying a row.</param>
-        /// <param name="cancellationToken">A cancellation token.</param>
-        /// <returns>The contents of the <see cref="ContentColumnName"/> column, or <see langword="null"/>.</returns>
-        internal async Task<Stream?> SelectUsingPreparedStatementAsync(DbCommand dbCommand, T obj, CancellationToken cancellationToken = default)
-        {
-            sqlCDB.SetCdbParameter(dbCommand);
-            SetObjectParameters(dbCommand, obj);
-
-            DbDataReader dbDataReader = await dbCommand.ExecuteReaderAsync(
-                CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow,
-                cancellationToken);
-            try
-            {
-                do
-                {
-                    while (await dbDataReader.ReadAsync(cancellationToken))
-                    {
-                        Stream stream = dbDataReader.GetStream(sqlCDB.ContentColumnName);
-                        return new WrappedStream(stream, dbDataReader);
-                    }
-                } while (await dbDataReader.NextResultAsync(cancellationToken));
-                await dbDataReader.DisposeAsync();
-                return null;
-            }
-            catch (Exception)
-            {
-                await dbDataReader.DisposeAsync();
-                throw;
-            }
-        }
-
-        /// <summary>
-        /// Opens a new database connection and calls <see cref="SelectUsingPreparedStatement(DbCommand, T)"/>.
-        /// </summary>
-        /// <param name="obj">The object containing all the necessary members for uniquely identifying a row.</param>
-        /// <returns>The contents of the <see cref="ContentColumnName"/> column, or <see langword="null"/>.</returns>
-        internal Stream? SelectUsingNewConnection(T obj)
-        {
-            DbConnection dbConnection = sqlCDB.dbDataSource.OpenConnection();
-            try
-            {
-                DbCommand dbCommand = dbConnection.CreateCommand();
-                try
-                {
-                    InitializeSelectCommand(dbCommand);
-                    dbCommand.Prepare();
-
-                    Stream? stream = SelectUsingPreparedStatement(dbCommand, obj);
-                    if (stream is not null)
-                    {
-                        return new WrappedStream(stream, dbCommand, dbConnection);
-                    }
-                    else
-                    {
-                        dbCommand.Dispose();
-                        dbConnection.Dispose();
-                        return null;
-                    }
-                }
-                catch (Exception)
-                {
-                    dbCommand.Dispose();
-                    throw;
-                }
-            }
-            catch (Exception)
-            {
-                dbConnection.Dispose();
-                throw;
-            }
-        }
-
-        /// <summary>
-        /// Opens a new database connection and calls <see cref="SelectUsingPreparedStatementAsync(DbCommand, T, CancellationToken)"/>.
-        /// </summary>
-        /// <param name="obj">The object containing all the necessary members for uniquely identifying a row.</param>
-        /// <param name="cancellationToken">A cancellation token.</param>
-        /// <returns>The contents of the <see cref="ContentColumnName"/> column, or <see langword="null"/>.</returns>
-        internal async Task<Stream?> SelectUsingNewConnectionAsync(T obj, CancellationToken cancellationToken = default)
-        {
-            DbConnection dbConnection = await sqlCDB.dbDataSource.OpenConnectionAsync(cancellationToken);
-            try
-            {
-                DbCommand dbCommand = dbConnection.CreateCommand();
-                try
-                {
-                    InitializeSelectCommand(dbCommand);
-                    await dbCommand.PrepareAsync(cancellationToken);
-
-                    Stream? stream = await SelectUsingPreparedStatementAsync(dbCommand, obj, cancellationToken);
-                    if (stream is not null)
-                    {
-                        return new WrappedStream(stream, dbCommand, dbConnection);
-                    }
-                    else
-                    {
-                        await dbCommand.DisposeAsync();
-                        await dbConnection.DisposeAsync();
-                        return null;
-                    }
-                }
-                catch (Exception)
-                {
-                    await dbCommand.DisposeAsync();
-                    throw;
-                }
-            }
-            catch (Exception)
-            {
-                await dbConnection.DisposeAsync();
-                throw;
-            }
-        }
-
-        /// <summary>
-        /// Initializes a prepared statement to be an <c>insert</c> command for
-        /// the appropriate table with parameters matching all the columns that
-        /// make up the composite primary key.
-        /// </summary>
-        /// <param name="dbCommand">The command to initialize.</param>
-        internal void InitializeInsertCommand(DbCommand dbCommand)
-        {
-            dbCommand.CommandText = insertStatement;
-            sqlCDB.CreateAndAttachCdbParameter(dbCommand);
-            CreateAndAttachObjectParameter(dbCommand);
-            sqlCDB.CreateAndAttachContentParameter(dbCommand);
-        }
-
-        /// <summary>
-        /// Executes an insert command using the provided prepared statement and input.
-        /// </summary>
-        /// <remarks>
-        /// <para>
-        /// This takes the prepared statement as a parameter to support multiple
-        /// use cases.  Typical calls will get a database connection to read a
-        /// single file, disposing afterwards.  Bulk import scenarios will want
-        /// to maintain a persistent connection and provide transaction support.
-        /// </para>
-        /// <para>
-        /// The prepared statement must have been initialized by <see cref="InitializeInsertCommand(DbCommand)"/>.
-        /// </para>
-        /// </remarks>
-        /// <param name="dbCommand">The prepared statement.</param>
-        /// <param name="obj">The object containing all the necessary members for uniquely identifying a row.</param>
-        /// <param name="content">The file contents.</param>
-        internal void InsertUsingPreparedStatement(DbCommand dbCommand, T obj, Stream content)
-        {
-            sqlCDB.SetCdbParameter(dbCommand);
-            SetObjectParameters(dbCommand, obj);
-            sqlCDB.SetContentParameter(dbCommand, content);
-
-            dbCommand.ExecuteNonQuery();
-        }
-
-        /// <summary>
-        /// Executes an insert command using the provided prepared statement and input.
-        /// </summary>
-        /// <remarks>
-        /// <para>
-        /// This takes the prepared statement as a parameter to support multiple
-        /// use cases.  Typical calls will get a database connection to read a
-        /// single file, disposing afterwards.  Bulk import scenarios will want
-        /// to maintain a persistent connection and provide transaction support.
-        /// </para>
-        /// <para>
-        /// The prepared statement must have been initialized by <see cref="InitializeInsertCommand(DbCommand)"/>.
-        /// </para>
-        /// </remarks>
-        /// <param name="dbCommand">The prepared statement.</param>
-        /// <param name="obj">The object containing all the necessary members for uniquely identifying a row.</param>
-        /// <param name="content">The file contents.</param>
-        /// <param name="cancellationToken">A cancellation token.</param>
-        internal Task InsertUsingPreparedStatementAsync(DbCommand dbCommand, T obj, Stream content, CancellationToken cancellationToken = default)
-        {
-            sqlCDB.SetCdbParameter(dbCommand);
-            SetObjectParameters(dbCommand, obj);
-            sqlCDB.SetContentParameter(dbCommand, content);
-
-            return dbCommand.ExecuteNonQueryAsync(cancellationToken);
-        }
-
-        /// <summary>
-        /// Opens a new database connection and calls <see cref="InsertUsingPreparedStatement(DbCommand, T, Stream)"/>.
-        /// </summary>
-        /// <param name="obj">The object containing all the necessary members for uniquely identifying a row.</param>
-        /// <param name="content">The file contents.</param>
-        internal void InsertUsingNewConnection(T obj, Stream content)
-        {
-            using DbConnection dbConnection = sqlCDB.dbDataSource.OpenConnection();
-            using DbCommand dbCommand = dbConnection.CreateCommand();
-            InitializeInsertCommand(dbCommand);
-            dbCommand.Prepare();
-
-            InsertUsingPreparedStatement(dbCommand, obj, content);
-        }
-
-        /// <summary>
-        /// Opens a new database connection and calls <see cref="InsertUsingPreparedStatement(DbCommand, T, Stream)"/>.
-        /// </summary>
-        /// <param name="obj">The object containing all the necessary members for uniquely identifying a row.</param>
-        /// <param name="content">The file contents.</param>
-        /// <param name="cancellationToken">A cancellation token.</param>
-        internal async Task InsertUsingNewConnectionAsync(T obj, Stream content, CancellationToken cancellationToken = default)
-        {
-            await using DbConnection dbConnection = await sqlCDB.dbDataSource.OpenConnectionAsync(cancellationToken);
-            await using DbCommand dbCommand = dbConnection.CreateCommand();
-            InitializeInsertCommand(dbCommand);
-            await dbCommand.PrepareAsync(cancellationToken);
-
-            await InsertUsingPreparedStatementAsync(dbCommand, obj, content, cancellationToken);
-        }
-
-    }
-
-    /// <summary>
     /// Creates a parameter for a database command, sets the name and type of
     /// the parameter, and attaches the parameter to the command.
     /// </summary>
@@ -528,7 +183,7 @@ public abstract class SQLCDB : ICDB
     /// The name of the SQL parameter for the CDB name.
     /// The value must be of type <see cref="DbType.String"/>.
     /// </summary>
-    protected abstract string CdbParamName
+    public abstract string CdbParamName
     {
         get;
     }
@@ -537,7 +192,7 @@ public abstract class SQLCDB : ICDB
     /// The name of the SQL parameter for a Tile latitude.
     /// The value must be of type <see cref="DbType.Int32"/>.
     /// </summary>
-    protected abstract string LatitudeParamName
+    public abstract string LatitudeParamName
     {
         get;
     }
@@ -546,7 +201,7 @@ public abstract class SQLCDB : ICDB
     /// The name of the SQL parameter for a Tile longitude.
     /// The value must be of type <see cref="DbType.Int32"/>.
     /// </summary>
-    protected abstract string LongitudeParamName
+    public abstract string LongitudeParamName
     {
         get;
     }
@@ -555,7 +210,7 @@ public abstract class SQLCDB : ICDB
     /// The name of the SQL parameter for the dataset.
     /// The value must be of type <see cref="DbType.Int32"/>.
     /// </summary>
-    protected abstract string DatasetParamName
+    public abstract string DatasetParamName
     {
         get;
     }
@@ -564,7 +219,7 @@ public abstract class SQLCDB : ICDB
     /// The name of the SQL parameter for the component selector 1.
     /// The value must be of type <see cref="DbType.Int32"/>.
     /// </summary>
-    protected abstract string ComponentSelector1ParamName
+    public abstract string ComponentSelector1ParamName
     {
         get;
     }
@@ -573,7 +228,7 @@ public abstract class SQLCDB : ICDB
     /// The name of the SQL parameter for the component selector 2.
     /// The value must be of type <see cref="DbType.Int32"/>.
     /// </summary>
-    protected abstract string ComponentSelector2ParamName
+    public abstract string ComponentSelector2ParamName
     {
         get;
     }
@@ -582,7 +237,7 @@ public abstract class SQLCDB : ICDB
     /// The name of the SQL parameter for the level of detail.
     /// The value must be of type <see cref="DbType.Int32"/>.
     /// </summary>
-    protected abstract string LevelOfDetailParamName
+    public abstract string LevelOfDetailParamName
     {
         get;
     }
@@ -591,7 +246,7 @@ public abstract class SQLCDB : ICDB
     /// The name of the SQL parameter for a Tile UREF.
     /// The value must be of type <see cref="DbType.Int32"/>.
     /// </summary>
-    protected abstract string UpParamName
+    public abstract string UpParamName
     {
         get;
     }
@@ -600,7 +255,7 @@ public abstract class SQLCDB : ICDB
     /// The name of the SQL parameter for a Tile RREF.
     /// The value must be of type <see cref="DbType.Int32"/>.
     /// </summary>
-    protected abstract string RightParamName
+    public abstract string RightParamName
     {
         get;
     }
@@ -609,7 +264,7 @@ public abstract class SQLCDB : ICDB
     /// The name of the SQL parameter for the metadata name.
     /// The value must be of type <see cref="DbType.String"/>.
     /// </summary>
-    protected abstract string MetadataNameParamName
+    public abstract string MetadataNameParamName
     {
         get;
     }
@@ -618,7 +273,7 @@ public abstract class SQLCDB : ICDB
     /// The name of the SQL parameter for the texture name.
     /// The value must be of type <see cref="DbType.String"/>.
     /// </summary>
-    protected abstract string TextureNameParamName
+    public abstract string TextureNameParamName
     {
         get;
     }
@@ -629,7 +284,7 @@ public abstract class SQLCDB : ICDB
     /// The name of the SQL parameter for the Feature Code category.
     /// The value must be of type <see cref="DbType.String"/>.
     /// </summary>
-    protected abstract string FeatureCategoryParamName
+    public abstract string FeatureCategoryParamName
     {
         get;
     }
@@ -638,7 +293,7 @@ public abstract class SQLCDB : ICDB
     /// The name of the SQL parameter for the Feature Code subcategory.
     /// The value must be of type <see cref="DbType.String"/>.
     /// </summary>
-    protected abstract string FeatureSubcategoryParamName
+    public abstract string FeatureSubcategoryParamName
     {
         get;
     }
@@ -647,7 +302,7 @@ public abstract class SQLCDB : ICDB
     /// The name of the SQL parameter for the Feature Code type.
     /// The value must be of type <see cref="DbType.Int32"/>.
     /// </summary>
-    protected abstract string FeatureTypeParamName
+    public abstract string FeatureTypeParamName
     {
         get;
     }
@@ -656,7 +311,7 @@ public abstract class SQLCDB : ICDB
     /// The name of the SQL parameter for the Feature Code subcode.
     /// The value must be of type <see cref="DbType.Int32"/>.
     /// </summary>
-    protected abstract string FeatureSubcodeParamName
+    public abstract string FeatureSubcodeParamName
     {
         get;
     }
@@ -667,7 +322,7 @@ public abstract class SQLCDB : ICDB
     /// The name of the SQL parameter for the geotypical model name.
     /// The value must be of type <see cref="DbType.String"/>.
     /// </summary>
-    protected abstract string ModelNameParamName
+    public abstract string ModelNameParamName
     {
         get;
     }
@@ -678,7 +333,7 @@ public abstract class SQLCDB : ICDB
     /// The name of the SQL parameter for the DIS Code component "kind".
     /// The value must be of type <see cref="DbType.Int32"/>.
     /// </summary>
-    protected abstract string DISKindParamName
+    public abstract string DISKindParamName
     {
         get;
     }
@@ -687,7 +342,7 @@ public abstract class SQLCDB : ICDB
     /// The name of the SQL parameter for the DIS Code component "domain".
     /// The value must be of type <see cref="DbType.Int32"/>.
     /// </summary>
-    protected abstract string DISDomainParamName
+    public abstract string DISDomainParamName
     {
         get;
     }
@@ -696,7 +351,7 @@ public abstract class SQLCDB : ICDB
     /// The name of the SQL parameter for the DIS Code component "country".
     /// The value must be of type <see cref="DbType.Int32"/>.
     /// </summary>
-    protected abstract string DISCountryParamName
+    public abstract string DISCountryParamName
     {
         get;
     }
@@ -705,7 +360,7 @@ public abstract class SQLCDB : ICDB
     /// The name of the SQL parameter for the DIS Code component "category".
     /// The value must be of type <see cref="DbType.Int32"/>.
     /// </summary>
-    protected abstract string DISCategoryParamName
+    public abstract string DISCategoryParamName
     {
         get;
     }
@@ -714,7 +369,7 @@ public abstract class SQLCDB : ICDB
     /// The name of the SQL parameter for the DIS Code component "subcategory".
     /// The value must be of type <see cref="DbType.Int32"/>.
     /// </summary>
-    protected abstract string DISSubcategoryParamName
+    public abstract string DISSubcategoryParamName
     {
         get;
     }
@@ -723,7 +378,7 @@ public abstract class SQLCDB : ICDB
     /// The name of the SQL parameter for the DIS Code component "specific".
     /// The value must be of type <see cref="DbType.Int32"/>.
     /// </summary>
-    protected abstract string DISSpecificParamName
+    public abstract string DISSpecificParamName
     {
         get;
     }
@@ -732,7 +387,7 @@ public abstract class SQLCDB : ICDB
     /// The name of the SQL parameter for the DIS Code component "extra".
     /// The value must be of type <see cref="DbType.Int32"/>.
     /// </summary>
-    protected abstract string DISExtraParamName
+    public abstract string DISExtraParamName
     {
         get;
     }
@@ -743,7 +398,7 @@ public abstract class SQLCDB : ICDB
     /// The name of the SQL parameter for the file type.
     /// The value must be of type <see cref="DbType.String"/>.
     /// </summary>
-    protected abstract string FileTypeParamName
+    public abstract string FileTypeParamName
     {
         get;
     }
@@ -752,7 +407,7 @@ public abstract class SQLCDB : ICDB
     /// The name of the SQL parameter for the file content.
     /// The value must be of type <see cref="DbType.Binary"/>.
     /// </summary>
-    protected abstract string ContentParamName
+    public abstract string ContentParamName
     {
         get;
     }
@@ -766,7 +421,7 @@ public abstract class SQLCDB : ICDB
     /// Got that?
     /// </para>
     /// </remarks>
-    protected abstract string CDBNameColumnName
+    public abstract string CDBNameColumnName
     {
         get;
     }
@@ -775,7 +430,7 @@ public abstract class SQLCDB : ICDB
     /// The name of the column in tiled dataset tables that contains the latitude.
     /// The type is <see cref="DbType.Int32"/>.
     /// </summary>
-    protected abstract string LatitudeColumnName
+    public abstract string LatitudeColumnName
     {
         get;
     }
@@ -784,7 +439,7 @@ public abstract class SQLCDB : ICDB
     /// The name of the column in tiled dataset tables that contains the longitude.
     /// The type is <see cref="DbType.Int32"/>.
     /// </summary>
-    protected abstract string LongitudeColumnName
+    public abstract string LongitudeColumnName
     {
         get;
     }
@@ -793,7 +448,7 @@ public abstract class SQLCDB : ICDB
     /// The name of the column (in most tables) that contains the file contents.
     /// The type is <see cref="DbType.Binary"/>.
     /// </summary>
-    protected abstract string ContentColumnName
+    public abstract string ContentColumnName
     {
         get;
     }
@@ -812,7 +467,7 @@ public abstract class SQLCDB : ICDB
     /// </remarks>
     /// <param name="dbCommand">The command to create the parameter for.</param>
     /// <seealso cref="SetCdbParameter(DbCommand)"/>
-    private void CreateAndAttachCdbParameter(DbCommand dbCommand)
+    public void CreateAndAttachCdbParameter(DbCommand dbCommand)
     {
         CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
     }
@@ -832,7 +487,7 @@ public abstract class SQLCDB : ICDB
     /// </remarks>
     /// <param name="dbCommand">The prepared statement to set the parameter for.</param>
     /// <seealso cref="CreateAndAttachCdbParameter(DbCommand)"/>
-    private void SetCdbParameter(DbCommand dbCommand)
+    public void SetCdbParameter(DbCommand dbCommand)
     {
         dbCommand.Parameters[CdbParamName].Value = Name;
     }
@@ -848,7 +503,7 @@ public abstract class SQLCDB : ICDB
     /// </remarks>
     /// <param name="dbCommand">The command to create the parameter for.</param>
     /// <seealso cref="SetContentParameter(DbCommand, Stream)"/>
-    private void CreateAndAttachContentParameter(DbCommand dbCommand)
+    public void CreateAndAttachContentParameter(DbCommand dbCommand)
     {
         CreateAndAttachParameter(dbCommand, ContentParamName, DbType.Binary);
     }
@@ -866,7 +521,7 @@ public abstract class SQLCDB : ICDB
     /// <param name="dbCommand">The prepared statement to set the parameter for.</param>
     /// <param name="content">The file contents.</param>
     /// <seealso cref="CreateAndAttachContentParameter(DbCommand)"/>
-    protected virtual void SetContentParameter(DbCommand dbCommand, Stream content)
+    public virtual void SetContentParameter(DbCommand dbCommand, Stream content)
     {
         dbCommand.Parameters[ContentParamName].Value = content;
     }
@@ -882,7 +537,7 @@ public abstract class SQLCDB : ICDB
     /// The name of the column is <see cref="CDBNameColumnName"/>.
     /// </para>
     /// </remarks>
-    protected abstract string CreateTableCDBStatement
+    public abstract string CreateTableCDBStatement
     {
         get;
     }
@@ -901,7 +556,7 @@ public abstract class SQLCDB : ICDB
     ///   <item><description><see cref="CDBNameColumnName"/></description></item>
     /// </list>
     /// </remarks>
-    protected abstract string SelectFromCDBStatement
+    public abstract string SelectFromCDBStatement
     {
         get;
     }
@@ -1006,7 +661,7 @@ public abstract class SQLCDB : ICDB
     ///   <item><description><see cref="CdbParamName"/></description></item>
     /// </list>
     /// </remarks>
-    protected abstract string InsertIntoCDBStatement
+    public abstract string InsertIntoCDBStatement
     {
         get;
     }
@@ -1100,41 +755,9 @@ public abstract class SQLCDB : ICDB
     #region Metadata
 
     /// <summary>
-    /// A table accessor for type <see cref="Metadata"/>.
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    ///   <listheader><term><see cref="Metadata"/> Property</term><description>SQL Statement Parameter</description></listheader>
-    ///   <item><term><see cref="Metadata.Name"/></term><description><see cref="MetadataNameParamName"/></description></item>
-    ///   <item><term><see cref="Metadata.FileType"/></term><description><see cref="FileTypeParamName"/></description></item>
-    /// </list>
-    /// </remarks>
-    private class MetadataTableAccessor : TableAccessor<Metadata>
-    {
-        internal MetadataTableAccessor(SQLCDB sqlCDB)
-            : base(sqlCDB, sqlCDB.SelectFromMetadataStatement, sqlCDB.InsertIntoMetadataStatement)
-        {
-        }
-
-        /// <inheritdoc/>
-        internal override void CreateAndAttachObjectParameter(DbCommand dbCommand)
-        {
-            CreateAndAttachParameter(dbCommand, sqlCDB.MetadataNameParamName, DbType.String);
-            CreateAndAttachParameter(dbCommand, sqlCDB.FileTypeParamName, DbType.String);
-        }
-
-        /// <inheritdoc/>
-        internal override void SetObjectParameters(DbCommand dbCommand, Metadata obj)
-        {
-            dbCommand.Parameters[sqlCDB.MetadataNameParamName].Value = obj.Name;
-            dbCommand.Parameters[sqlCDB.FileTypeParamName].Value = obj.FileType;
-        }
-    }
-
-    /// <summary>
     /// The SQL DDL statement to create the Metadata table.
     /// </summary>
-    protected abstract string CreateTableMetadataStatement
+    public abstract string CreateTableMetadataStatement
     {
         get;
     }
@@ -1156,7 +779,7 @@ public abstract class SQLCDB : ICDB
     ///   <item><description><see cref="ContentColumnName"/></description></item>
     /// </list>
     /// </remarks>
-    protected abstract string SelectFromMetadataStatement
+    public abstract string SelectFromMetadataStatement
     {
         get;
     }
@@ -1189,7 +812,7 @@ public abstract class SQLCDB : ICDB
     ///   <item><description><see cref="ContentParamName"/></description></item>
     /// </list>
     /// </remarks>
-    protected abstract string InsertIntoMetadataStatement
+    public abstract string InsertIntoMetadataStatement
     {
         get;
     }
@@ -1213,50 +836,9 @@ public abstract class SQLCDB : ICDB
     #region Texture
 
     /// <summary>
-    /// A table accessor for type <see cref="Texture"/>.
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    ///   <listheader><term><see cref="Texture"/> Property</term><description>SQL Statement Parameter</description></listheader>
-    ///   <item><term><see cref="Texture.Dataset"/></term><description><see cref="DatasetParamName"/></description></item>
-    ///   <item><term><see cref="Texture.ComponentSelector1"/></term><description><see cref="ComponentSelector1ParamName"/></description></item>
-    ///   <item><term><see cref="Texture.ComponentSelector2"/></term><description><see cref="ComponentSelector2ParamName"/></description></item>
-    ///   <item><term><see cref="Texture.Name"/></term><description><see cref="TextureNameParamName"/></description></item>
-    ///   <item><term><see cref="Texture.FileType"/></term><description><see cref="FileTypeParamName"/></description></item>
-    /// </list>
-    /// </remarks>
-    private class TextureTableAccessor : TableAccessor<Texture>
-    {
-        internal TextureTableAccessor(SQLCDB sqlCDB)
-            : base(sqlCDB, sqlCDB.SelectFromTextureStatement, sqlCDB.InsertIntoTextureStatement)
-        {
-        }
-
-        /// <inheritdoc/>
-        internal override void CreateAndAttachObjectParameter(DbCommand dbCommand)
-        {
-            CreateAndAttachParameter(dbCommand, sqlCDB.DatasetParamName, DbType.Int32);
-            CreateAndAttachParameter(dbCommand, sqlCDB.ComponentSelector1ParamName, DbType.Int32);
-            CreateAndAttachParameter(dbCommand, sqlCDB.ComponentSelector2ParamName, DbType.Int32);
-            CreateAndAttachParameter(dbCommand, sqlCDB.TextureNameParamName, DbType.String);
-            CreateAndAttachParameter(dbCommand, sqlCDB.FileTypeParamName, DbType.String);
-        }
-
-        /// <inheritdoc/>
-        internal override void SetObjectParameters(DbCommand dbCommand, Texture obj)
-        {
-            dbCommand.Parameters[sqlCDB.DatasetParamName].Value = obj.Dataset.Value;
-            dbCommand.Parameters[sqlCDB.ComponentSelector1ParamName].Value = obj.ComponentSelector1;
-            dbCommand.Parameters[sqlCDB.ComponentSelector2ParamName].Value = obj.ComponentSelector2;
-            dbCommand.Parameters[sqlCDB.TextureNameParamName].Value = obj.Name;
-            dbCommand.Parameters[sqlCDB.FileTypeParamName].Value = obj.FileType;
-        }
-    }
-
-    /// <summary>
     /// The SQL DDL statement to create the Texture table.
     /// </summary>
-    protected abstract string CreateTableTextureStatement
+    public abstract string CreateTableTextureStatement
     {
         get;
     }
@@ -1281,7 +863,7 @@ public abstract class SQLCDB : ICDB
     ///   <item><description><see cref="ContentColumnName"/></description></item>
     /// </list>
     /// </remarks>
-    protected abstract string SelectFromTextureStatement
+    public abstract string SelectFromTextureStatement
     {
         get;
     }
@@ -1317,7 +899,7 @@ public abstract class SQLCDB : ICDB
     ///   <item><description><see cref="ContentParamName"/></description></item>
     /// </list>
     /// </remarks>
-    protected abstract string InsertIntoTextureStatement
+    public abstract string InsertIntoTextureStatement
     {
         get;
     }
@@ -1341,53 +923,9 @@ public abstract class SQLCDB : ICDB
     #region Texture LOD
 
     /// <summary>
-    /// A table accessor for type <see cref="TextureLod"/>.
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    ///   <listheader><term><see cref="TextureLod"/> Property</term><description>SQL Statement Parameter</description></listheader>
-    ///   <item><term><see cref="TextureLod.Dataset"/></term><description><see cref="DatasetParamName"/></description></item>
-    ///   <item><term><see cref="TextureLod.ComponentSelector1"/></term><description><see cref="ComponentSelector1ParamName"/></description></item>
-    ///   <item><term><see cref="TextureLod.ComponentSelector2"/></term><description><see cref="ComponentSelector2ParamName"/></description></item>
-    ///   <item><term><see cref="TextureLod.LevelOfDetail"/></term><description><see cref="LevelOfDetailParamName"/></description></item>
-    ///   <item><term><see cref="TextureLod.Name"/></term><description><see cref="TextureNameParamName"/></description></item>
-    ///   <item><term><see cref="TextureLod.FileType"/></term><description><see cref="FileTypeParamName"/></description></item>
-    /// </list>
-    /// </remarks>
-    private class TextureLodTableAccessor : TableAccessor<TextureLod>
-    {
-        internal TextureLodTableAccessor(SQLCDB sqlCDB)
-            : base(sqlCDB, sqlCDB.SelectFromTextureLodStatement, sqlCDB.InsertIntoTextureLodStatement)
-        {
-        }
-
-        /// <inheritdoc/>
-        internal override void CreateAndAttachObjectParameter(DbCommand dbCommand)
-        {
-            CreateAndAttachParameter(dbCommand, sqlCDB.DatasetParamName, DbType.Int32);
-            CreateAndAttachParameter(dbCommand, sqlCDB.ComponentSelector1ParamName, DbType.Int32);
-            CreateAndAttachParameter(dbCommand, sqlCDB.ComponentSelector2ParamName, DbType.Int32);
-            CreateAndAttachParameter(dbCommand, sqlCDB.LevelOfDetailParamName, DbType.Int32);
-            CreateAndAttachParameter(dbCommand, sqlCDB.TextureNameParamName, DbType.String);
-            CreateAndAttachParameter(dbCommand, sqlCDB.FileTypeParamName, DbType.String);
-        }
-
-        /// <inheritdoc/>
-        internal override void SetObjectParameters(DbCommand dbCommand, TextureLod obj)
-        {
-            dbCommand.Parameters[sqlCDB.DatasetParamName].Value = obj.Dataset.Value;
-            dbCommand.Parameters[sqlCDB.ComponentSelector1ParamName].Value = obj.ComponentSelector1;
-            dbCommand.Parameters[sqlCDB.ComponentSelector2ParamName].Value = obj.ComponentSelector2;
-            dbCommand.Parameters[sqlCDB.LevelOfDetailParamName].Value = obj.LevelOfDetail.Value;
-            dbCommand.Parameters[sqlCDB.TextureNameParamName].Value = obj.Name;
-            dbCommand.Parameters[sqlCDB.FileTypeParamName].Value = obj.FileType;
-        }
-    }
-
-    /// <summary>
     /// The SQL DDL statement to create the Texture Level of Detail table.
     /// </summary>
-    protected abstract string CreateTableTextureLodStatement
+    public abstract string CreateTableTextureLodStatement
     {
         get;
     }
@@ -1413,7 +951,7 @@ public abstract class SQLCDB : ICDB
     ///   <item><description><see cref="ContentColumnName"/></description></item>
     /// </list>
     /// </remarks>
-    protected abstract string SelectFromTextureLodStatement
+    public abstract string SelectFromTextureLodStatement
     {
         get;
     }
@@ -1450,7 +988,7 @@ public abstract class SQLCDB : ICDB
     ///   <item><description><see cref="ContentParamName"/></description></item>
     /// </list>
     /// </remarks>
-    protected abstract string InsertIntoTextureLodStatement
+    public abstract string InsertIntoTextureLodStatement
     {
         get;
     }
@@ -1474,62 +1012,9 @@ public abstract class SQLCDB : ICDB
     #region Geotypical Model
 
     /// <summary>
-    /// A table accessor for type <see cref="GeotypicalModel"/>.
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    ///   <listheader><term><see cref="GeotypicalModel"/> Property</term><description>SQL Statement Parameter</description></listheader>
-    ///   <item><term><see cref="GeotypicalModel.Dataset"/></term><description><see cref="DatasetParamName"/></description></item>
-    ///   <item><term><see cref="GeotypicalModel.ComponentSelector1"/></term><description><see cref="ComponentSelector1ParamName"/></description></item>
-    ///   <item><term><see cref="GeotypicalModel.ComponentSelector2"/></term><description><see cref="ComponentSelector2ParamName"/></description></item>
-    ///   <item><term><see cref="GeotypicalModel.FeatureCode"/> <see cref="FeatureCode.Category"/></term><description><see cref="FeatureCategoryParamName"/></description></item>
-    ///   <item><term><see cref="GeotypicalModel.FeatureCode"/> <see cref="FeatureCode.Subcategory"/></term><description><see cref="FeatureSubcategoryParamName"/></description></item>
-    ///   <item><term><see cref="GeotypicalModel.FeatureCode"/> <see cref="FeatureCode.Type"/></term><description><see cref="FeatureTypeParamName"/></description></item>
-    ///   <item><term><see cref="GeotypicalModel.FeatureSubcode"/></term><description><see cref="FeatureSubcodeParamName"/></description></item>
-    ///   <item><term><see cref="GeotypicalModel.Name"/></term><description><see cref="ModelNameParamName"/></description></item>
-    ///   <item><term><see cref="GeotypicalModel.FileType"/></term><description><see cref="FileTypeParamName"/></description></item>
-    /// </list>
-    /// </remarks>
-    private class GeotypicalModelTableAccessor : TableAccessor<GeotypicalModel>
-    {
-        internal GeotypicalModelTableAccessor(SQLCDB sqlCDB)
-            : base(sqlCDB, sqlCDB.SelectFromGeotypicalModelStatement, sqlCDB.InsertIntoGeotypicalModelStatement)
-        {
-        }
-
-        /// <inheritdoc/>
-        internal override void CreateAndAttachObjectParameter(DbCommand dbCommand)
-        {
-            CreateAndAttachParameter(dbCommand, sqlCDB.DatasetParamName, DbType.Int32);
-            CreateAndAttachParameter(dbCommand, sqlCDB.ComponentSelector1ParamName, DbType.Int32);
-            CreateAndAttachParameter(dbCommand, sqlCDB.ComponentSelector2ParamName, DbType.Int32);
-            CreateAndAttachParameter(dbCommand, sqlCDB.FeatureCategoryParamName, DbType.String);
-            CreateAndAttachParameter(dbCommand, sqlCDB.FeatureSubcategoryParamName, DbType.String);
-            CreateAndAttachParameter(dbCommand, sqlCDB.FeatureTypeParamName, DbType.Int32);
-            CreateAndAttachParameter(dbCommand, sqlCDB.FeatureSubcodeParamName, DbType.Int32);
-            CreateAndAttachParameter(dbCommand, sqlCDB.ModelNameParamName, DbType.String);
-            CreateAndAttachParameter(dbCommand, sqlCDB.FileTypeParamName, DbType.String);
-        }
-
-        /// <inheritdoc/>
-        internal override void SetObjectParameters(DbCommand dbCommand, GeotypicalModel obj)
-        {
-            dbCommand.Parameters[sqlCDB.DatasetParamName].Value = obj.Dataset.Value;
-            dbCommand.Parameters[sqlCDB.ComponentSelector1ParamName].Value = obj.ComponentSelector1;
-            dbCommand.Parameters[sqlCDB.ComponentSelector2ParamName].Value = obj.ComponentSelector2;
-            dbCommand.Parameters[sqlCDB.FeatureCategoryParamName].Value = obj.FeatureCode.Category;
-            dbCommand.Parameters[sqlCDB.FeatureSubcategoryParamName].Value = obj.FeatureCode.Subcategory;
-            dbCommand.Parameters[sqlCDB.FeatureTypeParamName].Value = obj.FeatureCode.Type;
-            dbCommand.Parameters[sqlCDB.FeatureSubcodeParamName].Value = obj.FeatureSubcode;
-            dbCommand.Parameters[sqlCDB.ModelNameParamName].Value = obj.Name;
-            dbCommand.Parameters[sqlCDB.FileTypeParamName].Value = obj.FileType;
-        }
-    }
-
-    /// <summary>
     /// The SQL DDL statement to create the Geotypical Model table.
     /// </summary>
-    protected abstract string CreateTableGeotypicalModelStatement
+    public abstract string CreateTableGeotypicalModelStatement
     {
         get;
     }
@@ -1558,7 +1043,7 @@ public abstract class SQLCDB : ICDB
     ///   <item><description><see cref="ContentColumnName"/></description></item>
     /// </list>
     /// </remarks>
-    protected abstract string SelectFromGeotypicalModelStatement
+    public abstract string SelectFromGeotypicalModelStatement
     {
         get;
     }
@@ -1598,7 +1083,7 @@ public abstract class SQLCDB : ICDB
     ///   <item><description><see cref="ContentParamName"/></description></item>
     /// </list>
     /// </remarks>
-    protected abstract string InsertIntoGeotypicalModelStatement
+    public abstract string InsertIntoGeotypicalModelStatement
     {
         get;
     }
@@ -1622,65 +1107,9 @@ public abstract class SQLCDB : ICDB
     #region Geotypical Model LOD
 
     /// <summary>
-    /// A table accessor for type <see cref="GeotypicalModelLod"/>.
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    ///   <listheader><term><see cref="GeotypicalModelLod"/> Property</term><description>SQL Statement Parameter</description></listheader>
-    ///   <item><term><see cref="GeotypicalModelLod.Dataset"/></term><description><see cref="DatasetParamName"/></description></item>
-    ///   <item><term><see cref="GeotypicalModelLod.ComponentSelector1"/></term><description><see cref="ComponentSelector1ParamName"/></description></item>
-    ///   <item><term><see cref="GeotypicalModelLod.ComponentSelector2"/></term><description><see cref="ComponentSelector2ParamName"/></description></item>
-    ///   <item><term><see cref="GeotypicalModelLod.LevelOfDetail"/></term><description><see cref="LevelOfDetailParamName"/></description></item>
-    ///   <item><term><see cref="GeotypicalModelLod.FeatureCode"/> <see cref="FeatureCode.Category"/></term><description><see cref="FeatureCategoryParamName"/></description></item>
-    ///   <item><term><see cref="GeotypicalModelLod.FeatureCode"/> <see cref="FeatureCode.Subcategory"/></term><description><see cref="FeatureSubcategoryParamName"/></description></item>
-    ///   <item><term><see cref="GeotypicalModelLod.FeatureCode"/> <see cref="FeatureCode.Type"/></term><description><see cref="FeatureTypeParamName"/></description></item>
-    ///   <item><term><see cref="GeotypicalModelLod.FeatureSubcode"/></term><description><see cref="FeatureSubcodeParamName"/></description></item>
-    ///   <item><term><see cref="GeotypicalModelLod.Name"/></term><description><see cref="ModelNameParamName"/></description></item>
-    ///   <item><term><see cref="GeotypicalModelLod.FileType"/></term><description><see cref="FileTypeParamName"/></description></item>
-    /// </list>
-    /// </remarks>
-    private class GeotypicalModelLodTableAccessor : TableAccessor<GeotypicalModelLod>
-    {
-        internal GeotypicalModelLodTableAccessor(SQLCDB sqlCDB)
-            : base(sqlCDB, sqlCDB.SelectFromGeotypicalModelLodStatement, sqlCDB.InsertIntoGeotypicalModelLodStatement)
-        {
-        }
-
-        /// <inheritdoc/>
-        internal override void CreateAndAttachObjectParameter(DbCommand dbCommand)
-        {
-            CreateAndAttachParameter(dbCommand, sqlCDB.DatasetParamName, DbType.Int32);
-            CreateAndAttachParameter(dbCommand, sqlCDB.ComponentSelector1ParamName, DbType.Int32);
-            CreateAndAttachParameter(dbCommand, sqlCDB.ComponentSelector2ParamName, DbType.Int32);
-            CreateAndAttachParameter(dbCommand, sqlCDB.LevelOfDetailParamName, DbType.Int32);
-            CreateAndAttachParameter(dbCommand, sqlCDB.FeatureCategoryParamName, DbType.String);
-            CreateAndAttachParameter(dbCommand, sqlCDB.FeatureSubcategoryParamName, DbType.String);
-            CreateAndAttachParameter(dbCommand, sqlCDB.FeatureTypeParamName, DbType.Int32);
-            CreateAndAttachParameter(dbCommand, sqlCDB.FeatureSubcodeParamName, DbType.Int32);
-            CreateAndAttachParameter(dbCommand, sqlCDB.ModelNameParamName, DbType.String);
-            CreateAndAttachParameter(dbCommand, sqlCDB.FileTypeParamName, DbType.String);
-        }
-
-        /// <inheritdoc/>
-        internal override void SetObjectParameters(DbCommand dbCommand, GeotypicalModelLod obj)
-        {
-            dbCommand.Parameters[sqlCDB.DatasetParamName].Value = obj.Dataset.Value;
-            dbCommand.Parameters[sqlCDB.ComponentSelector1ParamName].Value = obj.ComponentSelector1;
-            dbCommand.Parameters[sqlCDB.ComponentSelector2ParamName].Value = obj.ComponentSelector2;
-            dbCommand.Parameters[sqlCDB.LevelOfDetailParamName].Value = obj.LevelOfDetail.Value;
-            dbCommand.Parameters[sqlCDB.FeatureCategoryParamName].Value = obj.FeatureCode.Category;
-            dbCommand.Parameters[sqlCDB.FeatureSubcategoryParamName].Value = obj.FeatureCode.Subcategory;
-            dbCommand.Parameters[sqlCDB.FeatureTypeParamName].Value = obj.FeatureCode.Type;
-            dbCommand.Parameters[sqlCDB.FeatureSubcodeParamName].Value = obj.FeatureSubcode;
-            dbCommand.Parameters[sqlCDB.ModelNameParamName].Value = obj.Name;
-            dbCommand.Parameters[sqlCDB.FileTypeParamName].Value = obj.FileType;
-        }
-    }
-
-    /// <summary>
     /// The SQL DDL statement to create the Geotypical Model Level of Detail table.
     /// </summary>
-    protected abstract string CreateTableGeotypicalModelLodStatement
+    public abstract string CreateTableGeotypicalModelLodStatement
     {
         get;
     }
@@ -1710,7 +1139,7 @@ public abstract class SQLCDB : ICDB
     ///   <item><description><see cref="ContentColumnName"/></description></item>
     /// </list>
     /// </remarks>
-    protected abstract string SelectFromGeotypicalModelLodStatement
+    public abstract string SelectFromGeotypicalModelLodStatement
     {
         get;
     }
@@ -1751,7 +1180,7 @@ public abstract class SQLCDB : ICDB
     ///   <item><description><see cref="ContentParamName"/></description></item>
     /// </list>
     /// </remarks>
-    protected abstract string InsertIntoGeotypicalModelLodStatement
+    public abstract string InsertIntoGeotypicalModelLodStatement
     {
         get;
     }
@@ -1775,68 +1204,9 @@ public abstract class SQLCDB : ICDB
     #region Moving Model
 
     /// <summary>
-    /// A table accessor for type <see cref="MovingModel"/>.
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    ///   <listheader><term><see cref="MovingModel"/> Property</term><description>SQL Statement Parameter</description></listheader>
-    ///   <item><term><see cref="MovingModel.Dataset"/></term><description><see cref="DatasetParamName"/></description></item>
-    ///   <item><term><see cref="MovingModel.ComponentSelector1"/></term><description><see cref="ComponentSelector1ParamName"/></description></item>
-    ///   <item><term><see cref="MovingModel.ComponentSelector2"/></term><description><see cref="ComponentSelector2ParamName"/></description></item>
-    ///   <item><term><see cref="MovingModel.MMDC"/> <see cref="DISEntity.Kind"/></term><description><see cref="DISKindParamName"/></description></item>
-    ///   <item><term><see cref="MovingModel.MMDC"/> <see cref="DISEntity.Domain"/></term><description><see cref="DISDomainParamName"/></description></item>
-    ///   <item><term><see cref="MovingModel.MMDC"/> <see cref="DISEntity.Country"/></term><description><see cref="DISCountryParamName"/></description></item>
-    ///   <item><term><see cref="MovingModel.MMDC"/> <see cref="DISEntity.Category"/></term><description><see cref="DISCategoryParamName"/></description></item>
-    ///   <item><term><see cref="MovingModel.MMDC"/> <see cref="DISEntity.Subcategory"/></term><description><see cref="DISSubcategoryParamName"/></description></item>
-    ///   <item><term><see cref="MovingModel.MMDC"/> <see cref="DISEntity.Specific"/></term><description><see cref="DISSpecificParamName"/></description></item>
-    ///   <item><term><see cref="MovingModel.MMDC"/> <see cref="DISEntity.Extra"/></term><description><see cref="DISExtraParamName"/></description></item>
-    ///   <item><term><see cref="MovingModel.FileType"/></term><description><see cref="FileTypeParamName"/></description></item>
-    /// </list>
-    /// </remarks>
-    private class MovingModelTableAccessor : TableAccessor<MovingModel>
-    {
-        internal MovingModelTableAccessor(SQLCDB sqlCDB)
-            : base(sqlCDB, sqlCDB.SelectFromMovingModelStatement, sqlCDB.InsertIntoMovingModelStatement)
-        {
-        }
-
-        /// <inheritdoc/>
-        internal override void CreateAndAttachObjectParameter(DbCommand dbCommand)
-        {
-            CreateAndAttachParameter(dbCommand, sqlCDB.DatasetParamName, DbType.Int32);
-            CreateAndAttachParameter(dbCommand, sqlCDB.ComponentSelector1ParamName, DbType.Int32);
-            CreateAndAttachParameter(dbCommand, sqlCDB.ComponentSelector2ParamName, DbType.Int32);
-            CreateAndAttachParameter(dbCommand, sqlCDB.DISKindParamName, DbType.Int32);
-            CreateAndAttachParameter(dbCommand, sqlCDB.DISDomainParamName, DbType.Int32);
-            CreateAndAttachParameter(dbCommand, sqlCDB.DISCountryParamName, DbType.Int32);
-            CreateAndAttachParameter(dbCommand, sqlCDB.DISCategoryParamName, DbType.Int32);
-            CreateAndAttachParameter(dbCommand, sqlCDB.DISSubcategoryParamName, DbType.Int32);
-            CreateAndAttachParameter(dbCommand, sqlCDB.DISSpecificParamName, DbType.Int32);
-            CreateAndAttachParameter(dbCommand, sqlCDB.DISExtraParamName, DbType.Int32);
-            CreateAndAttachParameter(dbCommand, sqlCDB.FileTypeParamName, DbType.String);
-        }
-
-        /// <inheritdoc/>
-        internal override void SetObjectParameters(DbCommand dbCommand, MovingModel obj)
-        {
-            dbCommand.Parameters[sqlCDB.DatasetParamName].Value = obj.Dataset.Value;
-            dbCommand.Parameters[sqlCDB.ComponentSelector1ParamName].Value = obj.ComponentSelector1;
-            dbCommand.Parameters[sqlCDB.ComponentSelector2ParamName].Value = obj.ComponentSelector2;
-            dbCommand.Parameters[sqlCDB.DISKindParamName].Value = obj.MMDC.Kind;
-            dbCommand.Parameters[sqlCDB.DISDomainParamName].Value = obj.MMDC.Domain;
-            dbCommand.Parameters[sqlCDB.DISCountryParamName].Value = obj.MMDC.Country;
-            dbCommand.Parameters[sqlCDB.DISCategoryParamName].Value = obj.MMDC.Category;
-            dbCommand.Parameters[sqlCDB.DISSubcategoryParamName].Value = obj.MMDC.Subcategory;
-            dbCommand.Parameters[sqlCDB.DISSpecificParamName].Value = obj.MMDC.Specific;
-            dbCommand.Parameters[sqlCDB.DISExtraParamName].Value = obj.MMDC.Extra;
-            dbCommand.Parameters[sqlCDB.FileTypeParamName].Value = obj.FileType;
-        }
-    }
-
-    /// <summary>
     /// The SQL DDL statement to create the Moving Model table.
     /// </summary>
-    protected abstract string CreateTableMovingModelStatement
+    public abstract string CreateTableMovingModelStatement
     {
         get;
     }
@@ -1867,7 +1237,7 @@ public abstract class SQLCDB : ICDB
     ///   <item><description><see cref="ContentColumnName"/></description></item>
     /// </list>
     /// </remarks>
-    protected abstract string SelectFromMovingModelStatement
+    public abstract string SelectFromMovingModelStatement
     {
         get;
     }
@@ -1909,7 +1279,7 @@ public abstract class SQLCDB : ICDB
     ///   <item><description><see cref="ContentParamName"/></description></item>
     /// </list>
     /// </remarks>
-    protected abstract string InsertIntoMovingModelStatement
+    public abstract string InsertIntoMovingModelStatement
     {
         get;
     }
@@ -1933,71 +1303,9 @@ public abstract class SQLCDB : ICDB
     #region Moving Model LOD
 
     /// <summary>
-    /// A table accessor for type <see cref="MovingModelLod"/>.
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    ///   <listheader><term><see cref="MovingModelLod"/> Property</term><description>SQL Statement Parameter</description></listheader>
-    ///   <item><term><see cref="MovingModelLod.Dataset"/></term><description><see cref="DatasetParamName"/></description></item>
-    ///   <item><term><see cref="MovingModelLod.ComponentSelector1"/></term><description><see cref="ComponentSelector1ParamName"/></description></item>
-    ///   <item><term><see cref="MovingModelLod.ComponentSelector2"/></term><description><see cref="ComponentSelector2ParamName"/></description></item>
-    ///   <item><term><see cref="MovingModelLod.LevelOfDetail"/></term><description><see cref="LevelOfDetailParamName"/></description></item>
-    ///   <item><term><see cref="MovingModelLod.MMDC"/> <see cref="DISEntity.Kind"/></term><description><see cref="DISKindParamName"/></description></item>
-    ///   <item><term><see cref="MovingModelLod.MMDC"/> <see cref="DISEntity.Domain"/></term><description><see cref="DISDomainParamName"/></description></item>
-    ///   <item><term><see cref="MovingModelLod.MMDC"/> <see cref="DISEntity.Country"/></term><description><see cref="DISCountryParamName"/></description></item>
-    ///   <item><term><see cref="MovingModelLod.MMDC"/> <see cref="DISEntity.Category"/></term><description><see cref="DISCategoryParamName"/></description></item>
-    ///   <item><term><see cref="MovingModelLod.MMDC"/> <see cref="DISEntity.Subcategory"/></term><description><see cref="DISSubcategoryParamName"/></description></item>
-    ///   <item><term><see cref="MovingModelLod.MMDC"/> <see cref="DISEntity.Specific"/></term><description><see cref="DISSpecificParamName"/></description></item>
-    ///   <item><term><see cref="MovingModelLod.MMDC"/> <see cref="DISEntity.Extra"/></term><description><see cref="DISExtraParamName"/></description></item>
-    ///   <item><term><see cref="MovingModelLod.FileType"/></term><description><see cref="FileTypeParamName"/></description></item>
-    /// </list>
-    /// </remarks>
-    private class MovingModelLodTableAccessor : TableAccessor<MovingModelLod>
-    {
-        internal MovingModelLodTableAccessor(SQLCDB sqlCDB)
-            : base(sqlCDB, sqlCDB.SelectFromMovingModelLodStatement, sqlCDB.InsertIntoMovingModelLodStatement)
-        {
-        }
-
-        /// <inheritdoc/>
-        internal override void CreateAndAttachObjectParameter(DbCommand dbCommand)
-        {
-            CreateAndAttachParameter(dbCommand, sqlCDB.DatasetParamName, DbType.Int32);
-            CreateAndAttachParameter(dbCommand, sqlCDB.ComponentSelector1ParamName, DbType.Int32);
-            CreateAndAttachParameter(dbCommand, sqlCDB.ComponentSelector2ParamName, DbType.Int32);
-            CreateAndAttachParameter(dbCommand, sqlCDB.LevelOfDetailParamName, DbType.Int32);
-            CreateAndAttachParameter(dbCommand, sqlCDB.DISKindParamName, DbType.Int32);
-            CreateAndAttachParameter(dbCommand, sqlCDB.DISDomainParamName, DbType.Int32);
-            CreateAndAttachParameter(dbCommand, sqlCDB.DISCountryParamName, DbType.Int32);
-            CreateAndAttachParameter(dbCommand, sqlCDB.DISCategoryParamName, DbType.Int32);
-            CreateAndAttachParameter(dbCommand, sqlCDB.DISSubcategoryParamName, DbType.Int32);
-            CreateAndAttachParameter(dbCommand, sqlCDB.DISSpecificParamName, DbType.Int32);
-            CreateAndAttachParameter(dbCommand, sqlCDB.DISExtraParamName, DbType.Int32);
-            CreateAndAttachParameter(dbCommand, sqlCDB.FileTypeParamName, DbType.String);
-        }
-
-        /// <inheritdoc/>
-        internal override void SetObjectParameters(DbCommand dbCommand, MovingModelLod obj)
-        {
-            dbCommand.Parameters[sqlCDB.DatasetParamName].Value = obj.Dataset.Value;
-            dbCommand.Parameters[sqlCDB.ComponentSelector1ParamName].Value = obj.ComponentSelector1;
-            dbCommand.Parameters[sqlCDB.ComponentSelector2ParamName].Value = obj.ComponentSelector2;
-            dbCommand.Parameters[sqlCDB.LevelOfDetailParamName].Value = obj.LevelOfDetail.Value;
-            dbCommand.Parameters[sqlCDB.DISKindParamName].Value = obj.MMDC.Kind;
-            dbCommand.Parameters[sqlCDB.DISDomainParamName].Value = obj.MMDC.Domain;
-            dbCommand.Parameters[sqlCDB.DISCountryParamName].Value = obj.MMDC.Country;
-            dbCommand.Parameters[sqlCDB.DISCategoryParamName].Value = obj.MMDC.Category;
-            dbCommand.Parameters[sqlCDB.DISSubcategoryParamName].Value = obj.MMDC.Subcategory;
-            dbCommand.Parameters[sqlCDB.DISSpecificParamName].Value = obj.MMDC.Specific;
-            dbCommand.Parameters[sqlCDB.DISExtraParamName].Value = obj.MMDC.Extra;
-            dbCommand.Parameters[sqlCDB.FileTypeParamName].Value = obj.FileType;
-        }
-    }
-
-    /// <summary>
     /// The SQL DDL statement to create the Moving Model Level of Detail table.
     /// </summary>
-    protected abstract string CreateTableMovingModelLodStatement
+    public abstract string CreateTableMovingModelLodStatement
     {
         get;
     }
@@ -2029,7 +1337,7 @@ public abstract class SQLCDB : ICDB
     ///   <item><description><see cref="ContentColumnName"/></description></item>
     /// </list>
     /// </remarks>
-    protected abstract string SelectFromMovingModelLodStatement
+    public abstract string SelectFromMovingModelLodStatement
     {
         get;
     }
@@ -2072,7 +1380,7 @@ public abstract class SQLCDB : ICDB
     ///   <item><description><see cref="ContentParamName"/></description></item>
     /// </list>
     /// </remarks>
-    protected abstract string InsertIntoMovingModelLodStatement
+    public abstract string InsertIntoMovingModelLodStatement
     {
         get;
     }
@@ -2096,62 +1404,9 @@ public abstract class SQLCDB : ICDB
     #region Tile
 
     /// <summary>
-    /// A table accessor for type <see cref="Tile"/>.
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    ///   <listheader><term><see cref="Tile"/> Property</term><description>SQL Statement Parameter</description></listheader>
-    ///   <item><term><see cref="Tile.LatitudeValue"/></term><description><see cref="LatitudeParamName"/></description></item>
-    ///   <item><term><see cref="Tile.LongitudeValue"/></term><description><see cref="LongitudeParamName"/></description></item>
-    ///   <item><term><see cref="Tile.DatasetValue"/></term><description><see cref="DatasetParamName"/></description></item>
-    ///   <item><term><see cref="Tile.ComponentSelector1"/></term><description><see cref="ComponentSelector1ParamName"/></description></item>
-    ///   <item><term><see cref="Tile.ComponentSelector2"/></term><description><see cref="ComponentSelector2ParamName"/></description></item>
-    ///   <item><term><see cref="Tile.Level"/></term><description><see cref="LevelOfDetailParamName"/></description></item>
-    ///   <item><term><see cref="Tile.Up"/></term><description><see cref="UpParamName"/></description></item>
-    ///   <item><term><see cref="Tile.Right"/></term><description><see cref="RightParamName"/></description></item>
-    ///   <item><term><see cref="Tile.FileType"/></term><description><see cref="FileTypeParamName"/></description></item>
-    /// </list>
-    /// </remarks>
-    private class TileTableAccessor : TableAccessor<Tile>
-    {
-        internal TileTableAccessor(SQLCDB sqlCDB)
-            : base(sqlCDB, sqlCDB.SelectFromTileStatement, sqlCDB.InsertIntoTileStatement)
-        {
-        }
-
-        /// <inheritdoc/>
-        internal override void CreateAndAttachObjectParameter(DbCommand dbCommand)
-        {
-            CreateAndAttachParameter(dbCommand, sqlCDB.LatitudeParamName, DbType.Int32);
-            CreateAndAttachParameter(dbCommand, sqlCDB.LongitudeParamName, DbType.Int32);
-            CreateAndAttachParameter(dbCommand, sqlCDB.DatasetParamName, DbType.Int32);
-            CreateAndAttachParameter(dbCommand, sqlCDB.ComponentSelector1ParamName, DbType.Int32);
-            CreateAndAttachParameter(dbCommand, sqlCDB.ComponentSelector2ParamName, DbType.Int32);
-            CreateAndAttachParameter(dbCommand, sqlCDB.LevelOfDetailParamName, DbType.Int32);
-            CreateAndAttachParameter(dbCommand, sqlCDB.UpParamName, DbType.Int32);
-            CreateAndAttachParameter(dbCommand, sqlCDB.RightParamName, DbType.Int32);
-            CreateAndAttachParameter(dbCommand, sqlCDB.FileTypeParamName, DbType.String);
-        }
-
-        /// <inheritdoc/>
-        internal override void SetObjectParameters(DbCommand dbCommand, Tile obj)
-        {
-            dbCommand.Parameters[sqlCDB.LatitudeParamName].Value = obj.LatitudeValue.Value;
-            dbCommand.Parameters[sqlCDB.LongitudeParamName].Value = obj.LongitudeValue.Value;
-            dbCommand.Parameters[sqlCDB.DatasetParamName].Value = obj.DatasetValue.Value;
-            dbCommand.Parameters[sqlCDB.ComponentSelector1ParamName].Value = obj.ComponentSelector1;
-            dbCommand.Parameters[sqlCDB.ComponentSelector2ParamName].Value = obj.ComponentSelector2;
-            dbCommand.Parameters[sqlCDB.LevelOfDetailParamName].Value = obj.Level.Value;
-            dbCommand.Parameters[sqlCDB.UpParamName].Value = obj.Up;
-            dbCommand.Parameters[sqlCDB.RightParamName].Value = obj.Right;
-            dbCommand.Parameters[sqlCDB.FileTypeParamName].Value = obj.FileType;
-        }
-    }
-
-    /// <summary>
     /// The SQL DDL statement to create the Tile table.
     /// </summary>
-    protected abstract string CreateTableTileStatement
+    public abstract string CreateTableTileStatement
     {
         get;
     }
@@ -2180,7 +1435,7 @@ public abstract class SQLCDB : ICDB
     ///   <item><description><see cref="ContentColumnName"/></description></item>
     /// </list>
     /// </remarks>
-    protected abstract string SelectFromTileStatement
+    public abstract string SelectFromTileStatement
     {
         get;
     }
@@ -2220,7 +1475,7 @@ public abstract class SQLCDB : ICDB
     ///   <item><description><see cref="ContentParamName"/></description></item>
     /// </list>
     /// </remarks>
-    protected abstract string InsertIntoTileStatement
+    public abstract string InsertIntoTileStatement
     {
         get;
     }
@@ -2244,77 +1499,9 @@ public abstract class SQLCDB : ICDB
     #region Tile Archived Feature
 
     /// <summary>
-    /// A table accessor for type <see cref="TileArchivedFeature"/>.
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    ///   <listheader><term><see cref="TileArchivedFeature"/> Property</term><description>SQL Statement Parameter</description></listheader>
-    ///   <item><term><see cref="TileArchivedFeature.LatitudeValue"/></term><description><see cref="LatitudeParamName"/></description></item>
-    ///   <item><term><see cref="TileArchivedFeature.LongitudeValue"/></term><description><see cref="LongitudeParamName"/></description></item>
-    ///   <item><term><see cref="TileArchivedFeature.DatasetValue"/></term><description><see cref="DatasetParamName"/></description></item>
-    ///   <item><term><see cref="TileArchivedFeature.ComponentSelector1"/></term><description><see cref="ComponentSelector1ParamName"/></description></item>
-    ///   <item><term><see cref="TileArchivedFeature.ComponentSelector2"/></term><description><see cref="ComponentSelector2ParamName"/></description></item>
-    ///   <item><term><see cref="TileArchivedFeature.Level"/></term><description><see cref="LevelOfDetailParamName"/></description></item>
-    ///   <item><term><see cref="TileArchivedFeature.Up"/></term><description><see cref="UpParamName"/></description></item>
-    ///   <item><term><see cref="TileArchivedFeature.Right"/></term><description><see cref="RightParamName"/></description></item>
-    ///   <item><term><see cref="TileArchivedFeature.FeatureCode"/> <see cref="FeatureCode.Category"/></term><description><see cref="FeatureCategoryParamName"/></description></item>
-    ///   <item><term><see cref="TileArchivedFeature.FeatureCode"/> <see cref="FeatureCode.Subcategory"/></term><description><see cref="FeatureSubcategoryParamName"/></description></item>
-    ///   <item><term><see cref="TileArchivedFeature.FeatureCode"/> <see cref="FeatureCode.Type"/></term><description><see cref="FeatureTypeParamName"/></description></item>
-    ///   <item><term><see cref="TileArchivedFeature.FeatureSubcode"/></term><description><see cref="FeatureSubcodeParamName"/></description></item>
-    ///   <item><term><see cref="TileArchivedFeature.Name"/></term><description><see cref="ModelNameParamName"/></description></item>
-    ///   <item><term><see cref="TileArchivedFeature.FileType"/></term><description><see cref="FileTypeParamName"/></description></item>
-    /// </list>
-    /// </remarks>
-    private class TileArchivedFeatureTableAccessor : TableAccessor<TileArchivedFeature>
-    {
-        internal TileArchivedFeatureTableAccessor(SQLCDB sqlCDB)
-            : base(sqlCDB, sqlCDB.SelectFromTileArchivedFeatureStatement, sqlCDB.InsertIntoTileArchivedFeatureStatement)
-        {
-        }
-
-        /// <inheritdoc/>
-        internal override void CreateAndAttachObjectParameter(DbCommand dbCommand)
-        {
-            CreateAndAttachParameter(dbCommand, sqlCDB.LatitudeParamName, DbType.Int32);
-            CreateAndAttachParameter(dbCommand, sqlCDB.LongitudeParamName, DbType.Int32);
-            CreateAndAttachParameter(dbCommand, sqlCDB.DatasetParamName, DbType.Int32);
-            CreateAndAttachParameter(dbCommand, sqlCDB.ComponentSelector1ParamName, DbType.Int32);
-            CreateAndAttachParameter(dbCommand, sqlCDB.ComponentSelector2ParamName, DbType.Int32);
-            CreateAndAttachParameter(dbCommand, sqlCDB.LevelOfDetailParamName, DbType.Int32);
-            CreateAndAttachParameter(dbCommand, sqlCDB.UpParamName, DbType.Int32);
-            CreateAndAttachParameter(dbCommand, sqlCDB.RightParamName, DbType.Int32);
-            CreateAndAttachParameter(dbCommand, sqlCDB.FeatureCategoryParamName, DbType.String);
-            CreateAndAttachParameter(dbCommand, sqlCDB.FeatureSubcategoryParamName, DbType.String);
-            CreateAndAttachParameter(dbCommand, sqlCDB.FeatureTypeParamName, DbType.Int32);
-            CreateAndAttachParameter(dbCommand, sqlCDB.FeatureSubcodeParamName, DbType.Int32);
-            CreateAndAttachParameter(dbCommand, sqlCDB.ModelNameParamName, DbType.String);
-            CreateAndAttachParameter(dbCommand, sqlCDB.FileTypeParamName, DbType.String);
-        }
-
-        /// <inheritdoc/>
-        internal override void SetObjectParameters(DbCommand dbCommand, TileArchivedFeature obj)
-        {
-            dbCommand.Parameters[sqlCDB.LatitudeParamName].Value = obj.LatitudeValue.Value;
-            dbCommand.Parameters[sqlCDB.LongitudeParamName].Value = obj.LongitudeValue.Value;
-            dbCommand.Parameters[sqlCDB.DatasetParamName].Value = obj.DatasetValue.Value;
-            dbCommand.Parameters[sqlCDB.ComponentSelector1ParamName].Value = obj.ComponentSelector1;
-            dbCommand.Parameters[sqlCDB.ComponentSelector2ParamName].Value = obj.ComponentSelector2;
-            dbCommand.Parameters[sqlCDB.LevelOfDetailParamName].Value = obj.Level.Value;
-            dbCommand.Parameters[sqlCDB.UpParamName].Value = obj.Up;
-            dbCommand.Parameters[sqlCDB.RightParamName].Value = obj.Right;
-            dbCommand.Parameters[sqlCDB.FeatureCategoryParamName].Value = obj.FeatureCode.Category;
-            dbCommand.Parameters[sqlCDB.FeatureSubcategoryParamName].Value = obj.FeatureCode.Subcategory;
-            dbCommand.Parameters[sqlCDB.FeatureTypeParamName].Value = obj.FeatureCode.Type;
-            dbCommand.Parameters[sqlCDB.FeatureSubcodeParamName].Value = obj.FeatureSubcode;
-            dbCommand.Parameters[sqlCDB.ModelNameParamName].Value = obj.Name;
-            dbCommand.Parameters[sqlCDB.FileTypeParamName].Value = obj.FileType;
-        }
-    }
-
-    /// <summary>
     /// The SQL DDL statement to create the TileArchivedFeature table.
     /// </summary>
-    protected abstract string CreateTableTileArchivedFeatureStatement
+    public abstract string CreateTableTileArchivedFeatureStatement
     {
         get;
     }
@@ -2348,7 +1535,7 @@ public abstract class SQLCDB : ICDB
     ///   <item><description><see cref="ContentColumnName"/></description></item>
     /// </list>
     /// </remarks>
-    protected abstract string SelectFromTileArchivedFeatureStatement
+    public abstract string SelectFromTileArchivedFeatureStatement
     {
         get;
     }
@@ -2393,7 +1580,7 @@ public abstract class SQLCDB : ICDB
     ///   <item><description><see cref="ContentParamName"/></description></item>
     /// </list>
     /// </remarks>
-    protected abstract string InsertIntoTileArchivedFeatureStatement
+    public abstract string InsertIntoTileArchivedFeatureStatement
     {
         get;
     }
@@ -2417,65 +1604,9 @@ public abstract class SQLCDB : ICDB
     #region Tile Archived Texture
 
     /// <summary>
-    /// A table accessor for type <see cref="TileArchivedTexture"/>.
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    ///   <listheader><term><see cref="TileArchivedTexture"/> Property</term><description>SQL Statement Parameter</description></listheader>
-    ///   <item><term><see cref="TileArchivedTexture.LatitudeValue"/></term><description><see cref="LatitudeParamName"/></description></item>
-    ///   <item><term><see cref="TileArchivedTexture.LongitudeValue"/></term><description><see cref="LongitudeParamName"/></description></item>
-    ///   <item><term><see cref="TileArchivedTexture.DatasetValue"/></term><description><see cref="DatasetParamName"/></description></item>
-    ///   <item><term><see cref="TileArchivedTexture.ComponentSelector1"/></term><description><see cref="ComponentSelector1ParamName"/></description></item>
-    ///   <item><term><see cref="TileArchivedTexture.ComponentSelector2"/></term><description><see cref="ComponentSelector2ParamName"/></description></item>
-    ///   <item><term><see cref="TileArchivedTexture.Level"/></term><description><see cref="LevelOfDetailParamName"/></description></item>
-    ///   <item><term><see cref="TileArchivedTexture.Up"/></term><description><see cref="UpParamName"/></description></item>
-    ///   <item><term><see cref="TileArchivedTexture.Right"/></term><description><see cref="RightParamName"/></description></item>
-    ///   <item><term><see cref="TileArchivedTexture.Name"/></term><description><see cref="TextureNameParamName"/></description></item>
-    ///   <item><term><see cref="TileArchivedTexture.FileType"/></term><description><see cref="FileTypeParamName"/></description></item>
-    /// </list>
-    /// </remarks>
-    private class TileArchivedTextureTableAccessor : TableAccessor<TileArchivedTexture>
-    {
-        internal TileArchivedTextureTableAccessor(SQLCDB sqlCDB)
-            : base(sqlCDB, sqlCDB.SelectFromTileArchivedTextureStatement, sqlCDB.InsertIntoTileArchivedTextureStatement)
-        {
-        }
-
-        /// <inheritdoc/>
-        internal override void CreateAndAttachObjectParameter(DbCommand dbCommand)
-        {
-            CreateAndAttachParameter(dbCommand, sqlCDB.LatitudeParamName, DbType.Int32);
-            CreateAndAttachParameter(dbCommand, sqlCDB.LongitudeParamName, DbType.Int32);
-            CreateAndAttachParameter(dbCommand, sqlCDB.DatasetParamName, DbType.Int32);
-            CreateAndAttachParameter(dbCommand, sqlCDB.ComponentSelector1ParamName, DbType.Int32);
-            CreateAndAttachParameter(dbCommand, sqlCDB.ComponentSelector2ParamName, DbType.Int32);
-            CreateAndAttachParameter(dbCommand, sqlCDB.LevelOfDetailParamName, DbType.Int32);
-            CreateAndAttachParameter(dbCommand, sqlCDB.UpParamName, DbType.Int32);
-            CreateAndAttachParameter(dbCommand, sqlCDB.RightParamName, DbType.Int32);
-            CreateAndAttachParameter(dbCommand, sqlCDB.TextureNameParamName, DbType.String);
-            CreateAndAttachParameter(dbCommand, sqlCDB.FileTypeParamName, DbType.String);
-        }
-
-        /// <inheritdoc/>
-        internal override void SetObjectParameters(DbCommand dbCommand, TileArchivedTexture obj)
-        {
-            dbCommand.Parameters[sqlCDB.LatitudeParamName].Value = obj.LatitudeValue.Value;
-            dbCommand.Parameters[sqlCDB.LongitudeParamName].Value = obj.LongitudeValue.Value;
-            dbCommand.Parameters[sqlCDB.DatasetParamName].Value = obj.DatasetValue.Value;
-            dbCommand.Parameters[sqlCDB.ComponentSelector1ParamName].Value = obj.ComponentSelector1;
-            dbCommand.Parameters[sqlCDB.ComponentSelector2ParamName].Value = obj.ComponentSelector2;
-            dbCommand.Parameters[sqlCDB.LevelOfDetailParamName].Value = obj.Level.Value;
-            dbCommand.Parameters[sqlCDB.UpParamName].Value = obj.Up;
-            dbCommand.Parameters[sqlCDB.RightParamName].Value = obj.Right;
-            dbCommand.Parameters[sqlCDB.TextureNameParamName].Value = obj.Name;
-            dbCommand.Parameters[sqlCDB.FileTypeParamName].Value = obj.FileType;
-        }
-    }
-
-    /// <summary>
     /// The SQL DDL statement to create the TileArchivedTexture table.
     /// </summary>
-    protected abstract string CreateTableTileArchivedTextureStatement
+    public abstract string CreateTableTileArchivedTextureStatement
     {
         get;
     }
@@ -2505,7 +1636,7 @@ public abstract class SQLCDB : ICDB
     ///   <item><description><see cref="ContentColumnName"/></description></item>
     /// </list>
     /// </remarks>
-    protected abstract string SelectFromTileArchivedTextureStatement
+    public abstract string SelectFromTileArchivedTextureStatement
     {
         get;
     }
@@ -2546,7 +1677,7 @@ public abstract class SQLCDB : ICDB
     ///   <item><description><see cref="ContentParamName"/></description></item>
     /// </list>
     /// </remarks>
-    protected abstract string InsertIntoTileArchivedTextureStatement
+    public abstract string InsertIntoTileArchivedTextureStatement
     {
         get;
     }
@@ -2570,47 +1701,9 @@ public abstract class SQLCDB : ICDB
     #region Navigation
 
     /// <summary>
-    /// A table accessor for type <see cref="Navigation"/>.
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    ///   <listheader><term><see cref="Navigation"/> Property</term><description>SQL Statement Parameter</description></listheader>
-    ///   <item><term><see cref="Navigation.Dataset"/></term><description><see cref="DatasetParamName"/></description></item>
-    ///   <item><term><see cref="Navigation.ComponentSelector1"/></term><description><see cref="ComponentSelector1ParamName"/></description></item>
-    ///   <item><term><see cref="Navigation.ComponentSelector2"/></term><description><see cref="ComponentSelector2ParamName"/></description></item>
-    ///   <item><term><see cref="Navigation.FileType"/></term><description><see cref="FileTypeParamName"/></description></item>
-    /// </list>
-    /// </remarks>
-    private class NavigationTableAccessor : TableAccessor<Navigation>
-    {
-        internal NavigationTableAccessor(SQLCDB sqlCDB)
-            : base(sqlCDB, sqlCDB.SelectFromNavigationStatement, sqlCDB.InsertIntoNavigationStatement)
-        {
-        }
-
-        /// <inheritdoc/>
-        internal override void CreateAndAttachObjectParameter(DbCommand dbCommand)
-        {
-            CreateAndAttachParameter(dbCommand, sqlCDB.DatasetParamName, DbType.Int32);
-            CreateAndAttachParameter(dbCommand, sqlCDB.ComponentSelector1ParamName, DbType.Int32);
-            CreateAndAttachParameter(dbCommand, sqlCDB.ComponentSelector2ParamName, DbType.Int32);
-            CreateAndAttachParameter(dbCommand, sqlCDB.FileTypeParamName, DbType.String);
-        }
-
-        /// <inheritdoc/>
-        internal override void SetObjectParameters(DbCommand dbCommand, Navigation obj)
-        {
-            dbCommand.Parameters[sqlCDB.DatasetParamName].Value = obj.Dataset.Value;
-            dbCommand.Parameters[sqlCDB.ComponentSelector1ParamName].Value = obj.ComponentSelector1;
-            dbCommand.Parameters[sqlCDB.ComponentSelector2ParamName].Value = obj.ComponentSelector2;
-            dbCommand.Parameters[sqlCDB.FileTypeParamName].Value = obj.FileType;
-        }
-    }
-
-    /// <summary>
     /// The SQL DDL statement to create the Navigation table.
     /// </summary>
-    protected abstract string CreateTableNavigationStatement
+    public abstract string CreateTableNavigationStatement
     {
         get;
     }
@@ -2634,7 +1727,7 @@ public abstract class SQLCDB : ICDB
     ///   <item><description><see cref="ContentColumnName"/></description></item>
     /// </list>
     /// </remarks>
-    protected abstract string SelectFromNavigationStatement
+    public abstract string SelectFromNavigationStatement
     {
         get;
     }
@@ -2669,7 +1762,7 @@ public abstract class SQLCDB : ICDB
     ///   <item><description><see cref="ContentParamName"/></description></item>
     /// </list>
     /// </remarks>
-    protected abstract string InsertIntoNavigationStatement
+    public abstract string InsertIntoNavigationStatement
     {
         get;
     }
@@ -2705,7 +1798,7 @@ public abstract class SQLCDB : ICDB
     ///   <item><description><see cref="LongitudeColumnName"/></description></item>
     /// </list>
     /// </remarks>
-    protected abstract string SelectTileExtentsStatement
+    public abstract string SelectTileExtentsStatement
     {
         get;
     }
@@ -2782,7 +1875,7 @@ public abstract class SQLCDB : ICDB
     /// Any SQL DDL statements to create indexes necessary for queries to run
     /// efficiently.
     /// </summary>
-    protected abstract IEnumerable<string> CreateIndexStatements
+    public abstract IEnumerable<string> CreateIndexStatements
     {
         get;
     }
