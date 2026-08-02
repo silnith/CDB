@@ -50,6 +50,49 @@ public class TiledDatasetVisitor : VisitorBase
     }
 
     /// <summary>
+    /// Enumerates all of the latitude and longitude directories in the CDB.
+    /// </summary>
+    /// <param name="cdbDir">The CDB root directory.</param>
+    /// <returns>An enumeration of all the latitude-longitude pairs that exist
+    /// in the CDB.</returns>
+    public IEnumerable<(Latitude, Longitude)> EnumerateTiles(DirectoryInfo cdbDir)
+    {
+        DirectoryInfo tilesDir = new(Path.Combine(cdbDir.FullName, "Tiles"));
+        if (!tilesDir.Exists)
+        {
+            logger.LogTrace("{Directory} does not exist.  Skipping.",
+                tilesDir);
+            yield break;
+        }
+
+        foreach (DirectoryInfo latitudeDir in tilesDir.EnumerateDirectories("*", enumerationOptions))
+        {
+            Match latitudeMatch = Latitude.TiledDatasetDirectoryPattern.Match(latitudeDir.Name);
+            if (!latitudeMatch.Success)
+            {
+                logger.LogTrace("{Directory} is not a Latitude directory.  Skipping.",
+                    latitudeDir);
+                continue;
+            }
+            Latitude latitude = Latitude.FromTiledDatasetDirectoryMatch(latitudeMatch);
+
+            foreach (DirectoryInfo longitudeDir in latitudeDir.EnumerateDirectories("*", enumerationOptions))
+            {
+                Match longitudeMatch = Longitude.TiledDatasetDirectoryPattern.Match(longitudeDir.Name);
+                if (!longitudeMatch.Success)
+                {
+                    logger.LogTrace("{Directory} is not a Longitude directory.  Skipping.",
+                        longitudeDir);
+                    continue;
+                }
+                Longitude longitude = Longitude.FromTiledDatasetDirectoryMatch(longitudeMatch);
+
+                yield return (latitude, longitude);
+            }
+        }
+    }
+
+    /// <summary>
     /// Enumerates all recognized files in a CDB <c>Tiles</c> directory.
     /// </summary>
     /// <remarks>

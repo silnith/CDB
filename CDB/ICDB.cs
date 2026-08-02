@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -372,5 +374,19 @@ public interface ICDB : IDisposable, IAsyncDisposable
     /// <param name="cancellationToken">A cancellation token.</param>
     /// <returns>A stream of the file contents, or <see langword="null"/>.</returns>
     public Task WriteNavigationAsync(Navigation navigation, Stream content, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns all latitude-longitude pairs that exist in the data store.
+    /// </summary>
+    /// <returns>An enumeration of all latitude-longitude pairs that the data
+    /// store contains.</returns>
+    public IEnumerable<(Latitude, Longitude)> GetTileExtents();
+
+    /// <summary>
+    /// Returns all latitude-longitude pairs that exist in the data store.
+    /// </summary>
+    /// <returns>An enumeration of all latitude-longitude pairs that the data
+    /// store contains.</returns>
+    public IAsyncEnumerable<(Latitude, Longitude)> GetTileExtentsAsync([EnumeratorCancellation] CancellationToken cancellationToken = default);
 
 }

@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -456,6 +457,22 @@ public class FileSystemCDB : ICDB
     public Task WriteTileAsync(Tile tile, Stream content, CancellationToken cancellationToken)
     {
         return WriteFileAsync(tile, content, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public IEnumerable<(Latitude, Longitude)> GetTileExtents()
+    {
+        return tiledDatasetVisitor.EnumerateTiles(CdbRoot);
+    }
+
+    /// <inheritdoc/>
+    public async IAsyncEnumerable<(Latitude, Longitude)> GetTileExtentsAsync([EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        foreach ((Latitude, Longitude) tuple in tiledDatasetVisitor.EnumerateTiles(CdbRoot))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            yield return tuple;
+        }
     }
 
     /// <inheritdoc/>

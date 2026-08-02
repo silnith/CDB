@@ -57,6 +57,7 @@ public class PersistentConnection : ICDB
     private readonly DbCommand insertIntoTileArchivedTextureCommand;
     private readonly DbCommand selectFromNavigationCommand;
     private readonly DbCommand insertIntoNavigationCommand;
+    private readonly DbCommand selectTileExtentsCommand;
 
     /// <summary>
     /// Creates a connection that allows batching operations into transactions.
@@ -165,6 +166,9 @@ public class PersistentConnection : ICDB
         this.sqlCDB.navigationAccessor.InitializeInsertCommand(insertIntoNavigationCommand);
         insertIntoNavigationCommand.Prepare();
 
+        selectTileExtentsCommand = DbConnection.CreateCommand();
+        this.sqlCDB.InitializeTileExtentsQuery(selectTileExtentsCommand);
+        selectTileExtentsCommand.Prepare();
     }
 
     /// <inheritdoc cref="SQLCDB.Name"/>
@@ -628,6 +632,21 @@ public class PersistentConnection : ICDB
 
     #endregion
 
+    /// <inheritdoc/>
+    public IEnumerable<(Latitude, Longitude)> GetTileExtents()
+    {
+        return sqlCDB.GetTileExtents(selectTileExtentsCommand);
+    }
+
+    /// <inheritdoc/>
+    public async IAsyncEnumerable<(Latitude, Longitude)> GetTileExtentsAsync([EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        await foreach ((Latitude, Longitude) tuple in sqlCDB.GetTileExtentsAsync(selectTileExtentsCommand, cancellationToken).WithCancellation(cancellationToken))
+        {
+            yield return tuple;
+        }
+    }
+
     #region Dispose Pattern
 
     private bool disposedValue;
@@ -646,6 +665,7 @@ public class PersistentConnection : ICDB
         {
             if (disposing)
             {
+                selectTileExtentsCommand.Dispose();
                 insertIntoNavigationCommand.Dispose();
                 selectFromNavigationCommand.Dispose();
                 insertIntoTileArchivedTextureCommand.Dispose();
@@ -699,6 +719,7 @@ public class PersistentConnection : ICDB
     protected virtual async ValueTask DisposeAsyncCore()
     {
         await Task.WhenAll(
+            selectTileExtentsCommand.DisposeAsync().AsTask(),
             insertIntoNavigationCommand.DisposeAsync().AsTask(),
             selectFromNavigationCommand.DisposeAsync().AsTask(),
             insertIntoTileArchivedTextureCommand.DisposeAsync().AsTask(),

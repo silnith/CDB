@@ -995,6 +995,26 @@ public class SQLiteCDB : SQLCDB
 
     #endregion
 
+    private const string selectTileExtents = $"""
+        select distinct
+            "{latitudeColumnName}",
+            "{longitudeColumnName}"
+        from "{tileTableName}"
+        where "{cdbNameColumnName}" = {cdbParamName}
+        union
+        select distinct
+            "{latitudeColumnName}",
+            "{longitudeColumnName}"
+        from "{tileArchivedFeatureTableName}"
+        where "{cdbNameColumnName}" = {cdbParamName}
+        union
+        select distinct
+            "{latitudeColumnName}",
+            "{longitudeColumnName}"
+        from "{tileArchivedTextureTableName}"
+        where "{cdbNameColumnName}" = {cdbParamName}
+        """;
+
     /// <summary>
     /// Creates a new SQL data store using the provided SQLite data source.
     /// </summary>
@@ -1014,6 +1034,12 @@ public class SQLiteCDB : SQLCDB
 
     /// <inheritdoc/>
     protected override string CDBNameColumnName => cdbNameColumnName;
+
+    /// <inheritdoc/>
+    protected override string LatitudeColumnName => latitudeColumnName;
+
+    /// <inheritdoc/>
+    protected override string LongitudeColumnName => longitudeColumnName;
 
     /// <inheritdoc/>
     protected override string ContentColumnName => contentColumnName;
@@ -1200,6 +1226,9 @@ public class SQLiteCDB : SQLCDB
 
     /// <inheritdoc/>
     protected override string SelectFromNavigationStatement => selectFromNavigation;
+
+    /// <inheritdoc/>
+    protected override string SelectTileExtentsStatement => selectTileExtents;
 
     /// <inheritdoc/>
     protected override IEnumerable<string> CreateIndexStatements => new List<string>()

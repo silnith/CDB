@@ -772,6 +772,24 @@ public abstract class SQLCDB : ICDB
     }
 
     /// <summary>
+    /// The name of the column in tiled dataset tables that contains the latitude.
+    /// The type is <see cref="DbType.Int32"/>.
+    /// </summary>
+    protected abstract string LatitudeColumnName
+    {
+        get;
+    }
+
+    /// <summary>
+    /// The name of the column in tiled dataset tables that contains the longitude.
+    /// The type is <see cref="DbType.Int32"/>.
+    /// </summary>
+    protected abstract string LongitudeColumnName
+    {
+        get;
+    }
+
+    /// <summary>
     /// The name of the column (in most tables) that contains the file contents.
     /// The type is <see cref="DbType.Binary"/>.
     /// </summary>
@@ -2671,6 +2689,94 @@ public abstract class SQLCDB : ICDB
     #endregion
 
     #endregion
+
+    /// <summary>
+    /// The SQL statement to select all distinct latitude-longitude pairs from
+    /// all tables that contain tiled datasets.
+    /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><description>Parameters</description></listheader>
+    ///   <item><description><see cref="CdbParamName"/></description></item>
+    /// </list>
+    /// <list type="bullet">
+    ///   <listheader><description>Selected Columns</description></listheader>
+    ///   <item><description><see cref="LatitudeColumnName"/></description></item>
+    ///   <item><description><see cref="LongitudeColumnName"/></description></item>
+    /// </list>
+    /// </remarks>
+    protected abstract string SelectTileExtentsStatement
+    {
+        get;
+    }
+
+    internal void InitializeTileExtentsQuery(DbCommand dbCommand)
+    {
+        dbCommand.CommandText = SelectTileExtentsStatement;
+        CreateAndAttachCdbParameter(dbCommand);
+    }
+
+    /// <inheritdoc/>
+    public IEnumerable<(Latitude, Longitude)> GetTileExtents()
+    {
+        using DbConnection dbConnection = dbDataSource.OpenConnection();
+        using DbCommand dbCommand = dbConnection.CreateCommand();
+        InitializeTileExtentsQuery(dbCommand);
+
+        foreach ((Latitude, Longitude) tuple in GetTileExtents(dbCommand))
+        {
+            yield return tuple;
+        }
+    }
+
+    /// <inheritdoc cref="GetTileExtents()"/>
+    internal IEnumerable<(Latitude, Longitude)> GetTileExtents(DbCommand dbCommand)
+    {
+        SetCdbParameter(dbCommand);
+
+        using DbDataReader dbDataReader = dbCommand.ExecuteReader(CommandBehavior.SingleResult | CommandBehavior.SequentialAccess);
+        do
+        {
+            while (dbDataReader.Read())
+            {
+                int latitude = dbDataReader.GetInt32(LatitudeColumnName);
+                int longitude = dbDataReader.GetInt32(LongitudeColumnName);
+                yield return (new Latitude(latitude), new Longitude(longitude));
+            }
+        } while (dbDataReader.NextResult());
+    }
+
+    /// <inheritdoc/>
+    public async IAsyncEnumerable<(Latitude, Longitude)> GetTileExtentsAsync([EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
+        await using DbCommand dbCommand = dbConnection.CreateCommand();
+        InitializeTileExtentsQuery(dbCommand);
+
+        await foreach ((Latitude, Longitude) tuple in GetTileExtentsAsync(dbCommand, cancellationToken).WithCancellation(cancellationToken))
+        {
+            yield return tuple;
+        }
+    }
+
+    /// <inheritdoc cref="GetTileExtentsAsync(CancellationToken)"/>
+    internal async IAsyncEnumerable<(Latitude, Longitude)> GetTileExtentsAsync(DbCommand dbCommand, [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        SetCdbParameter(dbCommand);
+
+        await using DbDataReader dbDataReader = await dbCommand.ExecuteReaderAsync(
+            CommandBehavior.SingleResult | CommandBehavior.SequentialAccess,
+            cancellationToken);
+        do
+        {
+            while (await dbDataReader.ReadAsync(cancellationToken))
+            {
+                int latitude = dbDataReader.GetInt32(LatitudeColumnName);
+                int longitude = dbDataReader.GetInt32(LongitudeColumnName);
+                yield return (new Latitude(latitude), new Longitude(longitude));
+            }
+        } while (await dbDataReader.NextResultAsync(cancellationToken));
+    }
 
     /// <summary>
     /// Any SQL DDL statements to create indexes necessary for queries to run

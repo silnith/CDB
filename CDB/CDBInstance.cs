@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -461,6 +462,40 @@ public class CDBInstance : ICDB
     public Task WriteNavigationAsync(Navigation navigation, Stream content, CancellationToken cancellationToken)
     {
         return cdbs.First().WriteNavigationAsync(navigation, content, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public IEnumerable<(Latitude, Longitude)> GetTileExtents()
+    {
+        ISet<(Latitude, Longitude)> tiles = new HashSet<(Latitude, Longitude)>();
+        foreach (ICDB cdb in cdbs)
+        {
+            foreach ((Latitude, Longitude) tuple in cdb.GetTileExtents())
+            {
+                if (!tiles.Contains(tuple))
+                {
+                    yield return tuple;
+                    tiles.Add(tuple);
+                }
+            }
+        }
+    }
+
+    /// <inheritdoc/>
+    public async IAsyncEnumerable<(Latitude, Longitude)> GetTileExtentsAsync([EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        ISet<(Latitude, Longitude)> tiles = new HashSet<(Latitude, Longitude)>();
+        foreach (ICDB cdb in cdbs)
+        {
+            await foreach ((Latitude, Longitude) tuple in cdb.GetTileExtentsAsync(cancellationToken).WithCancellation(cancellationToken))
+            {
+                if (!tiles.Contains(tuple))
+                {
+                    yield return tuple;
+                    tiles.Add(tuple);
+                }
+            }
+        }
     }
 
     public Task<Stream?> ReadNavigation2Async(Navigation navigation, CancellationToken cancellationToken)
