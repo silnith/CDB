@@ -78,91 +78,91 @@ public class PersistentConnection : ICDB
         insertIntoCDBCommand.Prepare();
 
         selectFromMetadataCommand = DbConnection.CreateCommand();
-        this.sqlCDB.InitializeSelectFromMetadataCommand(selectFromMetadataCommand);
+        this.sqlCDB.metadataAccessor.InitializeSelectCommand(selectFromMetadataCommand);
         selectFromMetadataCommand.Prepare();
 
         insertIntoMetadataCommand = DbConnection.CreateCommand();
-        this.sqlCDB.InitializeInsertIntoMetadataCommand(insertIntoMetadataCommand);
+        this.sqlCDB.metadataAccessor.InitializeInsertCommand(insertIntoMetadataCommand);
         insertIntoMetadataCommand.Prepare();
 
         selectFromTextureCommand = DbConnection.CreateCommand();
-        this.sqlCDB.InitializeSelectFromTextureCommand(selectFromTextureCommand);
+        this.sqlCDB.textureAccessor.InitializeSelectCommand(selectFromTextureCommand);
         selectFromTextureCommand.Prepare();
 
         insertIntoTextureCommand = DbConnection.CreateCommand();
-        this.sqlCDB.InitializeInsertIntoTextureCommand(insertIntoTextureCommand);
+        this.sqlCDB.textureAccessor.InitializeInsertCommand(insertIntoTextureCommand);
         insertIntoTextureCommand.Prepare();
 
         selectFromTextureLodCommand = DbConnection.CreateCommand();
-        this.sqlCDB.InitializeSelectFromTextureLodCommand(selectFromTextureLodCommand);
+        this.sqlCDB.textureLodAccessor.InitializeSelectCommand(selectFromTextureLodCommand);
         selectFromTextureLodCommand.Prepare();
 
         insertIntoTextureLodCommand = DbConnection.CreateCommand();
-        this.sqlCDB.InitializeInsertIntoTextureLodCommand(insertIntoTextureLodCommand);
+        this.sqlCDB.textureLodAccessor.InitializeInsertCommand(insertIntoTextureLodCommand);
         insertIntoTextureLodCommand.Prepare();
 
         selectFromGeotypicalModelCommand = DbConnection.CreateCommand();
-        this.sqlCDB.InitializeSelectFromGeotypicalModelCommand(selectFromGeotypicalModelCommand);
+        this.sqlCDB.geotypicalModelAccessor.InitializeSelectCommand(selectFromGeotypicalModelCommand);
         selectFromGeotypicalModelCommand.Prepare();
 
         insertIntoGeotypicalModelCommand = DbConnection.CreateCommand();
-        this.sqlCDB.InitializeInsertIntoGeotypicalModelCommand(insertIntoGeotypicalModelCommand);
+        this.sqlCDB.geotypicalModelAccessor.InitializeInsertCommand(insertIntoGeotypicalModelCommand);
         insertIntoGeotypicalModelCommand.Prepare();
 
         selectFromGeotypicalModelLodCommand = DbConnection.CreateCommand();
-        this.sqlCDB.InitializeSelectFromGeotypicalModelLodCommand(selectFromGeotypicalModelLodCommand);
+        this.sqlCDB.geotypicalModelLodAccessor.InitializeSelectCommand(selectFromGeotypicalModelLodCommand);
         selectFromGeotypicalModelLodCommand.Prepare();
 
         insertIntoGeotypicalModelLodCommand = DbConnection.CreateCommand();
-        this.sqlCDB.InitializeInsertIntoGeotypicalModelLodCommand(insertIntoGeotypicalModelLodCommand);
+        this.sqlCDB.geotypicalModelLodAccessor.InitializeInsertCommand(insertIntoGeotypicalModelLodCommand);
         insertIntoGeotypicalModelLodCommand.Prepare();
 
         selectFromMovingModelCommand = DbConnection.CreateCommand();
-        this.sqlCDB.InitializeSelectFromMovingModelCommand(selectFromMovingModelCommand);
+        this.sqlCDB.movingModelAccessor.InitializeSelectCommand(selectFromMovingModelCommand);
         selectFromMovingModelCommand.Prepare();
 
         insertIntoMovingModelCommand = DbConnection.CreateCommand();
-        this.sqlCDB.InitializeInsertIntoMovingModelCommand(insertIntoMovingModelCommand);
+        this.sqlCDB.movingModelAccessor.InitializeInsertCommand(insertIntoMovingModelCommand);
         insertIntoMovingModelCommand.Prepare();
 
         selectFromMovingModelLodCommand = DbConnection.CreateCommand();
-        this.sqlCDB.InitializeSelectFromMovingModelLodCommand(selectFromMovingModelLodCommand);
+        this.sqlCDB.movingModelLodAccessor.InitializeSelectCommand(selectFromMovingModelLodCommand);
         selectFromMovingModelLodCommand.Prepare();
 
         insertIntoMovingModelLodCommand = DbConnection.CreateCommand();
-        this.sqlCDB.InitializeInsertIntoMovingModelLodCommand(insertIntoMovingModelLodCommand);
+        this.sqlCDB.movingModelLodAccessor.InitializeInsertCommand(insertIntoMovingModelLodCommand);
         insertIntoMovingModelLodCommand.Prepare();
 
         selectFromTileCommand = DbConnection.CreateCommand();
-        this.sqlCDB.InitializeSelectFromTileCommand(selectFromTileCommand);
+        this.sqlCDB.tileAccessor.InitializeSelectCommand(selectFromTileCommand);
         selectFromTileCommand.Prepare();
 
         insertIntoTileCommand = DbConnection.CreateCommand();
-        this.sqlCDB.InitializeInsertIntoTileCommand(insertIntoTileCommand);
+        this.sqlCDB.tileAccessor.InitializeInsertCommand(insertIntoTileCommand);
         insertIntoTileCommand.Prepare();
 
         selectFromTileArchivedFeatureCommand = DbConnection.CreateCommand();
-        this.sqlCDB.InitializeSelectFromTileArchivedFeatureCommand(selectFromTileArchivedFeatureCommand);
+        this.sqlCDB.tileFeatureAccessor.InitializeSelectCommand(selectFromTileArchivedFeatureCommand);
         selectFromTileArchivedFeatureCommand.Prepare();
 
         insertIntoTileArchivedFeatureCommand = DbConnection.CreateCommand();
-        this.sqlCDB.InitializeInsertIntoTileArchivedFeatureCommand(insertIntoTileArchivedFeatureCommand);
+        this.sqlCDB.tileFeatureAccessor.InitializeInsertCommand(insertIntoTileArchivedFeatureCommand);
         insertIntoTileArchivedFeatureCommand.Prepare();
 
         selectFromTileArchivedTextureCommand = DbConnection.CreateCommand();
-        this.sqlCDB.InitializeSelectFromTileArchivedTextureCommand(selectFromTileArchivedTextureCommand);
+        this.sqlCDB.tileTextureAccessor.InitializeSelectCommand(selectFromTileArchivedTextureCommand);
         selectFromTileArchivedTextureCommand.Prepare();
 
         insertIntoTileArchivedTextureCommand = DbConnection.CreateCommand();
-        this.sqlCDB.InitializeInsertIntoTileArchivedTextureCommand(insertIntoTileArchivedTextureCommand);
+        this.sqlCDB.tileTextureAccessor.InitializeInsertCommand(insertIntoTileArchivedTextureCommand);
         insertIntoTileArchivedTextureCommand.Prepare();
 
         selectFromNavigationCommand = DbConnection.CreateCommand();
-        this.sqlCDB.InitializeSelectFromNavigationCommand(selectFromNavigationCommand);
+        this.sqlCDB.navigationAccessor.InitializeSelectCommand(selectFromNavigationCommand);
         selectFromNavigationCommand.Prepare();
 
         insertIntoNavigationCommand = DbConnection.CreateCommand();
-        this.sqlCDB.InitializeInsertIntoNavigationCommand(insertIntoNavigationCommand);
+        this.sqlCDB.navigationAccessor.InitializeInsertCommand(insertIntoNavigationCommand);
         insertIntoNavigationCommand.Prepare();
 
     }
@@ -239,13 +239,13 @@ public class PersistentConnection : ICDB
     /// <inheritdoc/>
     public Stream? ReadMetadata(Metadata metadata)
     {
-        return sqlCDB.SelectFromMetadata(selectFromMetadataCommand, metadata);
+        return sqlCDB.metadataAccessor.SelectUsingPreparedStatement(selectFromMetadataCommand, metadata);
     }
 
     /// <inheritdoc/>
     public Task<Stream?> ReadMetadataAsync(Metadata metadata, CancellationToken cancellationToken)
     {
-        return sqlCDB.SelectFromMetadataAsync(selectFromMetadataCommand, metadata, cancellationToken);
+        return sqlCDB.metadataAccessor.SelectUsingPreparedStatementAsync(selectFromMetadataCommand, metadata, cancellationToken);
     }
 
     #endregion
@@ -255,13 +255,13 @@ public class PersistentConnection : ICDB
     /// <inheritdoc/>
     public void WriteMetadata(Metadata metadata, Stream content)
     {
-        sqlCDB.InsertIntoMetadata(insertIntoMetadataCommand, metadata, content);
+        sqlCDB.metadataAccessor.InsertUsingPreparedStatement(insertIntoMetadataCommand, metadata, content);
     }
 
     /// <inheritdoc/>
     public Task WriteMetadataAsync(Metadata metadata, Stream content, CancellationToken cancellationToken)
     {
-        return sqlCDB.InsertIntoMetadataAsync(insertIntoMetadataCommand, metadata, content, cancellationToken);
+        return sqlCDB.metadataAccessor.InsertUsingPreparedStatementAsync(insertIntoMetadataCommand, metadata, content, cancellationToken);
     }
 
     #endregion
@@ -275,13 +275,13 @@ public class PersistentConnection : ICDB
     /// <inheritdoc/>
     public Stream? ReadTexture(Texture texture)
     {
-        return sqlCDB.SelectFromTexture(selectFromTextureCommand, texture);
+        return sqlCDB.textureAccessor.SelectUsingPreparedStatement(selectFromTextureCommand, texture);
     }
 
     /// <inheritdoc/>
     public Task<Stream?> ReadTextureAsync(Texture texture, CancellationToken cancellationToken)
     {
-        return sqlCDB.SelectFromTextureAsync(selectFromTextureCommand, texture, cancellationToken);
+        return sqlCDB.textureAccessor.SelectUsingPreparedStatementAsync(selectFromTextureCommand, texture, cancellationToken);
     }
 
     #endregion
@@ -291,13 +291,13 @@ public class PersistentConnection : ICDB
     /// <inheritdoc/>
     public void WriteTexture(Texture texture, Stream content)
     {
-        sqlCDB.InsertIntoTexture(insertIntoTextureCommand, texture, content);
+        sqlCDB.textureAccessor.InsertUsingPreparedStatement(insertIntoTextureCommand, texture, content);
     }
 
     /// <inheritdoc/>
     public Task WriteTextureAsync(Texture texture, Stream content, CancellationToken cancellationToken)
     {
-        return sqlCDB.InsertIntoTextureAsync(insertIntoTextureCommand, texture, content, cancellationToken);
+        return sqlCDB.textureAccessor.InsertUsingPreparedStatementAsync(insertIntoTextureCommand, texture, content, cancellationToken);
     }
 
     #endregion
@@ -311,13 +311,13 @@ public class PersistentConnection : ICDB
     /// <inheritdoc/>
     public Stream? ReadTextureLevelOfDetail(TextureLod textureLod)
     {
-        return sqlCDB.SelectFromTextureLod(selectFromTextureLodCommand, textureLod);
+        return sqlCDB.textureLodAccessor.SelectUsingPreparedStatement(selectFromTextureLodCommand, textureLod);
     }
 
     /// <inheritdoc/>
     public Task<Stream?> ReadTextureLevelOfDetailAsync(TextureLod textureLod, CancellationToken cancellationToken)
     {
-        return sqlCDB.SelectFromTextureLodAsync(selectFromTextureLodCommand, textureLod, cancellationToken);
+        return sqlCDB.textureLodAccessor.SelectUsingPreparedStatementAsync(selectFromTextureLodCommand, textureLod, cancellationToken);
     }
 
     #endregion
@@ -327,13 +327,13 @@ public class PersistentConnection : ICDB
     /// <inheritdoc/>
     public void WriteTextureLevelOfDetail(TextureLod textureLod, Stream content)
     {
-        sqlCDB.InsertIntoTextureLod(insertIntoTextureLodCommand, textureLod, content);
+        sqlCDB.textureLodAccessor.InsertUsingPreparedStatement(insertIntoTextureLodCommand, textureLod, content);
     }
 
     /// <inheritdoc/>
     public Task WriteTextureLevelOfDetailAsync(TextureLod textureLod, Stream content, CancellationToken cancellationToken)
     {
-        return sqlCDB.InsertIntoTextureLodAsync(insertIntoTextureLodCommand, textureLod, content, cancellationToken);
+        return sqlCDB.textureLodAccessor.InsertUsingPreparedStatementAsync(insertIntoTextureLodCommand, textureLod, content, cancellationToken);
     }
 
     #endregion
@@ -347,13 +347,13 @@ public class PersistentConnection : ICDB
     /// <inheritdoc/>
     public Stream? ReadGeotypicalModel(GeotypicalModel geotypicalModel)
     {
-        return sqlCDB.SelectFromGeotypicalModel(selectFromGeotypicalModelCommand, geotypicalModel);
+        return sqlCDB.geotypicalModelAccessor.SelectUsingPreparedStatement(selectFromGeotypicalModelCommand, geotypicalModel);
     }
 
     /// <inheritdoc/>
     public Task<Stream?> ReadGeotypicalModelAsync(GeotypicalModel geotypicalModel, CancellationToken cancellationToken)
     {
-        return sqlCDB.SelectFromGeotypicalModelAsync(selectFromGeotypicalModelCommand, geotypicalModel, cancellationToken);
+        return sqlCDB.geotypicalModelAccessor.SelectUsingPreparedStatementAsync(selectFromGeotypicalModelCommand, geotypicalModel, cancellationToken);
     }
 
     #endregion
@@ -363,13 +363,13 @@ public class PersistentConnection : ICDB
     /// <inheritdoc/>
     public void WriteGeotypicalModel(GeotypicalModel geotypicalModel, Stream content)
     {
-        sqlCDB.InsertIntoGeotypicalModel(insertIntoGeotypicalModelCommand, geotypicalModel, content);
+        sqlCDB.geotypicalModelAccessor.InsertUsingPreparedStatement(insertIntoGeotypicalModelCommand, geotypicalModel, content);
     }
 
     /// <inheritdoc/>
     public Task WriteGeotypicalModelAsync(GeotypicalModel geotypicalModel, Stream content, CancellationToken cancellationToken)
     {
-        return sqlCDB.InsertIntoGeotypicalModelAsync(insertIntoGeotypicalModelCommand, geotypicalModel, content, cancellationToken);
+        return sqlCDB.geotypicalModelAccessor.InsertUsingPreparedStatementAsync(insertIntoGeotypicalModelCommand, geotypicalModel, content, cancellationToken);
     }
 
     #endregion
@@ -383,13 +383,13 @@ public class PersistentConnection : ICDB
     /// <inheritdoc/>
     public Stream? ReadGeotypicalModelLevelOfDetail(GeotypicalModelLod geotypicalModelLod)
     {
-        return sqlCDB.SelectFromGeotypicalModelLod(selectFromGeotypicalModelLodCommand, geotypicalModelLod);
+        return sqlCDB.geotypicalModelLodAccessor.SelectUsingPreparedStatement(selectFromGeotypicalModelLodCommand, geotypicalModelLod);
     }
 
     /// <inheritdoc/>
     public Task<Stream?> ReadGeotypicalModelLevelOfDetailAsync(GeotypicalModelLod geotypicalModelLod, CancellationToken cancellationToken)
     {
-        return sqlCDB.SelectFromGeotypicalModelLodAsync(selectFromGeotypicalModelLodCommand, geotypicalModelLod, cancellationToken);
+        return sqlCDB.geotypicalModelLodAccessor.SelectUsingPreparedStatementAsync(selectFromGeotypicalModelLodCommand, geotypicalModelLod, cancellationToken);
     }
 
     #endregion
@@ -399,13 +399,13 @@ public class PersistentConnection : ICDB
     /// <inheritdoc/>
     public void WriteGeotypicalModelLevelOfDetail(GeotypicalModelLod geotypicalModelLod, Stream content)
     {
-        sqlCDB.InsertIntoGeotypicalModelLod(insertIntoGeotypicalModelLodCommand, geotypicalModelLod, content);
+        sqlCDB.geotypicalModelLodAccessor.InsertUsingPreparedStatement(insertIntoGeotypicalModelLodCommand, geotypicalModelLod, content);
     }
 
     /// <inheritdoc/>
     public Task WriteGeotypicalModelLevelOfDetailAsync(GeotypicalModelLod geotypicalModelLod, Stream content, CancellationToken cancellationToken)
     {
-        return sqlCDB.InsertIntoGeotypicalModelLodAsync(insertIntoGeotypicalModelLodCommand, geotypicalModelLod, content, cancellationToken);
+        return sqlCDB.geotypicalModelLodAccessor.InsertUsingPreparedStatementAsync(insertIntoGeotypicalModelLodCommand, geotypicalModelLod, content, cancellationToken);
     }
 
     #endregion
@@ -419,13 +419,13 @@ public class PersistentConnection : ICDB
     /// <inheritdoc/>
     public Stream? ReadMovingModel(MovingModel movingModel)
     {
-        return sqlCDB.SelectFromMovingModel(selectFromMovingModelCommand, movingModel);
+        return sqlCDB.movingModelAccessor.SelectUsingPreparedStatement(selectFromMovingModelCommand, movingModel);
     }
 
     /// <inheritdoc/>
     public Task<Stream?> ReadMovingModelAsync(MovingModel movingModel, CancellationToken cancellationToken)
     {
-        return sqlCDB.SelectFromMovingModelAsync(selectFromMovingModelCommand, movingModel, cancellationToken);
+        return sqlCDB.movingModelAccessor.SelectUsingPreparedStatementAsync(selectFromMovingModelCommand, movingModel, cancellationToken);
     }
 
     #endregion
@@ -435,13 +435,13 @@ public class PersistentConnection : ICDB
     /// <inheritdoc/>
     public void WriteMovingModel(MovingModel movingModel, Stream content)
     {
-        sqlCDB.InsertIntoMovingModel(insertIntoMovingModelCommand, movingModel, content);
+        sqlCDB.movingModelAccessor.InsertUsingPreparedStatement(insertIntoMovingModelCommand, movingModel, content);
     }
 
     /// <inheritdoc/>
     public Task WriteMovingModelAsync(MovingModel movingModel, Stream content, CancellationToken cancellationToken)
     {
-        return sqlCDB.InsertIntoMovingModelAsync(insertIntoMovingModelCommand, movingModel, content, cancellationToken);
+        return sqlCDB.movingModelAccessor.InsertUsingPreparedStatementAsync(insertIntoMovingModelCommand, movingModel, content, cancellationToken);
     }
 
     #endregion
@@ -455,13 +455,13 @@ public class PersistentConnection : ICDB
     /// <inheritdoc/>
     public Stream? ReadMovingModelLevelOfDetail(MovingModelLod movingModelLod)
     {
-        return sqlCDB.SelectFromMovingModelLod(selectFromMovingModelLodCommand, movingModelLod);
+        return sqlCDB.movingModelLodAccessor.SelectUsingPreparedStatement(selectFromMovingModelLodCommand, movingModelLod);
     }
 
     /// <inheritdoc/>
     public Task<Stream?> ReadMovingModelLevelOfDetailAsync(MovingModelLod movingModelLod, CancellationToken cancellationToken)
     {
-        return sqlCDB.SelectFromMovingModelLodAsync(selectFromMovingModelLodCommand, movingModelLod, cancellationToken);
+        return sqlCDB.movingModelLodAccessor.SelectUsingPreparedStatementAsync(selectFromMovingModelLodCommand, movingModelLod, cancellationToken);
     }
 
     #endregion
@@ -471,13 +471,13 @@ public class PersistentConnection : ICDB
     /// <inheritdoc/>
     public void WriteMovingModelLevelOfDetail(MovingModelLod movingModelLod, Stream content)
     {
-        sqlCDB.InsertIntoMovingModelLod(insertIntoMovingModelLodCommand, movingModelLod, content);
+        sqlCDB.movingModelLodAccessor.InsertUsingPreparedStatement(insertIntoMovingModelLodCommand, movingModelLod, content);
     }
 
     /// <inheritdoc/>
     public Task WriteMovingModelLevelOfDetailAsync(MovingModelLod movingModelLod, Stream content, CancellationToken cancellationToken)
     {
-        return sqlCDB.InsertIntoMovingModelLodAsync(insertIntoMovingModelLodCommand, movingModelLod, content, cancellationToken);
+        return sqlCDB.movingModelLodAccessor.InsertUsingPreparedStatementAsync(insertIntoMovingModelLodCommand, movingModelLod, content, cancellationToken);
     }
 
     #endregion
@@ -491,13 +491,13 @@ public class PersistentConnection : ICDB
     /// <inheritdoc/>
     public Stream? ReadTile(Tile tile)
     {
-        return sqlCDB.SelectFromTile(selectFromTileCommand, tile);
+        return sqlCDB.tileAccessor.SelectUsingPreparedStatement(selectFromTileCommand, tile);
     }
 
     /// <inheritdoc/>
     public Task<Stream?> ReadTileAsync(Tile tile, CancellationToken cancellationToken)
     {
-        return sqlCDB.SelectFromTileAsync(selectFromTileCommand, tile, cancellationToken);
+        return sqlCDB.tileAccessor.SelectUsingPreparedStatementAsync(selectFromTileCommand, tile, cancellationToken);
     }
 
     #endregion
@@ -507,13 +507,13 @@ public class PersistentConnection : ICDB
     /// <inheritdoc/>
     public void WriteTile(Tile tile, Stream content)
     {
-        sqlCDB.InsertIntoTile(insertIntoTileCommand, tile, content);
+        sqlCDB.tileAccessor.InsertUsingPreparedStatement(insertIntoTileCommand, tile, content);
     }
 
     /// <inheritdoc/>
     public Task WriteTileAsync(Tile tile, Stream content, CancellationToken cancellationToken)
     {
-        return sqlCDB.InsertIntoTileAsync(insertIntoTileCommand, tile, content, cancellationToken);
+        return sqlCDB.tileAccessor.InsertUsingPreparedStatementAsync(insertIntoTileCommand, tile, content, cancellationToken);
     }
 
     #endregion
@@ -527,13 +527,13 @@ public class PersistentConnection : ICDB
     /// <inheritdoc/>
     public Stream? ReadTileFeature(TileArchivedFeature tileArchivedFeature)
     {
-        return sqlCDB.SelectFromTileArchivedFeature(selectFromTileArchivedFeatureCommand, tileArchivedFeature);
+        return sqlCDB.tileFeatureAccessor.SelectUsingPreparedStatement(selectFromTileArchivedFeatureCommand, tileArchivedFeature);
     }
 
     /// <inheritdoc/>
     public Task<Stream?> ReadTileFeatureAsync(TileArchivedFeature tileArchivedFeature, CancellationToken cancellationToken)
     {
-        return sqlCDB.SelectFromTileArchivedFeatureAsync(selectFromTileArchivedFeatureCommand, tileArchivedFeature, cancellationToken);
+        return sqlCDB.tileFeatureAccessor.SelectUsingPreparedStatementAsync(selectFromTileArchivedFeatureCommand, tileArchivedFeature, cancellationToken);
     }
 
     #endregion
@@ -543,13 +543,13 @@ public class PersistentConnection : ICDB
     /// <inheritdoc/>
     public void WriteTileFeature(TileArchivedFeature tileArchivedFeature, Stream content)
     {
-        sqlCDB.InsertIntoTileArchivedFeature(insertIntoTileArchivedFeatureCommand, tileArchivedFeature, content);
+        sqlCDB.tileFeatureAccessor.InsertUsingPreparedStatement(insertIntoTileArchivedFeatureCommand, tileArchivedFeature, content);
     }
 
     /// <inheritdoc/>
     public Task WriteTileFeatureAsync(TileArchivedFeature tileArchivedFeature, Stream content, CancellationToken cancellationToken)
     {
-        return sqlCDB.InsertIntoTileArchivedFeatureAsync(insertIntoTileArchivedFeatureCommand, tileArchivedFeature, content, cancellationToken);
+        return sqlCDB.tileFeatureAccessor.InsertUsingPreparedStatementAsync(insertIntoTileArchivedFeatureCommand, tileArchivedFeature, content, cancellationToken);
     }
 
     #endregion
@@ -563,13 +563,13 @@ public class PersistentConnection : ICDB
     /// <inheritdoc/>
     public Stream? ReadTileTexture(TileArchivedTexture tileArchivedTexture)
     {
-        return sqlCDB.SelectFromTileArchivedTexture(selectFromTileArchivedTextureCommand, tileArchivedTexture);
+        return sqlCDB.tileTextureAccessor.SelectUsingPreparedStatement(selectFromTileArchivedTextureCommand, tileArchivedTexture);
     }
 
     /// <inheritdoc/>
     public Task<Stream?> ReadTileTextureAsync(TileArchivedTexture tileArchivedTexture, CancellationToken cancellationToken)
     {
-        return sqlCDB.SelectFromTileArchivedTextureAsync(selectFromTileArchivedTextureCommand, tileArchivedTexture, cancellationToken);
+        return sqlCDB.tileTextureAccessor.SelectUsingPreparedStatementAsync(selectFromTileArchivedTextureCommand, tileArchivedTexture, cancellationToken);
     }
 
     #endregion
@@ -579,14 +579,13 @@ public class PersistentConnection : ICDB
     /// <inheritdoc/>
     public void WriteTileTexture(TileArchivedTexture tileArchivedTexture, Stream content)
     {
-        sqlCDB.InsertIntoTileArchivedTexture(insertIntoTileArchivedTextureCommand, tileArchivedTexture, content);
+        sqlCDB.tileTextureAccessor.InsertUsingPreparedStatement(insertIntoTileArchivedTextureCommand, tileArchivedTexture, content);
     }
 
     /// <inheritdoc/>
     public Task WriteTileTextureAsync(TileArchivedTexture tileArchivedTexture, Stream content, CancellationToken cancellationToken)
     {
-        return sqlCDB.InsertIntoTileArchivedTextureAsync(insertIntoTileArchivedTextureCommand,
-            tileArchivedTexture, content, cancellationToken);
+        return sqlCDB.tileTextureAccessor.InsertUsingPreparedStatementAsync(insertIntoTileArchivedTextureCommand, tileArchivedTexture, content, cancellationToken);
     }
 
     #endregion
@@ -600,13 +599,13 @@ public class PersistentConnection : ICDB
     /// <inheritdoc/>
     public Stream? ReadNavigation(Navigation navigation)
     {
-        return sqlCDB.SelectFromNavigation(selectFromNavigationCommand, navigation);
+        return sqlCDB.navigationAccessor.SelectUsingPreparedStatement(selectFromNavigationCommand, navigation);
     }
 
     /// <inheritdoc/>
     public Task<Stream?> ReadNavigationAsync(Navigation navigation, CancellationToken cancellationToken)
     {
-        return sqlCDB.SelectFromNavigationAsync(selectFromNavigationCommand, navigation, cancellationToken);
+        return sqlCDB.navigationAccessor.SelectUsingPreparedStatementAsync(selectFromNavigationCommand, navigation, cancellationToken);
     }
 
     #endregion
@@ -616,13 +615,13 @@ public class PersistentConnection : ICDB
     /// <inheritdoc/>
     public void WriteNavigation(Navigation navigation, Stream content)
     {
-        sqlCDB.InsertIntoNavigation(insertIntoNavigationCommand, navigation, content);
+        sqlCDB.navigationAccessor.InsertUsingPreparedStatement(insertIntoNavigationCommand, navigation, content);
     }
 
     /// <inheritdoc/>
     public Task WriteNavigationAsync(Navigation navigation, Stream content, CancellationToken cancellationToken)
     {
-        return sqlCDB.InsertIntoNavigationAsync(insertIntoNavigationCommand, navigation, content, cancellationToken);
+        return sqlCDB.navigationAccessor.InsertUsingPreparedStatementAsync(insertIntoNavigationCommand, navigation, content, cancellationToken);
     }
 
     #endregion

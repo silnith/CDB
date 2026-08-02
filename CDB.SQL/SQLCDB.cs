@@ -10,8 +10,6 @@ using System.Threading.Tasks;
 
 namespace Silnith.CDB.SQL;
 
-#pragma warning disable CS1573 // Parameter has no matching param tag in the XML comment (but other parameters do)
-
 /// <summary>
 /// A CDB data store that uses an SQL database for its storage.
 /// </summary>
@@ -25,6 +23,351 @@ namespace Silnith.CDB.SQL;
 public abstract class SQLCDB : ICDB
 {
     /// <summary>
+    /// A generic accessor that provides common boilerplate code for the most
+    /// common access scenarios.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// All of the tables emulating filesystem storage of CDB files follow the
+    /// same pattern.  The first column is the identifier for the CDB.  The
+    /// last column before the file contents is the file type (extension).  In
+    /// between are all the parameters extracted from the file name.
+    /// </para>
+    /// <para>
+    /// The most common access patterns are reading a file and writing a file.
+    /// Both of these involve taking all of the parameters from the filename
+    /// and either inserting or retrieving the file contents.  The code to call
+    /// the select or insert statement is the same across all the tables, the
+    /// only difference is how to map the file identifier to the columns.
+    /// </para>
+    /// <para>
+    /// This provides that common code, and abstract methods for mapping the
+    /// specific identifier to the columns of the specific table.  Subclasses
+    /// can provide these mappings and reuse the code that handles the database
+    /// access.
+    /// </para>
+    /// </remarks>
+    /// <typeparam name="T">The type of identifier that holds all the data
+    /// necessary to uniquely identify a row in the specific table for that
+    /// file type.</typeparam>
+    internal abstract class TableAccessor<T>
+    {
+        protected readonly SQLCDB sqlCDB;
+
+        private readonly string selectStatement;
+
+        private readonly string insertStatement;
+
+        internal TableAccessor(SQLCDB sqlCDB, string selectStatement, string insertStatement)
+        {
+            this.sqlCDB = sqlCDB;
+            this.selectStatement = selectStatement;
+            this.insertStatement = insertStatement;
+        }
+
+        /// <summary>
+        /// Creates the parameters appropriate for an object of type
+        /// <typeparamref name="T"/> and attaches them to the prepared statement.
+        /// </summary>
+        /// <param name="dbCommand">The command to create the parameters for.</param>
+        internal abstract void CreateAndAttachObjectParameter(DbCommand dbCommand);
+
+        /// <summary>
+        /// Sets the parameters according to the members of an object of type
+        /// <typeparamref name="T"/>.
+        /// </summary>
+        /// <param name="dbCommand">The prepared statement to set the parameter for.</param>
+        /// <param name="obj">The object from which to get all the parameter values.</param>
+        internal abstract void SetObjectParameters(DbCommand dbCommand, T obj);
+
+        /// <summary>
+        /// Initializes a prepared statement to be a <c>select</c> query for
+        /// the appropriate table with parameters matching all the columns that
+        /// make up the composite primary key.
+        /// </summary>
+        /// <param name="dbCommand">The command to initialize.</param>
+        internal void InitializeSelectCommand(DbCommand dbCommand)
+        {
+            dbCommand.CommandText = selectStatement;
+            sqlCDB.CreateAndAttachCdbParameter(dbCommand);
+            CreateAndAttachObjectParameter(dbCommand);
+        }
+
+        /// <summary>
+        /// Executes a <c>select</c> query using the provided prepared statement
+        /// and input.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// This takes the prepared statement as a parameter to support multiple
+        /// use cases.  Typical calls will get a database connection to read a
+        /// single file, disposing afterwards.  Bulk import scenarios will want
+        /// to maintain a persistent connection and provide transaction support.
+        /// </para>
+        /// <para>
+        /// The prepared statement must have been initialized by <see cref="InitializeSelectCommand(DbCommand)"/>.
+        /// </para>
+        /// </remarks>
+        /// <param name="dbCommand">The prepared statement.</param>
+        /// <param name="obj">The object containing all the necessary members for uniquely identifying a row.</param>
+        /// <returns>The contents of the <see cref="ContentColumnName"/> column, or <see langword="null"/>.</returns>
+        internal Stream? SelectUsingPreparedStatement(DbCommand dbCommand, T obj)
+        {
+            sqlCDB.SetCdbParameter(dbCommand);
+            SetObjectParameters(dbCommand, obj);
+
+            DbDataReader dbDataReader = dbCommand.ExecuteReader(
+                CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow);
+            try
+            {
+                do
+                {
+                    while (dbDataReader.Read())
+                    {
+                        Stream stream = dbDataReader.GetStream(sqlCDB.ContentColumnName);
+                        return new WrappedStream(stream, dbDataReader);
+                    }
+                } while (dbDataReader.NextResult());
+                dbDataReader.Dispose();
+                return null;
+            }
+            catch (Exception)
+            {
+                dbDataReader.Dispose();
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Executes a select query using the provided prepared statement and input.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// This takes the prepared statement as a parameter to support multiple
+        /// use cases.  Typical calls will get a database connection to read a
+        /// single file, disposing afterwards.  Bulk import scenarios will want
+        /// to maintain a persistent connection and provide transaction support.
+        /// </para>
+        /// <para>
+        /// The prepared statement must have been initialized by <see cref="InitializeSelectCommand(DbCommand)"/>.
+        /// </para>
+        /// </remarks>
+        /// <param name="dbCommand">The prepared statement.</param>
+        /// <param name="obj">The object containing all the necessary members for uniquely identifying a row.</param>
+        /// <param name="cancellationToken">A cancellation token.</param>
+        /// <returns>The contents of the <see cref="ContentColumnName"/> column, or <see langword="null"/>.</returns>
+        internal async Task<Stream?> SelectUsingPreparedStatementAsync(DbCommand dbCommand, T obj, CancellationToken cancellationToken = default)
+        {
+            sqlCDB.SetCdbParameter(dbCommand);
+            SetObjectParameters(dbCommand, obj);
+
+            DbDataReader dbDataReader = await dbCommand.ExecuteReaderAsync(
+                CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow,
+                cancellationToken);
+            try
+            {
+                do
+                {
+                    while (await dbDataReader.ReadAsync(cancellationToken))
+                    {
+                        Stream stream = dbDataReader.GetStream(sqlCDB.ContentColumnName);
+                        return new WrappedStream(stream, dbDataReader);
+                    }
+                } while (await dbDataReader.NextResultAsync(cancellationToken));
+                await dbDataReader.DisposeAsync();
+                return null;
+            }
+            catch (Exception)
+            {
+                await dbDataReader.DisposeAsync();
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Opens a new database connection and calls <see cref="SelectUsingPreparedStatement(DbCommand, T)"/>.
+        /// </summary>
+        /// <param name="obj">The object containing all the necessary members for uniquely identifying a row.</param>
+        /// <returns>The contents of the <see cref="ContentColumnName"/> column, or <see langword="null"/>.</returns>
+        internal Stream? SelectUsingNewConnection(T obj)
+        {
+            DbConnection dbConnection = sqlCDB.dbDataSource.OpenConnection();
+            try
+            {
+                DbCommand dbCommand = dbConnection.CreateCommand();
+                try
+                {
+                    InitializeSelectCommand(dbCommand);
+                    dbCommand.Prepare();
+
+                    Stream? stream = SelectUsingPreparedStatement(dbCommand, obj);
+                    if (stream is not null)
+                    {
+                        return new WrappedStream(stream, dbCommand, dbConnection);
+                    }
+                    else
+                    {
+                        dbCommand.Dispose();
+                        dbConnection.Dispose();
+                        return null;
+                    }
+                }
+                catch (Exception)
+                {
+                    dbCommand.Dispose();
+                    throw;
+                }
+            }
+            catch (Exception)
+            {
+                dbConnection.Dispose();
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Opens a new database connection and calls <see cref="SelectUsingPreparedStatementAsync(DbCommand, T, CancellationToken)"/>.
+        /// </summary>
+        /// <param name="obj">The object containing all the necessary members for uniquely identifying a row.</param>
+        /// <param name="cancellationToken">A cancellation token.</param>
+        /// <returns>The contents of the <see cref="ContentColumnName"/> column, or <see langword="null"/>.</returns>
+        internal async Task<Stream?> SelectUsingNewConnectionAsync(T obj, CancellationToken cancellationToken = default)
+        {
+            DbConnection dbConnection = await sqlCDB.dbDataSource.OpenConnectionAsync(cancellationToken);
+            try
+            {
+                DbCommand dbCommand = dbConnection.CreateCommand();
+                try
+                {
+                    InitializeSelectCommand(dbCommand);
+                    await dbCommand.PrepareAsync(cancellationToken);
+
+                    Stream? stream = await SelectUsingPreparedStatementAsync(dbCommand, obj, cancellationToken);
+                    if (stream is not null)
+                    {
+                        return new WrappedStream(stream, dbCommand, dbConnection);
+                    }
+                    else
+                    {
+                        await dbCommand.DisposeAsync();
+                        await dbConnection.DisposeAsync();
+                        return null;
+                    }
+                }
+                catch (Exception)
+                {
+                    await dbCommand.DisposeAsync();
+                    throw;
+                }
+            }
+            catch (Exception)
+            {
+                await dbConnection.DisposeAsync();
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Initializes a prepared statement to be an <c>insert</c> command for
+        /// the appropriate table with parameters matching all the columns that
+        /// make up the composite primary key.
+        /// </summary>
+        /// <param name="dbCommand">The command to initialize.</param>
+        internal void InitializeInsertCommand(DbCommand dbCommand)
+        {
+            dbCommand.CommandText = insertStatement;
+            sqlCDB.CreateAndAttachCdbParameter(dbCommand);
+            CreateAndAttachObjectParameter(dbCommand);
+            sqlCDB.CreateAndAttachContentParameter(dbCommand);
+        }
+
+        /// <summary>
+        /// Executes an insert command using the provided prepared statement and input.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// This takes the prepared statement as a parameter to support multiple
+        /// use cases.  Typical calls will get a database connection to read a
+        /// single file, disposing afterwards.  Bulk import scenarios will want
+        /// to maintain a persistent connection and provide transaction support.
+        /// </para>
+        /// <para>
+        /// The prepared statement must have been initialized by <see cref="InitializeInsertCommand(DbCommand)"/>.
+        /// </para>
+        /// </remarks>
+        /// <param name="dbCommand">The prepared statement.</param>
+        /// <param name="obj">The object containing all the necessary members for uniquely identifying a row.</param>
+        /// <param name="content">The file contents.</param>
+        internal void InsertUsingPreparedStatement(DbCommand dbCommand, T obj, Stream content)
+        {
+            sqlCDB.SetCdbParameter(dbCommand);
+            SetObjectParameters(dbCommand, obj);
+            sqlCDB.SetContentParameter(dbCommand, content);
+
+            dbCommand.ExecuteNonQuery();
+        }
+
+        /// <summary>
+        /// Executes an insert command using the provided prepared statement and input.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// This takes the prepared statement as a parameter to support multiple
+        /// use cases.  Typical calls will get a database connection to read a
+        /// single file, disposing afterwards.  Bulk import scenarios will want
+        /// to maintain a persistent connection and provide transaction support.
+        /// </para>
+        /// <para>
+        /// The prepared statement must have been initialized by <see cref="InitializeInsertCommand(DbCommand)"/>.
+        /// </para>
+        /// </remarks>
+        /// <param name="dbCommand">The prepared statement.</param>
+        /// <param name="obj">The object containing all the necessary members for uniquely identifying a row.</param>
+        /// <param name="content">The file contents.</param>
+        /// <param name="cancellationToken">A cancellation token.</param>
+        internal Task InsertUsingPreparedStatementAsync(DbCommand dbCommand, T obj, Stream content, CancellationToken cancellationToken = default)
+        {
+            sqlCDB.SetCdbParameter(dbCommand);
+            SetObjectParameters(dbCommand, obj);
+            sqlCDB.SetContentParameter(dbCommand, content);
+
+            return dbCommand.ExecuteNonQueryAsync(cancellationToken);
+        }
+
+        /// <summary>
+        /// Opens a new database connection and calls <see cref="InsertUsingPreparedStatement(DbCommand, T, Stream)"/>.
+        /// </summary>
+        /// <param name="obj">The object containing all the necessary members for uniquely identifying a row.</param>
+        /// <param name="content">The file contents.</param>
+        internal void InsertUsingNewConnection(T obj, Stream content)
+        {
+            using DbConnection dbConnection = sqlCDB.dbDataSource.OpenConnection();
+            using DbCommand dbCommand = dbConnection.CreateCommand();
+            InitializeInsertCommand(dbCommand);
+            dbCommand.Prepare();
+
+            InsertUsingPreparedStatement(dbCommand, obj, content);
+        }
+
+        /// <summary>
+        /// Opens a new database connection and calls <see cref="InsertUsingPreparedStatement(DbCommand, T, Stream)"/>.
+        /// </summary>
+        /// <param name="obj">The object containing all the necessary members for uniquely identifying a row.</param>
+        /// <param name="content">The file contents.</param>
+        /// <param name="cancellationToken">A cancellation token.</param>
+        internal async Task InsertUsingNewConnectionAsync(T obj, Stream content, CancellationToken cancellationToken = default)
+        {
+            await using DbConnection dbConnection = await sqlCDB.dbDataSource.OpenConnectionAsync(cancellationToken);
+            await using DbCommand dbCommand = dbConnection.CreateCommand();
+            InitializeInsertCommand(dbCommand);
+            await dbCommand.PrepareAsync(cancellationToken);
+
+            await InsertUsingPreparedStatementAsync(dbCommand, obj, content, cancellationToken);
+        }
+
+    }
+
+    /// <summary>
     /// Creates a parameter for a database command, sets the name and type of
     /// the parameter, and attaches the parameter to the command.
     /// </summary>
@@ -33,7 +376,7 @@ public abstract class SQLCDB : ICDB
     /// Each database system has its own syntax for how these parameters should
     /// be named.</param>
     /// <param name="dbType">The parameter type.</param>
-    private static void CreateAndAttachParameter(DbCommand dbCommand, string dbParameterName, DbType dbType)
+    internal static void CreateAndAttachParameter(DbCommand dbCommand, string dbParameterName, DbType dbType)
     {
         DbParameter dbParameter = dbCommand.CreateParameter();
         dbCommand.Parameters.Add(dbParameter);
@@ -43,9 +386,20 @@ public abstract class SQLCDB : ICDB
 
     internal readonly DbDataSource dbDataSource;
 
+    internal readonly TableAccessor<Metadata> metadataAccessor;
+    internal readonly TableAccessor<Texture> textureAccessor;
+    internal readonly TableAccessor<TextureLod> textureLodAccessor;
+    internal readonly TableAccessor<GeotypicalModel> geotypicalModelAccessor;
+    internal readonly TableAccessor<GeotypicalModelLod> geotypicalModelLodAccessor;
+    internal readonly TableAccessor<MovingModel> movingModelAccessor;
+    internal readonly TableAccessor<MovingModelLod> movingModelLodAccessor;
+    internal readonly TableAccessor<Tile> tileAccessor;
+    internal readonly TableAccessor<TileArchivedFeature> tileFeatureAccessor;
+    internal readonly TableAccessor<TileArchivedTexture> tileTextureAccessor;
+    internal readonly TableAccessor<Navigation> navigationAccessor;
+
     /// <summary>
-    /// Creates a new CDB storage backend using the provided SQL connection
-    /// string.
+    /// Creates a new CDB storage backend using the provided SQL data source.
     /// </summary>
     /// <param name="dbDataSource">The data source.</param>
     /// <param name="options">Configurable settings.</param>
@@ -62,6 +416,18 @@ public abstract class SQLCDB : ICDB
             CreateSchema();
             InsertIntoCDB(Name);
         }
+
+        metadataAccessor = new MetadataTableAccessor(this);
+        textureAccessor = new TextureTableAccessor(this);
+        textureLodAccessor = new TextureLodTableAccessor(this);
+        geotypicalModelAccessor = new GeotypicalModelTableAccessor(this);
+        geotypicalModelLodAccessor = new GeotypicalModelLodTableAccessor(this);
+        movingModelAccessor = new MovingModelTableAccessor(this);
+        movingModelLodAccessor = new MovingModelLodTableAccessor(this);
+        tileAccessor = new TileTableAccessor(this);
+        tileFeatureAccessor = new TileArchivedFeatureTableAccessor(this);
+        tileTextureAccessor = new TileArchivedTextureTableAccessor(this);
+        navigationAccessor = new NavigationTableAccessor(this);
     }
 
     /// <summary>
@@ -551,7 +917,7 @@ public abstract class SQLCDB : ICDB
         return SelectFromCDB(selectFromCDBCommand);
     }
 
-    /// <inheritdoc cref="SelectFromCDBAsync(CancellationToken)"/>
+    /// <inheritdoc cref="SelectFromCDB()"/>
     /// <param name="selectFromCDBCommand">The prepared statement to use to execute the query.</param>
     internal IEnumerable<string> SelectFromCDB(DbCommand selectFromCDBCommand)
     {
@@ -578,7 +944,7 @@ public abstract class SQLCDB : ICDB
     /// </remarks>
     /// <param name="cancellationToken">A cancellation token.</param>
     /// <returns>All the names of the distinct CDB data stores in the database.</returns>
-    public async IAsyncEnumerable<string> SelectFromCDBAsync([EnumeratorCancellation] CancellationToken cancellationToken)
+    public async IAsyncEnumerable<string> SelectFromCDBAsync([EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
         await using DbCommand selectFromCDBCommand = dbConnection.CreateCommand();
@@ -593,10 +959,12 @@ public abstract class SQLCDB : ICDB
 
     /// <inheritdoc cref="SelectFromCDBAsync(CancellationToken)"/>
     /// <param name="selectFromCDBCommand">The prepared statement to use to execute the query.</param>
+    /// <param name="cancellationToken">A cancellation token.</param>
     internal async IAsyncEnumerable<string> SelectFromCDBAsync(DbCommand selectFromCDBCommand, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         await using DbDataReader dbDataReader = await selectFromCDBCommand.ExecuteReaderAsync(
-            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult, cancellationToken);
+            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult,
+            cancellationToken);
         do
         {
             while (await dbDataReader.ReadAsync(cancellationToken))
@@ -658,6 +1026,7 @@ public abstract class SQLCDB : ICDB
 
     /// <inheritdoc cref="InsertIntoCDB(string)"/>
     /// <param name="insertIntoCDBCommand">The prepared statement to use to execute the query.</param>
+    /// <param name="cdbName">The name of a new CDB data store.</param>
     internal void InsertIntoCDB(DbCommand insertIntoCDBCommand, string cdbName)
     {
         /*
@@ -681,7 +1050,7 @@ public abstract class SQLCDB : ICDB
     /// </remarks>
     /// <param name="cdbName">The name of a new CDB data store.</param>
     /// <param name="cancellationToken">A cancellation token.</param>
-    public async Task InsertIntoCDBAsync(string cdbName, CancellationToken cancellationToken)
+    public async Task InsertIntoCDBAsync(string cdbName, CancellationToken cancellationToken = default)
     {
         await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
         await using DbCommand insertIntoCDBCommand = dbConnection.CreateCommand();
@@ -693,6 +1062,8 @@ public abstract class SQLCDB : ICDB
 
     /// <inheritdoc cref="InsertIntoCDBAsync(string, CancellationToken)"/>
     /// <param name="insertIntoCDBCommand">The prepared statement to use to execute the query.</param>
+    /// <param name="cdbName">The name of a new CDB data store.</param>
+    /// <param name="cancellationToken">A cancellation token.</param>
     internal Task InsertIntoCDBAsync(DbCommand insertIntoCDBCommand, string cdbName, CancellationToken cancellationToken = default)
     {
         /*
@@ -711,50 +1082,43 @@ public abstract class SQLCDB : ICDB
     #region Metadata
 
     /// <summary>
+    /// A table accessor for type <see cref="Metadata"/>.
+    /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><term><see cref="Metadata"/> Property</term><description>SQL Statement Parameter</description></listheader>
+    ///   <item><term><see cref="Metadata.Name"/></term><description><see cref="MetadataNameParamName"/></description></item>
+    ///   <item><term><see cref="Metadata.FileType"/></term><description><see cref="FileTypeParamName"/></description></item>
+    /// </list>
+    /// </remarks>
+    private class MetadataTableAccessor : TableAccessor<Metadata>
+    {
+        internal MetadataTableAccessor(SQLCDB sqlCDB)
+            : base(sqlCDB, sqlCDB.SelectFromMetadataStatement, sqlCDB.InsertIntoMetadataStatement)
+        {
+        }
+
+        /// <inheritdoc/>
+        internal override void CreateAndAttachObjectParameter(DbCommand dbCommand)
+        {
+            CreateAndAttachParameter(dbCommand, sqlCDB.MetadataNameParamName, DbType.String);
+            CreateAndAttachParameter(dbCommand, sqlCDB.FileTypeParamName, DbType.String);
+        }
+
+        /// <inheritdoc/>
+        internal override void SetObjectParameters(DbCommand dbCommand, Metadata obj)
+        {
+            dbCommand.Parameters[sqlCDB.MetadataNameParamName].Value = obj.Name;
+            dbCommand.Parameters[sqlCDB.FileTypeParamName].Value = obj.FileType;
+        }
+    }
+
+    /// <summary>
     /// The SQL DDL statement to create the Metadata table.
     /// </summary>
     protected abstract string CreateTableMetadataStatement
     {
         get;
-    }
-
-    /// <summary>
-    /// Creates the parameters appropriate for a <see cref="Metadata"/> object
-    /// and attaches them to the prepared statement.
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    ///   <listheader><description>Parameters</description></listheader>
-    ///   <item><description><see cref="MetadataNameParamName"/></description></item>
-    ///   <item><description><see cref="FileTypeParamName"/></description></item>
-    /// </list>
-    /// </remarks>
-    /// <param name="dbCommand">The command to create the parameters for.</param>
-    /// <seealso cref="SetMetadataParameters(DbCommand, Metadata)"/>
-    private void CreateAndAttachMetadataParameters(DbCommand dbCommand)
-    {
-        CreateAndAttachParameter(dbCommand, MetadataNameParamName, DbType.String);
-        CreateAndAttachParameter(dbCommand, FileTypeParamName, DbType.String);
-    }
-
-    /// <summary>
-    /// Sets the parameters according to the members of a <see cref="Metadata"/>
-    /// object.
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    ///   <listheader><description>Parameters</description></listheader>
-    ///   <item><description><see cref="MetadataNameParamName"/></description></item>
-    ///   <item><description><see cref="FileTypeParamName"/></description></item>
-    /// </list>
-    /// </remarks>
-    /// <param name="dbCommand">The prepared statement to set the parameter for.</param>
-    /// <param name="metadata">The object from which to get all the parameter values.</param>
-    /// <seealso cref="CreateAndAttachMetadataParameters(DbCommand)"/>
-    private void SetMetadataParameters(DbCommand dbCommand, Metadata metadata)
-    {
-        dbCommand.Parameters[MetadataNameParamName].Value = metadata.Name;
-        dbCommand.Parameters[FileTypeParamName].Value = metadata.FileType;
     }
 
     #region Select
@@ -779,147 +1143,16 @@ public abstract class SQLCDB : ICDB
         get;
     }
 
-    /// <summary>
-    /// Initializes a prepared statement to be a <see cref="SelectFromMetadataStatement"/>.
-    /// </summary>
-    /// <param name="dbCommand">The command to initialize.</param>
-    internal void InitializeSelectFromMetadataCommand(DbCommand dbCommand)
-    {
-        dbCommand.CommandText = SelectFromMetadataStatement;
-        CreateAndAttachCdbParameter(dbCommand);
-        CreateAndAttachMetadataParameters(dbCommand);
-    }
-
     /// <inheritdoc/>
     public Stream? ReadMetadata(Metadata metadata)
     {
-        DbConnection dbConnection = dbDataSource.OpenConnection();
-        try
-        {
-            DbCommand selectFromMetadataCommand = dbConnection.CreateCommand();
-            try
-            {
-                InitializeSelectFromMetadataCommand(selectFromMetadataCommand);
-                selectFromMetadataCommand.Prepare();
-
-                Stream? stream = SelectFromMetadata(selectFromMetadataCommand, metadata);
-                if (stream is not null)
-                {
-                    return new WrappedStream(stream, selectFromMetadataCommand, dbConnection);
-                }
-                else
-                {
-                    selectFromMetadataCommand.Dispose();
-                    dbConnection.Dispose();
-                    return null;
-                }
-            }
-            catch (Exception)
-            {
-                selectFromMetadataCommand.Dispose();
-                throw;
-            }
-        }
-        catch (Exception)
-        {
-            dbConnection.Dispose();
-            throw;
-        }
-    }
-
-    /// <inheritdoc cref="ReadMetadata(Metadata)"/>
-    /// <param name="selectFromMetadataCommand">The prepared statement to use to execute the query.</param>
-    internal Stream? SelectFromMetadata(DbCommand selectFromMetadataCommand, Metadata metadata)
-    {
-        SetCdbParameter(selectFromMetadataCommand);
-        SetMetadataParameters(selectFromMetadataCommand, metadata);
-
-        DbDataReader dbDataReader = selectFromMetadataCommand.ExecuteReader(
-            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow);
-        try
-        {
-            do
-            {
-                while (dbDataReader.Read())
-                {
-                    Stream stream = dbDataReader.GetStream(ContentColumnName);
-                    return new WrappedStream(stream, dbDataReader);
-                }
-            } while (dbDataReader.NextResult());
-            dbDataReader.Dispose();
-            return null;
-        }
-        catch (Exception)
-        {
-            dbDataReader.Dispose();
-            throw;
-        }
+        return metadataAccessor.SelectUsingNewConnection(metadata);
     }
 
     /// <inheritdoc/>
-    public async Task<Stream?> ReadMetadataAsync(Metadata metadata, CancellationToken cancellationToken)
+    public Task<Stream?> ReadMetadataAsync(Metadata metadata, CancellationToken cancellationToken)
     {
-        DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        try
-        {
-            DbCommand selectFromMetadataCommand = dbConnection.CreateCommand();
-            try
-            {
-                InitializeSelectFromMetadataCommand(selectFromMetadataCommand);
-                await selectFromMetadataCommand.PrepareAsync(cancellationToken);
-
-                Stream? stream = await SelectFromMetadataAsync(selectFromMetadataCommand, metadata, cancellationToken);
-                if (stream is not null)
-                {
-                    return new WrappedStream(stream, selectFromMetadataCommand, dbConnection);
-                }
-                else
-                {
-                    await selectFromMetadataCommand.DisposeAsync();
-                    await dbConnection.DisposeAsync();
-                    return null;
-                }
-            }
-            catch (Exception)
-            {
-                await selectFromMetadataCommand.DisposeAsync();
-                throw;
-            }
-        }
-        catch (Exception)
-        {
-            await dbConnection.DisposeAsync();
-            throw;
-        }
-    }
-
-    /// <inheritdoc cref="ReadMetadataAsync(Metadata, CancellationToken)"/>
-    /// <param name="selectFromMetadataCommand">The prepared statement to use to execute the query.</param>
-    internal async Task<Stream?> SelectFromMetadataAsync(DbCommand selectFromMetadataCommand, Metadata metadata, CancellationToken cancellationToken)
-    {
-        SetCdbParameter(selectFromMetadataCommand);
-        SetMetadataParameters(selectFromMetadataCommand, metadata);
-
-        DbDataReader dbDataReader = await selectFromMetadataCommand.ExecuteReaderAsync(
-            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow, cancellationToken);
-        try
-        {
-            do
-            {
-                while (await dbDataReader.ReadAsync(cancellationToken))
-                {
-                    Stream stream = dbDataReader.GetStream(ContentColumnName);
-                    return new WrappedStream(stream, dbDataReader);
-                }
-            } while (await dbDataReader.NextResultAsync(cancellationToken));
-            await dbDataReader.DisposeAsync();
-            return null;
-        }
-        catch (Exception)
-        {
-            await dbDataReader.DisposeAsync();
-            throw;
-        }
+        return metadataAccessor.SelectUsingNewConnectionAsync(metadata, cancellationToken);
     }
 
     #endregion
@@ -943,60 +1176,16 @@ public abstract class SQLCDB : ICDB
         get;
     }
 
-    /// <summary>
-    /// Initializes a prepared statement to be an <see cref="InsertIntoMetadataStatement"/>.
-    /// </summary>
-    /// <param name="dbCommand">The command to initialize.</param>
-    internal void InitializeInsertIntoMetadataCommand(DbCommand dbCommand)
-    {
-        dbCommand.CommandText = InsertIntoMetadataStatement;
-        CreateAndAttachCdbParameter(dbCommand);
-        CreateAndAttachMetadataParameters(dbCommand);
-        CreateAndAttachContentParameter(dbCommand);
-    }
-
     /// <inheritdoc/>
     public void WriteMetadata(Metadata metadata, Stream content)
     {
-        using DbConnection dbConnection = dbDataSource.OpenConnection();
-        using DbCommand insertIntoMetadataCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoMetadataCommand(insertIntoMetadataCommand);
-        insertIntoMetadataCommand.Prepare();
-
-        InsertIntoMetadata(insertIntoMetadataCommand, metadata, content);
-    }
-
-    /// <inheritdoc cref="WriteMetadata(Metadata, Stream)"/>
-    /// <param name="insertIntoMetadataCommand">The prepared statement to use to execute the query.</param>
-    internal void InsertIntoMetadata(DbCommand insertIntoMetadataCommand, Metadata metadata, Stream content)
-    {
-        SetCdbParameter(insertIntoMetadataCommand);
-        SetMetadataParameters(insertIntoMetadataCommand, metadata);
-        SetContentParameter(insertIntoMetadataCommand, content);
-
-        insertIntoMetadataCommand.ExecuteNonQuery();
+        metadataAccessor.InsertUsingNewConnection(metadata, content);
     }
 
     /// <inheritdoc/>
-    public async Task WriteMetadataAsync(Metadata metadata, Stream content, CancellationToken cancellationToken)
+    public Task WriteMetadataAsync(Metadata metadata, Stream content, CancellationToken cancellationToken)
     {
-        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        await using DbCommand insertIntoMetadataCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoMetadataCommand(insertIntoMetadataCommand);
-        await insertIntoMetadataCommand.PrepareAsync(cancellationToken);
-
-        await InsertIntoMetadataAsync(insertIntoMetadataCommand, metadata, content, cancellationToken);
-    }
-
-    /// <inheritdoc cref="WriteMetadataAsync(Metadata, Stream, CancellationToken)"/>
-    /// <param name="insertIntoMetadataCommand">The prepared statement to use to execute the query.</param>
-    internal Task InsertIntoMetadataAsync(DbCommand insertIntoMetadataCommand, Metadata metadata, Stream content, CancellationToken cancellationToken)
-    {
-        SetCdbParameter(insertIntoMetadataCommand);
-        SetMetadataParameters(insertIntoMetadataCommand, metadata);
-        SetContentParameter(insertIntoMetadataCommand, content);
-
-        return insertIntoMetadataCommand.ExecuteNonQueryAsync(cancellationToken);
+        return metadataAccessor.InsertUsingNewConnectionAsync(metadata, content, cancellationToken);
     }
 
     #endregion
@@ -1006,62 +1195,52 @@ public abstract class SQLCDB : ICDB
     #region Texture
 
     /// <summary>
+    /// A table accessor for type <see cref="Texture"/>.
+    /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><term><see cref="Texture"/> Property</term><description>SQL Statement Parameter</description></listheader>
+    ///   <item><term><see cref="Texture.Dataset"/></term><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><term><see cref="Texture.ComponentSelector1"/></term><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><term><see cref="Texture.ComponentSelector2"/></term><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><term><see cref="Texture.Name"/></term><description><see cref="TextureNameParamName"/></description></item>
+    ///   <item><term><see cref="Texture.FileType"/></term><description><see cref="FileTypeParamName"/></description></item>
+    /// </list>
+    /// </remarks>
+    private class TextureTableAccessor : TableAccessor<Texture>
+    {
+        internal TextureTableAccessor(SQLCDB sqlCDB)
+            : base(sqlCDB, sqlCDB.SelectFromTextureStatement, sqlCDB.InsertIntoTextureStatement)
+        {
+        }
+
+        /// <inheritdoc/>
+        internal override void CreateAndAttachObjectParameter(DbCommand dbCommand)
+        {
+            CreateAndAttachParameter(dbCommand, sqlCDB.DatasetParamName, DbType.Int32);
+            CreateAndAttachParameter(dbCommand, sqlCDB.ComponentSelector1ParamName, DbType.Int32);
+            CreateAndAttachParameter(dbCommand, sqlCDB.ComponentSelector2ParamName, DbType.Int32);
+            CreateAndAttachParameter(dbCommand, sqlCDB.TextureNameParamName, DbType.String);
+            CreateAndAttachParameter(dbCommand, sqlCDB.FileTypeParamName, DbType.String);
+        }
+
+        /// <inheritdoc/>
+        internal override void SetObjectParameters(DbCommand dbCommand, Texture obj)
+        {
+            dbCommand.Parameters[sqlCDB.DatasetParamName].Value = obj.Dataset.Value;
+            dbCommand.Parameters[sqlCDB.ComponentSelector1ParamName].Value = obj.ComponentSelector1;
+            dbCommand.Parameters[sqlCDB.ComponentSelector2ParamName].Value = obj.ComponentSelector2;
+            dbCommand.Parameters[sqlCDB.TextureNameParamName].Value = obj.Name;
+            dbCommand.Parameters[sqlCDB.FileTypeParamName].Value = obj.FileType;
+        }
+    }
+
+    /// <summary>
     /// The SQL DDL statement to create the Texture table.
     /// </summary>
     protected abstract string CreateTableTextureStatement
     {
         get;
-    }
-
-    /// <summary>
-    /// Creates the parameters appropriate for a <see cref="Texture"/> object
-    /// and attaches them to the prepared statement.
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    ///   <listheader><description>Parameters</description></listheader>
-    ///   <item><description><see cref="DatasetParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
-    ///   <item><description><see cref="TextureNameParamName"/></description></item>
-    ///   <item><description><see cref="FileTypeParamName"/></description></item>
-    /// </list>
-    /// </remarks>
-    /// <param name="dbCommand">The command to create the parameters for.</param>
-    /// <seealso cref="SetTextureParameters(DbCommand, Texture)"/>
-    private void CreateAndAttachTextureParameters(DbCommand dbCommand)
-    {
-        CreateAndAttachParameter(dbCommand, DatasetParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, ComponentSelector1ParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, ComponentSelector2ParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, TextureNameParamName, DbType.String);
-        CreateAndAttachParameter(dbCommand, FileTypeParamName, DbType.String);
-    }
-
-    /// <summary>
-    /// Sets the parameters according to the members of a <see cref="Texture"/>
-    /// object.
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    ///   <listheader><description>Parameters</description></listheader>
-    ///   <item><description><see cref="DatasetParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
-    ///   <item><description><see cref="TextureNameParamName"/></description></item>
-    ///   <item><description><see cref="FileTypeParamName"/></description></item>
-    /// </list>
-    /// </remarks>
-    /// <param name="dbCommand">The prepared statement to set the parameter for.</param>
-    /// <param name="texture">The object from which to get all the parameter values.</param>
-    /// <seealso cref="CreateAndAttachTextureParameters(DbCommand)"/>
-    private void SetTextureParameters(DbCommand dbCommand, Texture texture)
-    {
-        dbCommand.Parameters[DatasetParamName].Value = texture.Dataset.Value;
-        dbCommand.Parameters[ComponentSelector1ParamName].Value = texture.ComponentSelector1;
-        dbCommand.Parameters[ComponentSelector2ParamName].Value = texture.ComponentSelector2;
-        dbCommand.Parameters[TextureNameParamName].Value = texture.Name;
-        dbCommand.Parameters[FileTypeParamName].Value = texture.FileType;
     }
 
     #region Select
@@ -1089,147 +1268,16 @@ public abstract class SQLCDB : ICDB
         get;
     }
 
-    /// <summary>
-    /// Initializes a prepared statement to be a <see cref="SelectFromTextureStatement"/>.
-    /// </summary>
-    /// <param name="dbCommand">The command to initialize.</param>
-    internal void InitializeSelectFromTextureCommand(DbCommand dbCommand)
-    {
-        dbCommand.CommandText = SelectFromTextureStatement;
-        CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
-        CreateAndAttachTextureParameters(dbCommand);
-    }
-
     /// <inheritdoc/>
     public Stream? ReadTexture(Texture texture)
     {
-        DbConnection dbConnection = dbDataSource.OpenConnection();
-        try
-        {
-            DbCommand selectFromTextureCommand = dbConnection.CreateCommand();
-            try
-            {
-                InitializeSelectFromTextureCommand(selectFromTextureCommand);
-                selectFromTextureCommand.Prepare();
-
-                Stream? stream = SelectFromTexture(selectFromTextureCommand, texture);
-                if (stream is not null)
-                {
-                    return new WrappedStream(stream, selectFromTextureCommand, dbConnection);
-                }
-                else
-                {
-                    selectFromTextureCommand.Dispose();
-                    dbConnection.Dispose();
-                    return null;
-                }
-            }
-            catch (Exception)
-            {
-                selectFromTextureCommand.Dispose();
-                throw;
-            }
-        }
-        catch (Exception)
-        {
-            dbConnection.Dispose();
-            throw;
-        }
-    }
-
-    /// <inheritdoc cref="ReadTexture(Texture)"/>
-    /// <param name="selectFromTextureCommand">The prepared statement to use to execute the query.</param>
-    internal Stream? SelectFromTexture(DbCommand selectFromTextureCommand, Texture texture)
-    {
-        SetCdbParameter(selectFromTextureCommand);
-        SetTextureParameters(selectFromTextureCommand, texture);
-
-        DbDataReader dbDataReader = selectFromTextureCommand.ExecuteReader(
-            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow);
-        try
-        {
-            do
-            {
-                while (dbDataReader.Read())
-                {
-                    Stream stream = dbDataReader.GetStream(ContentColumnName);
-                    return new WrappedStream(stream, dbDataReader);
-                }
-            } while (dbDataReader.NextResult());
-            dbDataReader.Dispose();
-            return null;
-        }
-        catch (Exception)
-        {
-            dbDataReader.Dispose();
-            throw;
-        }
+        return textureAccessor.SelectUsingNewConnection(texture);
     }
 
     /// <inheritdoc/>
-    public async Task<Stream?> ReadTextureAsync(Texture texture, CancellationToken cancellationToken)
+    public Task<Stream?> ReadTextureAsync(Texture texture, CancellationToken cancellationToken)
     {
-        DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        try
-        {
-            DbCommand selectFromTextureCommand = dbConnection.CreateCommand();
-            try
-            {
-                InitializeSelectFromTextureCommand(selectFromTextureCommand);
-                await selectFromTextureCommand.PrepareAsync(cancellationToken);
-
-                Stream? stream = await SelectFromTextureAsync(selectFromTextureCommand, texture, cancellationToken);
-                if (stream is not null)
-                {
-                    return new WrappedStream(stream, selectFromTextureCommand, dbConnection);
-                }
-                else
-                {
-                    await selectFromTextureCommand.DisposeAsync();
-                    await dbConnection.DisposeAsync();
-                    return null;
-                }
-            }
-            catch (Exception)
-            {
-                await selectFromTextureCommand.DisposeAsync();
-                throw;
-            }
-        }
-        catch (Exception)
-        {
-            await dbConnection.DisposeAsync();
-            throw;
-        }
-    }
-
-    /// <inheritdoc cref="ReadTextureAsync(Texture, CancellationToken)"/>
-    /// <param name="selectFromTextureCommand">The prepared statement to use to execute the query.</param>
-    internal async Task<Stream?> SelectFromTextureAsync(DbCommand selectFromTextureCommand, Texture texture, CancellationToken cancellationToken)
-    {
-        SetCdbParameter(selectFromTextureCommand);
-        SetTextureParameters(selectFromTextureCommand, texture);
-
-        DbDataReader dbDataReader = await selectFromTextureCommand.ExecuteReaderAsync(
-            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow, cancellationToken);
-        try
-        {
-            do
-            {
-                while (await dbDataReader.ReadAsync(cancellationToken))
-                {
-                    Stream stream = dbDataReader.GetStream(ContentColumnName);
-                    return new WrappedStream(stream, dbDataReader);
-                }
-            } while (await dbDataReader.NextResultAsync(cancellationToken));
-            await dbDataReader.DisposeAsync();
-            return null;
-        }
-        catch (Exception)
-        {
-            await dbDataReader.DisposeAsync();
-            throw;
-        }
+        return textureAccessor.SelectUsingNewConnectionAsync(texture, cancellationToken);
     }
 
     #endregion
@@ -1256,60 +1304,16 @@ public abstract class SQLCDB : ICDB
         get;
     }
 
-    /// <summary>
-    /// Initializes a prepared statement to be an <see cref="InsertIntoTextureStatement"/>.
-    /// </summary>
-    /// <param name="dbCommand">The command to initialize.</param>
-    internal void InitializeInsertIntoTextureCommand(DbCommand dbCommand)
-    {
-        dbCommand.CommandText = InsertIntoTextureStatement;
-        CreateAndAttachCdbParameter(dbCommand);
-        CreateAndAttachTextureParameters(dbCommand);
-        CreateAndAttachContentParameter(dbCommand);
-    }
-
     /// <inheritdoc/>
     public void WriteTexture(Texture texture, Stream content)
     {
-        using DbConnection dbConnection = dbDataSource.OpenConnection();
-        using DbCommand insertIntoTextureCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoTextureCommand(insertIntoTextureCommand);
-        insertIntoTextureCommand.Prepare();
-
-        InsertIntoTexture(insertIntoTextureCommand, texture, content);
-    }
-
-    /// <inheritdoc cref="WriteTexture(Texture, Stream)"/>
-    /// <param name="insertIntoTextureCommand">The prepared statement to use to execute the query.</param>
-    internal void InsertIntoTexture(DbCommand insertIntoTextureCommand, Texture texture, Stream content)
-    {
-        SetCdbParameter(insertIntoTextureCommand);
-        SetTextureParameters(insertIntoTextureCommand, texture);
-        SetContentParameter(insertIntoTextureCommand, content);
-
-        insertIntoTextureCommand.ExecuteNonQuery();
+        textureAccessor.InsertUsingNewConnection(texture, content);
     }
 
     /// <inheritdoc/>
-    public async Task WriteTextureAsync(Texture texture, Stream content, CancellationToken cancellationToken)
+    public Task WriteTextureAsync(Texture texture, Stream content, CancellationToken cancellationToken)
     {
-        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        await using DbCommand insertIntoTextureCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoTextureCommand(insertIntoTextureCommand);
-        await insertIntoTextureCommand.PrepareAsync(cancellationToken);
-
-        await InsertIntoTextureAsync(insertIntoTextureCommand, texture, content, cancellationToken);
-    }
-
-    /// <inheritdoc cref="WriteTextureAsync(Texture, Stream, CancellationToken)"/>
-    /// <param name="insertIntoTextureCommand">The prepared statement to use to execute the query.</param>
-    internal Task InsertIntoTextureAsync(DbCommand insertIntoTextureCommand, Texture texture, Stream content, CancellationToken cancellationToken)
-    {
-        SetCdbParameter(insertIntoTextureCommand);
-        SetTextureParameters(insertIntoTextureCommand, texture);
-        SetContentParameter(insertIntoTextureCommand, content);
-
-        return insertIntoTextureCommand.ExecuteNonQueryAsync(cancellationToken);
+        return textureAccessor.InsertUsingNewConnectionAsync(texture, content, cancellationToken);
     }
 
     #endregion
@@ -1319,66 +1323,55 @@ public abstract class SQLCDB : ICDB
     #region Texture LOD
 
     /// <summary>
+    /// A table accessor for type <see cref="TextureLod"/>.
+    /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><term><see cref="TextureLod"/> Property</term><description>SQL Statement Parameter</description></listheader>
+    ///   <item><term><see cref="TextureLod.Dataset"/></term><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><term><see cref="TextureLod.ComponentSelector1"/></term><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><term><see cref="TextureLod.ComponentSelector2"/></term><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><term><see cref="TextureLod.LevelOfDetail"/></term><description><see cref="LevelOfDetailParamName"/></description></item>
+    ///   <item><term><see cref="TextureLod.Name"/></term><description><see cref="TextureNameParamName"/></description></item>
+    ///   <item><term><see cref="TextureLod.FileType"/></term><description><see cref="FileTypeParamName"/></description></item>
+    /// </list>
+    /// </remarks>
+    private class TextureLodTableAccessor : TableAccessor<TextureLod>
+    {
+        internal TextureLodTableAccessor(SQLCDB sqlCDB)
+            : base(sqlCDB, sqlCDB.SelectFromTextureLodStatement, sqlCDB.InsertIntoTextureLodStatement)
+        {
+        }
+
+        /// <inheritdoc/>
+        internal override void CreateAndAttachObjectParameter(DbCommand dbCommand)
+        {
+            CreateAndAttachParameter(dbCommand, sqlCDB.DatasetParamName, DbType.Int32);
+            CreateAndAttachParameter(dbCommand, sqlCDB.ComponentSelector1ParamName, DbType.Int32);
+            CreateAndAttachParameter(dbCommand, sqlCDB.ComponentSelector2ParamName, DbType.Int32);
+            CreateAndAttachParameter(dbCommand, sqlCDB.LevelOfDetailParamName, DbType.Int32);
+            CreateAndAttachParameter(dbCommand, sqlCDB.TextureNameParamName, DbType.String);
+            CreateAndAttachParameter(dbCommand, sqlCDB.FileTypeParamName, DbType.String);
+        }
+
+        /// <inheritdoc/>
+        internal override void SetObjectParameters(DbCommand dbCommand, TextureLod obj)
+        {
+            dbCommand.Parameters[sqlCDB.DatasetParamName].Value = obj.Dataset.Value;
+            dbCommand.Parameters[sqlCDB.ComponentSelector1ParamName].Value = obj.ComponentSelector1;
+            dbCommand.Parameters[sqlCDB.ComponentSelector2ParamName].Value = obj.ComponentSelector2;
+            dbCommand.Parameters[sqlCDB.LevelOfDetailParamName].Value = obj.LevelOfDetail.Value;
+            dbCommand.Parameters[sqlCDB.TextureNameParamName].Value = obj.Name;
+            dbCommand.Parameters[sqlCDB.FileTypeParamName].Value = obj.FileType;
+        }
+    }
+
+    /// <summary>
     /// The SQL DDL statement to create the Texture Level of Detail table.
     /// </summary>
     protected abstract string CreateTableTextureLodStatement
     {
         get;
-    }
-
-    /// <summary>
-    /// Creates the parameters appropriate for a <see cref="TextureLod"/> object
-    /// and attaches them to the prepared statement.
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    ///   <listheader><description>Parameters</description></listheader>
-    ///   <item><description><see cref="DatasetParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
-    ///   <item><description><see cref="LevelOfDetailParamName"/></description></item>
-    ///   <item><description><see cref="TextureNameParamName"/></description></item>
-    ///   <item><description><see cref="FileTypeParamName"/></description></item>
-    /// </list>
-    /// </remarks>
-    /// <param name="dbCommand">The command to create the parameters for.</param>
-    /// <seealso cref="SetTextureLodParameters(DbCommand, TextureLod)"/>
-    private void CreateAndAttachTextureLodParameters(DbCommand dbCommand)
-    {
-        CreateAndAttachParameter(dbCommand, DatasetParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, ComponentSelector1ParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, ComponentSelector2ParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, LevelOfDetailParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, TextureNameParamName, DbType.String);
-        CreateAndAttachParameter(dbCommand, FileTypeParamName, DbType.String);
-    }
-
-    /// <summary>
-    /// Sets the parameters according to the members of a <see cref="TextureLod"/>
-    /// object.
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    ///   <listheader><description>Parameters</description></listheader>
-    ///   <item><description><see cref="DatasetParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
-    ///   <item><description><see cref="LevelOfDetailParamName"/></description></item>
-    ///   <item><description><see cref="TextureNameParamName"/></description></item>
-    ///   <item><description><see cref="FileTypeParamName"/></description></item>
-    /// </list>
-    /// </remarks>
-    /// <param name="dbCommand">The prepared statement to set the parameter for.</param>
-    /// <param name="textureLod">The object from which to get all the parameter values.</param>
-    /// <seealso cref="CreateAndAttachTextureLodParameters(DbCommand)"/>
-    private void SetTextureLodParameters(DbCommand dbCommand, TextureLod textureLod)
-    {
-        dbCommand.Parameters[DatasetParamName].Value = textureLod.Dataset.Value;
-        dbCommand.Parameters[ComponentSelector1ParamName].Value = textureLod.ComponentSelector1;
-        dbCommand.Parameters[ComponentSelector2ParamName].Value = textureLod.ComponentSelector2;
-        dbCommand.Parameters[LevelOfDetailParamName].Value = textureLod.LevelOfDetail.Value;
-        dbCommand.Parameters[TextureNameParamName].Value = textureLod.Name;
-        dbCommand.Parameters[FileTypeParamName].Value = textureLod.FileType;
     }
 
     #region Select
@@ -1407,147 +1400,16 @@ public abstract class SQLCDB : ICDB
         get;
     }
 
-    /// <summary>
-    /// Initializes a prepared statement to be a <see cref="SelectFromTextureLodStatement"/>.
-    /// </summary>
-    /// <param name="dbCommand">The command to initialize.</param>
-    internal void InitializeSelectFromTextureLodCommand(DbCommand dbCommand)
-    {
-        dbCommand.CommandText = SelectFromTextureLodStatement;
-        CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
-        CreateAndAttachTextureLodParameters(dbCommand);
-    }
-
     /// <inheritdoc/>
     public Stream? ReadTextureLevelOfDetail(TextureLod textureLod)
     {
-        DbConnection dbConnection = dbDataSource.OpenConnection();
-        try
-        {
-            DbCommand selectFromTextureLodCommand = dbConnection.CreateCommand();
-            try
-            {
-                InitializeSelectFromTextureLodCommand(selectFromTextureLodCommand);
-                selectFromTextureLodCommand.Prepare();
-
-                Stream? stream = SelectFromTextureLod(selectFromTextureLodCommand, textureLod);
-                if (stream is not null)
-                {
-                    return new WrappedStream(stream, selectFromTextureLodCommand, dbConnection);
-                }
-                else
-                {
-                    selectFromTextureLodCommand.Dispose();
-                    dbConnection.Dispose();
-                    return null;
-                }
-            }
-            catch (Exception)
-            {
-                selectFromTextureLodCommand.Dispose();
-                throw;
-            }
-        }
-        catch (Exception)
-        {
-            dbConnection.Dispose();
-            throw;
-        }
-    }
-
-    /// <inheritdoc cref="ReadTextureLevelOfDetail(TextureLod)"/>
-    /// <param name="selectFromTextureLodCommand">The prepared statement to use to execute the query.</param>
-    internal Stream? SelectFromTextureLod(DbCommand selectFromTextureLodCommand, TextureLod textureLod)
-    {
-        SetCdbParameter(selectFromTextureLodCommand);
-        SetTextureLodParameters(selectFromTextureLodCommand, textureLod);
-
-        DbDataReader dbDataReader = selectFromTextureLodCommand.ExecuteReader(
-            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow);
-        try
-        {
-            do
-            {
-                while (dbDataReader.Read())
-                {
-                    Stream stream = dbDataReader.GetStream(ContentColumnName);
-                    return new WrappedStream(stream, dbDataReader);
-                }
-            } while (dbDataReader.NextResult());
-            dbDataReader.Dispose();
-            return null;
-        }
-        catch (Exception)
-        {
-            dbDataReader.Dispose();
-            throw;
-        }
+        return textureLodAccessor.SelectUsingNewConnection(textureLod);
     }
 
     /// <inheritdoc/>
-    public async Task<Stream?> ReadTextureLevelOfDetailAsync(TextureLod textureLod, CancellationToken cancellationToken)
+    public Task<Stream?> ReadTextureLevelOfDetailAsync(TextureLod textureLod, CancellationToken cancellationToken)
     {
-        DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        try
-        {
-            DbCommand selectFromTextureLodCommand = dbConnection.CreateCommand();
-            try
-            {
-                InitializeSelectFromTextureLodCommand(selectFromTextureLodCommand);
-                await selectFromTextureLodCommand.PrepareAsync(cancellationToken);
-
-                Stream? stream = await SelectFromTextureLodAsync(selectFromTextureLodCommand, textureLod, cancellationToken);
-                if (stream is not null)
-                {
-                    return new WrappedStream(stream, selectFromTextureLodCommand, dbConnection);
-                }
-                else
-                {
-                    await selectFromTextureLodCommand.DisposeAsync();
-                    await dbConnection.DisposeAsync();
-                    return null;
-                }
-            }
-            catch (Exception)
-            {
-                await selectFromTextureLodCommand.DisposeAsync();
-                throw;
-            }
-        }
-        catch (Exception)
-        {
-            await dbConnection.DisposeAsync();
-            throw;
-        }
-    }
-
-    /// <inheritdoc cref="ReadTextureLevelOfDetailAsync(TextureLod, CancellationToken)"/>
-    /// <param name="selectFromTextureLodCommand">The prepared statement to use to execute the query.</param>
-    internal async Task<Stream?> SelectFromTextureLodAsync(DbCommand selectFromTextureLodCommand, TextureLod textureLod, CancellationToken cancellationToken)
-    {
-        SetCdbParameter(selectFromTextureLodCommand);
-        SetTextureLodParameters(selectFromTextureLodCommand, textureLod);
-
-        DbDataReader dbDataReader = await selectFromTextureLodCommand.ExecuteReaderAsync(
-            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow, cancellationToken);
-        try
-        {
-            do
-            {
-                while (await dbDataReader.ReadAsync(cancellationToken))
-                {
-                    Stream stream = dbDataReader.GetStream(ContentColumnName);
-                    return new WrappedStream(stream, dbDataReader);
-                }
-            } while (await dbDataReader.NextResultAsync(cancellationToken));
-            await dbDataReader.DisposeAsync();
-            return null;
-        }
-        catch (Exception)
-        {
-            await dbDataReader.DisposeAsync();
-            throw;
-        }
+        return textureLodAccessor.SelectUsingNewConnectionAsync(textureLod, cancellationToken);
     }
 
     #endregion
@@ -1575,60 +1437,16 @@ public abstract class SQLCDB : ICDB
         get;
     }
 
-    /// <summary>
-    /// Initializes a prepared statement to be a <see cref="InsertIntoTextureLodStatement"/>.
-    /// </summary>
-    /// <param name="dbCommand">The command to initialize.</param>
-    internal void InitializeInsertIntoTextureLodCommand(DbCommand dbCommand)
-    {
-        dbCommand.CommandText = InsertIntoTextureLodStatement;
-        CreateAndAttachCdbParameter(dbCommand);
-        CreateAndAttachTextureLodParameters(dbCommand);
-        CreateAndAttachContentParameter(dbCommand);
-    }
-
     /// <inheritdoc/>
     public void WriteTextureLevelOfDetail(TextureLod textureLod, Stream content)
     {
-        using DbConnection dbConnection = dbDataSource.OpenConnection();
-        using DbCommand insertIntoTextureLodCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoTextureLodCommand(insertIntoTextureLodCommand);
-        insertIntoTextureLodCommand.Prepare();
-
-        InsertIntoTextureLod(insertIntoTextureLodCommand, textureLod, content);
-    }
-
-    /// <inheritdoc cref="WriteTextureLevelOfDetail(TextureLod, Stream)"/>
-    /// <param name="insertIntoTextureLodCommand">The prepared statement to use to execute the query.</param>
-    internal void InsertIntoTextureLod(DbCommand insertIntoTextureLodCommand, TextureLod textureLod, Stream content)
-    {
-        SetCdbParameter(insertIntoTextureLodCommand);
-        SetTextureLodParameters(insertIntoTextureLodCommand, textureLod);
-        SetContentParameter(insertIntoTextureLodCommand, content);
-
-        insertIntoTextureLodCommand.ExecuteNonQuery();
+        textureLodAccessor.InsertUsingNewConnection(textureLod, content);
     }
 
     /// <inheritdoc/>
-    public async Task WriteTextureLevelOfDetailAsync(TextureLod textureLod, Stream content, CancellationToken cancellationToken)
+    public Task WriteTextureLevelOfDetailAsync(TextureLod textureLod, Stream content, CancellationToken cancellationToken)
     {
-        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        await using DbCommand insertIntoTextureLodCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoTextureLodCommand(insertIntoTextureLodCommand);
-        await insertIntoTextureLodCommand.PrepareAsync(cancellationToken);
-
-        await InsertIntoTextureLodAsync(insertIntoTextureLodCommand, textureLod, content, cancellationToken);
-    }
-
-    /// <inheritdoc cref="WriteTextureLevelOfDetailAsync(TextureLod, Stream, CancellationToken)"/>
-    /// <param name="insertIntoTextureLodCommand">The prepared statement to use to execute the query.</param>
-    internal Task InsertIntoTextureLodAsync(DbCommand insertIntoTextureLodCommand, TextureLod textureLod, Stream content, CancellationToken cancellationToken)
-    {
-        SetCdbParameter(insertIntoTextureLodCommand);
-        SetTextureLodParameters(insertIntoTextureLodCommand, textureLod);
-        SetContentParameter(insertIntoTextureLodCommand, content);
-
-        return insertIntoTextureLodCommand.ExecuteNonQueryAsync(cancellationToken);
+        return textureLodAccessor.InsertUsingNewConnectionAsync(textureLod, content, cancellationToken);
     }
 
     #endregion
@@ -1638,78 +1456,64 @@ public abstract class SQLCDB : ICDB
     #region Geotypical Model
 
     /// <summary>
+    /// A table accessor for type <see cref="GeotypicalModel"/>.
+    /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><term><see cref="GeotypicalModel"/> Property</term><description>SQL Statement Parameter</description></listheader>
+    ///   <item><term><see cref="GeotypicalModel.Dataset"/></term><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><term><see cref="GeotypicalModel.ComponentSelector1"/></term><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><term><see cref="GeotypicalModel.ComponentSelector2"/></term><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><term><see cref="GeotypicalModel.FeatureCode"/> <see cref="FeatureCode.Category"/></term><description><see cref="FeatureCategoryParamName"/></description></item>
+    ///   <item><term><see cref="GeotypicalModel.FeatureCode"/> <see cref="FeatureCode.Subcategory"/></term><description><see cref="FeatureSubcategoryParamName"/></description></item>
+    ///   <item><term><see cref="GeotypicalModel.FeatureCode"/> <see cref="FeatureCode.Type"/></term><description><see cref="FeatureTypeParamName"/></description></item>
+    ///   <item><term><see cref="GeotypicalModel.FeatureSubcode"/></term><description><see cref="FeatureSubcodeParamName"/></description></item>
+    ///   <item><term><see cref="GeotypicalModel.Name"/></term><description><see cref="ModelNameParamName"/></description></item>
+    ///   <item><term><see cref="GeotypicalModel.FileType"/></term><description><see cref="FileTypeParamName"/></description></item>
+    /// </list>
+    /// </remarks>
+    private class GeotypicalModelTableAccessor : TableAccessor<GeotypicalModel>
+    {
+        internal GeotypicalModelTableAccessor(SQLCDB sqlCDB)
+            : base(sqlCDB, sqlCDB.SelectFromGeotypicalModelStatement, sqlCDB.InsertIntoGeotypicalModelStatement)
+        {
+        }
+
+        /// <inheritdoc/>
+        internal override void CreateAndAttachObjectParameter(DbCommand dbCommand)
+        {
+            CreateAndAttachParameter(dbCommand, sqlCDB.DatasetParamName, DbType.Int32);
+            CreateAndAttachParameter(dbCommand, sqlCDB.ComponentSelector1ParamName, DbType.Int32);
+            CreateAndAttachParameter(dbCommand, sqlCDB.ComponentSelector2ParamName, DbType.Int32);
+            CreateAndAttachParameter(dbCommand, sqlCDB.FeatureCategoryParamName, DbType.String);
+            CreateAndAttachParameter(dbCommand, sqlCDB.FeatureSubcategoryParamName, DbType.String);
+            CreateAndAttachParameter(dbCommand, sqlCDB.FeatureTypeParamName, DbType.Int32);
+            CreateAndAttachParameter(dbCommand, sqlCDB.FeatureSubcodeParamName, DbType.Int32);
+            CreateAndAttachParameter(dbCommand, sqlCDB.ModelNameParamName, DbType.String);
+            CreateAndAttachParameter(dbCommand, sqlCDB.FileTypeParamName, DbType.String);
+        }
+
+        /// <inheritdoc/>
+        internal override void SetObjectParameters(DbCommand dbCommand, GeotypicalModel obj)
+        {
+            dbCommand.Parameters[sqlCDB.DatasetParamName].Value = obj.Dataset.Value;
+            dbCommand.Parameters[sqlCDB.ComponentSelector1ParamName].Value = obj.ComponentSelector1;
+            dbCommand.Parameters[sqlCDB.ComponentSelector2ParamName].Value = obj.ComponentSelector2;
+            dbCommand.Parameters[sqlCDB.FeatureCategoryParamName].Value = obj.FeatureCode.Category;
+            dbCommand.Parameters[sqlCDB.FeatureSubcategoryParamName].Value = obj.FeatureCode.Subcategory;
+            dbCommand.Parameters[sqlCDB.FeatureTypeParamName].Value = obj.FeatureCode.Type;
+            dbCommand.Parameters[sqlCDB.FeatureSubcodeParamName].Value = obj.FeatureSubcode;
+            dbCommand.Parameters[sqlCDB.ModelNameParamName].Value = obj.Name;
+            dbCommand.Parameters[sqlCDB.FileTypeParamName].Value = obj.FileType;
+        }
+    }
+
+    /// <summary>
     /// The SQL DDL statement to create the Geotypical Model table.
     /// </summary>
     protected abstract string CreateTableGeotypicalModelStatement
     {
         get;
-    }
-
-    /// <summary>
-    /// Creates the parameters appropriate for a <see cref="GeotypicalModel"/> object
-    /// and attaches them to the prepared statement.
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    ///   <listheader><description>Parameters</description></listheader>
-    ///   <item><description><see cref="DatasetParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
-    ///   <item><description><see cref="FeatureCategoryParamName"/></description></item>
-    ///   <item><description><see cref="FeatureSubcategoryParamName"/></description></item>
-    ///   <item><description><see cref="FeatureTypeParamName"/></description></item>
-    ///   <item><description><see cref="FeatureSubcodeParamName"/></description></item>
-    ///   <item><description><see cref="ModelNameParamName"/></description></item>
-    ///   <item><description><see cref="FileTypeParamName"/></description></item>
-    /// </list>
-    /// </remarks>
-    /// <param name="dbCommand">The command to create the parameters for.</param>
-    /// <seealso cref="SetGeotypicalModelParameters(DbCommand, GeotypicalModel)"/>
-    private void CreateAndAttachGeotypicalModelParameters(DbCommand dbCommand)
-    {
-        CreateAndAttachParameter(dbCommand, DatasetParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, ComponentSelector1ParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, ComponentSelector2ParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, FeatureCategoryParamName, DbType.String);
-        CreateAndAttachParameter(dbCommand, FeatureSubcategoryParamName, DbType.String);
-        CreateAndAttachParameter(dbCommand, FeatureTypeParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, FeatureSubcodeParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, ModelNameParamName, DbType.String);
-        CreateAndAttachParameter(dbCommand, FileTypeParamName, DbType.String);
-    }
-
-    /// <summary>
-    /// Sets the parameters according to the members of a <see cref="GeotypicalModel"/>
-    /// object.
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    ///   <listheader><description>Parameters</description></listheader>
-    ///   <item><description><see cref="DatasetParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
-    ///   <item><description><see cref="FeatureCategoryParamName"/></description></item>
-    ///   <item><description><see cref="FeatureSubcategoryParamName"/></description></item>
-    ///   <item><description><see cref="FeatureTypeParamName"/></description></item>
-    ///   <item><description><see cref="FeatureSubcodeParamName"/></description></item>
-    ///   <item><description><see cref="ModelNameParamName"/></description></item>
-    ///   <item><description><see cref="FileTypeParamName"/></description></item>
-    /// </list>
-    /// </remarks>
-    /// <param name="dbCommand">The prepared statement to set the parameter for.</param>
-    /// <param name="geotypicalModel">The object from which to get all the parameter values.</param>
-    /// <seealso cref="CreateAndAttachGeotypicalModelParameters(DbCommand)"/>
-    private void SetGeotypicalModelParameters(DbCommand dbCommand, GeotypicalModel geotypicalModel)
-    {
-        dbCommand.Parameters[DatasetParamName].Value = geotypicalModel.Dataset.Value;
-        dbCommand.Parameters[ComponentSelector1ParamName].Value = geotypicalModel.ComponentSelector1;
-        dbCommand.Parameters[ComponentSelector2ParamName].Value = geotypicalModel.ComponentSelector2;
-        dbCommand.Parameters[FeatureCategoryParamName].Value = geotypicalModel.FeatureCode.Category;
-        dbCommand.Parameters[FeatureSubcategoryParamName].Value = geotypicalModel.FeatureCode.Subcategory;
-        dbCommand.Parameters[FeatureTypeParamName].Value = geotypicalModel.FeatureCode.Type;
-        dbCommand.Parameters[FeatureSubcodeParamName].Value = geotypicalModel.FeatureSubcode;
-        dbCommand.Parameters[ModelNameParamName].Value = geotypicalModel.Name;
-        dbCommand.Parameters[FileTypeParamName].Value = geotypicalModel.FileType;
     }
 
     #region Select
@@ -1741,147 +1545,16 @@ public abstract class SQLCDB : ICDB
         get;
     }
 
-    /// <summary>
-    /// Initializes a prepared statement to be a <see cref="SelectFromGeotypicalModelStatement"/>.
-    /// </summary>
-    /// <param name="dbCommand">The command to initialize.</param>
-    internal void InitializeSelectFromGeotypicalModelCommand(DbCommand dbCommand)
-    {
-        dbCommand.CommandText = SelectFromGeotypicalModelStatement;
-        CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
-        CreateAndAttachGeotypicalModelParameters(dbCommand);
-    }
-
     /// <inheritdoc/>
     public Stream? ReadGeotypicalModel(GeotypicalModel geotypicalModel)
     {
-        DbConnection dbConnection = dbDataSource.OpenConnection();
-        try
-        {
-            DbCommand selectFromGeotypicalModelCommand = dbConnection.CreateCommand();
-            try
-            {
-                InitializeSelectFromGeotypicalModelCommand(selectFromGeotypicalModelCommand);
-                selectFromGeotypicalModelCommand.Prepare();
-
-                Stream? stream = SelectFromGeotypicalModel(selectFromGeotypicalModelCommand, geotypicalModel);
-                if (stream is not null)
-                {
-                    return new WrappedStream(stream, selectFromGeotypicalModelCommand, dbConnection);
-                }
-                else
-                {
-                    selectFromGeotypicalModelCommand.Dispose();
-                    dbConnection.Dispose();
-                    return null;
-                }
-            }
-            catch (Exception)
-            {
-                selectFromGeotypicalModelCommand.Dispose();
-                throw;
-            }
-        }
-        catch (Exception)
-        {
-            dbConnection.Dispose();
-            throw;
-        }
-    }
-
-    /// <inheritdoc cref="ReadGeotypicalModel(GeotypicalModel)"/>
-    /// <param name="selectFromGeotypicalModelCommand">The prepared statement to use to execute the query.</param>
-    internal Stream? SelectFromGeotypicalModel(DbCommand selectFromGeotypicalModelCommand, GeotypicalModel geotypicalModel)
-    {
-        SetCdbParameter(selectFromGeotypicalModelCommand);
-        SetGeotypicalModelParameters(selectFromGeotypicalModelCommand, geotypicalModel);
-
-        DbDataReader dbDataReader = selectFromGeotypicalModelCommand.ExecuteReader(
-            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow);
-        try
-        {
-            do
-            {
-                while (dbDataReader.Read())
-                {
-                    Stream stream = dbDataReader.GetStream(ContentColumnName);
-                    return new WrappedStream(stream, dbDataReader);
-                }
-            } while (dbDataReader.NextResult());
-            dbDataReader.Dispose();
-            return null;
-        }
-        catch (Exception)
-        {
-            dbDataReader.Dispose();
-            throw;
-        }
+        return geotypicalModelAccessor.SelectUsingNewConnection(geotypicalModel);
     }
 
     /// <inheritdoc/>
-    public async Task<Stream?> ReadGeotypicalModelAsync(GeotypicalModel geotypicalModel, CancellationToken cancellationToken)
+    public Task<Stream?> ReadGeotypicalModelAsync(GeotypicalModel geotypicalModel, CancellationToken cancellationToken)
     {
-        DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        try
-        {
-            DbCommand selectFromGeotypicalModelCommand = dbConnection.CreateCommand();
-            try
-            {
-                InitializeSelectFromGeotypicalModelCommand(selectFromGeotypicalModelCommand);
-                await selectFromGeotypicalModelCommand.PrepareAsync(cancellationToken);
-
-                Stream? stream = await SelectFromGeotypicalModelAsync(selectFromGeotypicalModelCommand, geotypicalModel, cancellationToken);
-                if (stream is not null)
-                {
-                    return new WrappedStream(stream, selectFromGeotypicalModelCommand, dbConnection);
-                }
-                else
-                {
-                    await selectFromGeotypicalModelCommand.DisposeAsync();
-                    await dbConnection.DisposeAsync();
-                    return null;
-                }
-            }
-            catch (Exception)
-            {
-                await selectFromGeotypicalModelCommand.DisposeAsync();
-                throw;
-            }
-        }
-        catch (Exception)
-        {
-            await dbConnection.DisposeAsync();
-            throw;
-        }
-    }
-
-    /// <inheritdoc cref="ReadGeotypicalModelAsync(GeotypicalModel, CancellationToken)"/>
-    /// <param name="selectFromGeotypicalModelCommand">The prepared statement to use to execute the query.</param>
-    internal async Task<Stream?> SelectFromGeotypicalModelAsync(DbCommand selectFromGeotypicalModelCommand, GeotypicalModel geotypicalModel, CancellationToken cancellationToken)
-    {
-        SetCdbParameter(selectFromGeotypicalModelCommand);
-        SetGeotypicalModelParameters(selectFromGeotypicalModelCommand, geotypicalModel);
-
-        DbDataReader dbDataReader = await selectFromGeotypicalModelCommand.ExecuteReaderAsync(
-            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow, cancellationToken);
-        try
-        {
-            do
-            {
-                while (await dbDataReader.ReadAsync(cancellationToken))
-                {
-                    Stream stream = dbDataReader.GetStream(ContentColumnName);
-                    return new WrappedStream(stream, dbDataReader);
-                }
-            } while (await dbDataReader.NextResultAsync(cancellationToken));
-            await dbDataReader.DisposeAsync();
-            return null;
-        }
-        catch (Exception)
-        {
-            await dbDataReader.DisposeAsync();
-            throw;
-        }
+        return geotypicalModelAccessor.SelectUsingNewConnectionAsync(geotypicalModel, cancellationToken);
     }
 
     #endregion
@@ -1912,60 +1585,16 @@ public abstract class SQLCDB : ICDB
         get;
     }
 
-    /// <summary>
-    /// Initializes a prepared statement to be an <see cref="InsertIntoGeotypicalModelStatement"/>.
-    /// </summary>
-    /// <param name="dbCommand">The command to initialize.</param>
-    internal void InitializeInsertIntoGeotypicalModelCommand(DbCommand dbCommand)
-    {
-        dbCommand.CommandText = InsertIntoGeotypicalModelStatement;
-        CreateAndAttachCdbParameter(dbCommand);
-        CreateAndAttachGeotypicalModelParameters(dbCommand);
-        CreateAndAttachContentParameter(dbCommand);
-    }
-
     /// <inheritdoc/>
     public void WriteGeotypicalModel(GeotypicalModel geotypicalModel, Stream content)
     {
-        using DbConnection dbConnection = dbDataSource.OpenConnection();
-        using DbCommand insertIntoGeotypicalModelCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoGeotypicalModelCommand(insertIntoGeotypicalModelCommand);
-        insertIntoGeotypicalModelCommand.Prepare();
-
-        InsertIntoGeotypicalModel(insertIntoGeotypicalModelCommand, geotypicalModel, content);
-    }
-
-    /// <inheritdoc cref="WriteGeotypicalModel(GeotypicalModel, Stream)"/>
-    /// <param name="insertIntoGeotypicalModelCommand">The prepared statement to use to execute the query.</param>
-    internal void InsertIntoGeotypicalModel(DbCommand insertIntoGeotypicalModelCommand, GeotypicalModel geotypicalModel, Stream content)
-    {
-        SetCdbParameter(insertIntoGeotypicalModelCommand);
-        SetGeotypicalModelParameters(insertIntoGeotypicalModelCommand, geotypicalModel);
-        SetContentParameter(insertIntoGeotypicalModelCommand, content);
-
-        insertIntoGeotypicalModelCommand.ExecuteNonQuery();
+        geotypicalModelAccessor.InsertUsingNewConnection(geotypicalModel, content);
     }
 
     /// <inheritdoc/>
-    public async Task WriteGeotypicalModelAsync(GeotypicalModel geotypicalModel, Stream content, CancellationToken cancellationToken)
+    public Task WriteGeotypicalModelAsync(GeotypicalModel geotypicalModel, Stream content, CancellationToken cancellationToken)
     {
-        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        await using DbCommand insertIntoGeotypicalModelCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoGeotypicalModelCommand(insertIntoGeotypicalModelCommand);
-        await insertIntoGeotypicalModelCommand.PrepareAsync(cancellationToken);
-
-        await InsertIntoGeotypicalModelAsync(insertIntoGeotypicalModelCommand, geotypicalModel, content, cancellationToken);
-    }
-
-    /// <inheritdoc cref="WriteGeotypicalModelAsync(GeotypicalModel, Stream, CancellationToken)"/>
-    /// <param name="insertIntoGeotypicalModelCommand">The prepared statement to use to execute the query.</param>
-    internal Task InsertIntoGeotypicalModelAsync(DbCommand insertIntoGeotypicalModelCommand, GeotypicalModel geotypicalModel, Stream content, CancellationToken cancellationToken)
-    {
-        SetCdbParameter(insertIntoGeotypicalModelCommand);
-        SetGeotypicalModelParameters(insertIntoGeotypicalModelCommand, geotypicalModel);
-        SetContentParameter(insertIntoGeotypicalModelCommand, content);
-
-        return insertIntoGeotypicalModelCommand.ExecuteNonQueryAsync(cancellationToken);
+        return geotypicalModelAccessor.InsertUsingNewConnectionAsync(geotypicalModel, content, cancellationToken);
     }
 
     #endregion
@@ -1975,82 +1604,67 @@ public abstract class SQLCDB : ICDB
     #region Geotypical Model LOD
 
     /// <summary>
+    /// A table accessor for type <see cref="GeotypicalModelLod"/>.
+    /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><term><see cref="GeotypicalModelLod"/> Property</term><description>SQL Statement Parameter</description></listheader>
+    ///   <item><term><see cref="GeotypicalModelLod.Dataset"/></term><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><term><see cref="GeotypicalModelLod.ComponentSelector1"/></term><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><term><see cref="GeotypicalModelLod.ComponentSelector2"/></term><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><term><see cref="GeotypicalModelLod.LevelOfDetail"/></term><description><see cref="LevelOfDetailParamName"/></description></item>
+    ///   <item><term><see cref="GeotypicalModelLod.FeatureCode"/> <see cref="FeatureCode.Category"/></term><description><see cref="FeatureCategoryParamName"/></description></item>
+    ///   <item><term><see cref="GeotypicalModelLod.FeatureCode"/> <see cref="FeatureCode.Subcategory"/></term><description><see cref="FeatureSubcategoryParamName"/></description></item>
+    ///   <item><term><see cref="GeotypicalModelLod.FeatureCode"/> <see cref="FeatureCode.Type"/></term><description><see cref="FeatureTypeParamName"/></description></item>
+    ///   <item><term><see cref="GeotypicalModelLod.FeatureSubcode"/></term><description><see cref="FeatureSubcodeParamName"/></description></item>
+    ///   <item><term><see cref="GeotypicalModelLod.Name"/></term><description><see cref="ModelNameParamName"/></description></item>
+    ///   <item><term><see cref="GeotypicalModelLod.FileType"/></term><description><see cref="FileTypeParamName"/></description></item>
+    /// </list>
+    /// </remarks>
+    private class GeotypicalModelLodTableAccessor : TableAccessor<GeotypicalModelLod>
+    {
+        internal GeotypicalModelLodTableAccessor(SQLCDB sqlCDB)
+            : base(sqlCDB, sqlCDB.SelectFromGeotypicalModelLodStatement, sqlCDB.InsertIntoGeotypicalModelLodStatement)
+        {
+        }
+
+        /// <inheritdoc/>
+        internal override void CreateAndAttachObjectParameter(DbCommand dbCommand)
+        {
+            CreateAndAttachParameter(dbCommand, sqlCDB.DatasetParamName, DbType.Int32);
+            CreateAndAttachParameter(dbCommand, sqlCDB.ComponentSelector1ParamName, DbType.Int32);
+            CreateAndAttachParameter(dbCommand, sqlCDB.ComponentSelector2ParamName, DbType.Int32);
+            CreateAndAttachParameter(dbCommand, sqlCDB.LevelOfDetailParamName, DbType.Int32);
+            CreateAndAttachParameter(dbCommand, sqlCDB.FeatureCategoryParamName, DbType.String);
+            CreateAndAttachParameter(dbCommand, sqlCDB.FeatureSubcategoryParamName, DbType.String);
+            CreateAndAttachParameter(dbCommand, sqlCDB.FeatureTypeParamName, DbType.Int32);
+            CreateAndAttachParameter(dbCommand, sqlCDB.FeatureSubcodeParamName, DbType.Int32);
+            CreateAndAttachParameter(dbCommand, sqlCDB.ModelNameParamName, DbType.String);
+            CreateAndAttachParameter(dbCommand, sqlCDB.FileTypeParamName, DbType.String);
+        }
+
+        /// <inheritdoc/>
+        internal override void SetObjectParameters(DbCommand dbCommand, GeotypicalModelLod obj)
+        {
+            dbCommand.Parameters[sqlCDB.DatasetParamName].Value = obj.Dataset.Value;
+            dbCommand.Parameters[sqlCDB.ComponentSelector1ParamName].Value = obj.ComponentSelector1;
+            dbCommand.Parameters[sqlCDB.ComponentSelector2ParamName].Value = obj.ComponentSelector2;
+            dbCommand.Parameters[sqlCDB.LevelOfDetailParamName].Value = obj.LevelOfDetail.Value;
+            dbCommand.Parameters[sqlCDB.FeatureCategoryParamName].Value = obj.FeatureCode.Category;
+            dbCommand.Parameters[sqlCDB.FeatureSubcategoryParamName].Value = obj.FeatureCode.Subcategory;
+            dbCommand.Parameters[sqlCDB.FeatureTypeParamName].Value = obj.FeatureCode.Type;
+            dbCommand.Parameters[sqlCDB.FeatureSubcodeParamName].Value = obj.FeatureSubcode;
+            dbCommand.Parameters[sqlCDB.ModelNameParamName].Value = obj.Name;
+            dbCommand.Parameters[sqlCDB.FileTypeParamName].Value = obj.FileType;
+        }
+    }
+
+    /// <summary>
     /// The SQL DDL statement to create the Geotypical Model Level of Detail table.
     /// </summary>
     protected abstract string CreateTableGeotypicalModelLodStatement
     {
         get;
-    }
-
-    /// <summary>
-    /// Creates the parameters appropriate for a <see cref="GeotypicalModelLod"/> object
-    /// and attaches them to the prepared statement.
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    ///   <listheader><description>Parameters</description></listheader>
-    ///   <item><description><see cref="DatasetParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
-    ///   <item><description><see cref="LevelOfDetailParamName"/></description></item>
-    ///   <item><description><see cref="FeatureCategoryParamName"/></description></item>
-    ///   <item><description><see cref="FeatureSubcategoryParamName"/></description></item>
-    ///   <item><description><see cref="FeatureTypeParamName"/></description></item>
-    ///   <item><description><see cref="FeatureSubcodeParamName"/></description></item>
-    ///   <item><description><see cref="ModelNameParamName"/></description></item>
-    ///   <item><description><see cref="FileTypeParamName"/></description></item>
-    /// </list>
-    /// </remarks>
-    /// <param name="dbCommand">The command to create the parameters for.</param>
-    /// <seealso cref="SetGeotypicalModelLodParameters(DbCommand, GeotypicalModelLod)"/>
-    private void CreateAndAttachGeotypicalModelLodParameters(DbCommand dbCommand)
-    {
-        CreateAndAttachParameter(dbCommand, DatasetParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, ComponentSelector1ParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, ComponentSelector2ParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, LevelOfDetailParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, FeatureCategoryParamName, DbType.String);
-        CreateAndAttachParameter(dbCommand, FeatureSubcategoryParamName, DbType.String);
-        CreateAndAttachParameter(dbCommand, FeatureTypeParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, FeatureSubcodeParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, ModelNameParamName, DbType.String);
-        CreateAndAttachParameter(dbCommand, FileTypeParamName, DbType.String);
-    }
-
-    /// <summary>
-    /// Sets the parameters according to the members of a <see cref="GeotypicalModelLod"/>
-    /// object.
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    ///   <listheader><description>Parameters</description></listheader>
-    ///   <item><description><see cref="DatasetParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
-    ///   <item><description><see cref="LevelOfDetailParamName"/></description></item>
-    ///   <item><description><see cref="FeatureCategoryParamName"/></description></item>
-    ///   <item><description><see cref="FeatureSubcategoryParamName"/></description></item>
-    ///   <item><description><see cref="FeatureTypeParamName"/></description></item>
-    ///   <item><description><see cref="FeatureSubcodeParamName"/></description></item>
-    ///   <item><description><see cref="ModelNameParamName"/></description></item>
-    ///   <item><description><see cref="FileTypeParamName"/></description></item>
-    /// </list>
-    /// </remarks>
-    /// <param name="dbCommand">The prepared statement to set the parameter for.</param>
-    /// <param name="geotypicalModelLod">The object from which to get all the parameter values.</param>
-    /// <seealso cref="CreateAndAttachGeotypicalModelLodParameters(DbCommand)"/>
-    private void SetGeotypicalModelLodParameters(DbCommand dbCommand, GeotypicalModelLod geotypicalModelLod)
-    {
-        dbCommand.Parameters[DatasetParamName].Value = geotypicalModelLod.Dataset.Value;
-        dbCommand.Parameters[ComponentSelector1ParamName].Value = geotypicalModelLod.ComponentSelector1;
-        dbCommand.Parameters[ComponentSelector2ParamName].Value = geotypicalModelLod.ComponentSelector2;
-        dbCommand.Parameters[LevelOfDetailParamName].Value = geotypicalModelLod.LevelOfDetail.Value;
-        dbCommand.Parameters[FeatureCategoryParamName].Value = geotypicalModelLod.FeatureCode.Category;
-        dbCommand.Parameters[FeatureSubcategoryParamName].Value = geotypicalModelLod.FeatureCode.Subcategory;
-        dbCommand.Parameters[FeatureTypeParamName].Value = geotypicalModelLod.FeatureCode.Type;
-        dbCommand.Parameters[FeatureSubcodeParamName].Value = geotypicalModelLod.FeatureSubcode;
-        dbCommand.Parameters[ModelNameParamName].Value = geotypicalModelLod.Name;
-        dbCommand.Parameters[FileTypeParamName].Value = geotypicalModelLod.FileType;
     }
 
     #region Select
@@ -2083,147 +1697,16 @@ public abstract class SQLCDB : ICDB
         get;
     }
 
-    /// <summary>
-    /// Initializes a prepared statement to be a <see cref="SelectFromGeotypicalModelLodStatement"/>.
-    /// </summary>
-    /// <param name="dbCommand">The command to initialize.</param>
-    internal void InitializeSelectFromGeotypicalModelLodCommand(DbCommand dbCommand)
-    {
-        dbCommand.CommandText = SelectFromGeotypicalModelLodStatement;
-        CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
-        CreateAndAttachGeotypicalModelLodParameters(dbCommand);
-    }
-
     /// <inheritdoc/>
     public Stream? ReadGeotypicalModelLevelOfDetail(GeotypicalModelLod geotypicalModelLod)
     {
-        DbConnection dbConnection = dbDataSource.OpenConnection();
-        try
-        {
-            DbCommand selectFromGeotypicalModelLodCommand = dbConnection.CreateCommand();
-            try
-            {
-                InitializeSelectFromGeotypicalModelLodCommand(selectFromGeotypicalModelLodCommand);
-                selectFromGeotypicalModelLodCommand.Prepare();
-
-                Stream? stream = SelectFromGeotypicalModelLod(selectFromGeotypicalModelLodCommand, geotypicalModelLod);
-                if (stream is not null)
-                {
-                    return new WrappedStream(stream, selectFromGeotypicalModelLodCommand, dbConnection);
-                }
-                else
-                {
-                    selectFromGeotypicalModelLodCommand.Dispose();
-                    dbConnection.Dispose();
-                    return null;
-                }
-            }
-            catch (Exception)
-            {
-                selectFromGeotypicalModelLodCommand.Dispose();
-                throw;
-            }
-        }
-        catch (Exception)
-        {
-            dbConnection.Dispose();
-            throw;
-        }
-    }
-
-    /// <inheritdoc cref="ReadGeotypicalModelLevelOfDetail(GeotypicalModelLod)"/>
-    /// <param name="selectFromGeotypicalModelLodCommand">The prepared statement to use to execute the query.</param>
-    internal Stream? SelectFromGeotypicalModelLod(DbCommand selectFromGeotypicalModelLodCommand, GeotypicalModelLod geotypicalModelLod)
-    {
-        SetCdbParameter(selectFromGeotypicalModelLodCommand);
-        SetGeotypicalModelLodParameters(selectFromGeotypicalModelLodCommand, geotypicalModelLod);
-
-        DbDataReader dbDataReader = selectFromGeotypicalModelLodCommand.ExecuteReader(
-            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow);
-        try
-        {
-            do
-            {
-                while (dbDataReader.Read())
-                {
-                    Stream stream = dbDataReader.GetStream(ContentColumnName);
-                    return new WrappedStream(stream, dbDataReader);
-                }
-            } while (dbDataReader.NextResult());
-            dbDataReader.Dispose();
-            return null;
-        }
-        catch (Exception)
-        {
-            dbDataReader.Dispose();
-            throw;
-        }
+        return geotypicalModelLodAccessor.SelectUsingNewConnection(geotypicalModelLod);
     }
 
     /// <inheritdoc/>
-    public async Task<Stream?> ReadGeotypicalModelLevelOfDetailAsync(GeotypicalModelLod geotypicalModelLod, CancellationToken cancellationToken)
+    public Task<Stream?> ReadGeotypicalModelLevelOfDetailAsync(GeotypicalModelLod geotypicalModelLod, CancellationToken cancellationToken)
     {
-        DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        try
-        {
-            DbCommand selectFromGeotypicalModelLodCommand = dbConnection.CreateCommand();
-            try
-            {
-                InitializeSelectFromGeotypicalModelLodCommand(selectFromGeotypicalModelLodCommand);
-                await selectFromGeotypicalModelLodCommand.PrepareAsync(cancellationToken);
-
-                Stream? stream = await SelectFromGeotypicalModelLodAsync(selectFromGeotypicalModelLodCommand, geotypicalModelLod, cancellationToken);
-                if (stream is not null)
-                {
-                    return new WrappedStream(stream, selectFromGeotypicalModelLodCommand, dbConnection);
-                }
-                else
-                {
-                    await selectFromGeotypicalModelLodCommand.DisposeAsync();
-                    await dbConnection.DisposeAsync();
-                    return null;
-                }
-            }
-            catch (Exception)
-            {
-                await selectFromGeotypicalModelLodCommand.DisposeAsync();
-                throw;
-            }
-        }
-        catch (Exception)
-        {
-            await dbConnection.DisposeAsync();
-            throw;
-        }
-    }
-
-    /// <inheritdoc cref="ReadGeotypicalModelLevelOfDetailAsync(GeotypicalModelLod, CancellationToken)"/>
-    /// <param name="selectFromGeotypicalModelLodCommand">The prepared statement to use to execute the query.</param>
-    internal async Task<Stream?> SelectFromGeotypicalModelLodAsync(DbCommand selectFromGeotypicalModelLodCommand, GeotypicalModelLod geotypicalModelLod, CancellationToken cancellationToken)
-    {
-        SetCdbParameter(selectFromGeotypicalModelLodCommand);
-        SetGeotypicalModelLodParameters(selectFromGeotypicalModelLodCommand, geotypicalModelLod);
-
-        DbDataReader dbDataReader = await selectFromGeotypicalModelLodCommand.ExecuteReaderAsync(
-            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow, cancellationToken);
-        try
-        {
-            do
-            {
-                while (await dbDataReader.ReadAsync(cancellationToken))
-                {
-                    Stream stream = dbDataReader.GetStream(ContentColumnName);
-                    return new WrappedStream(stream, dbDataReader);
-                }
-            } while (await dbDataReader.NextResultAsync(cancellationToken));
-            await dbDataReader.DisposeAsync();
-            return null;
-        }
-        catch (Exception)
-        {
-            await dbDataReader.DisposeAsync();
-            throw;
-        }
+        return geotypicalModelLodAccessor.SelectUsingNewConnectionAsync(geotypicalModelLod, cancellationToken);
     }
 
     #endregion
@@ -2255,60 +1738,16 @@ public abstract class SQLCDB : ICDB
         get;
     }
 
-    /// <summary>
-    /// Initializes a prepared statement to be an <see cref="InsertIntoGeotypicalModelLodStatement"/>.
-    /// </summary>
-    /// <param name="dbCommand">The command to initialize.</param>
-    internal void InitializeInsertIntoGeotypicalModelLodCommand(DbCommand dbCommand)
-    {
-        dbCommand.CommandText = InsertIntoGeotypicalModelLodStatement;
-        CreateAndAttachCdbParameter(dbCommand);
-        CreateAndAttachGeotypicalModelLodParameters(dbCommand);
-        CreateAndAttachContentParameter(dbCommand);
-    }
-
     /// <inheritdoc/>
     public void WriteGeotypicalModelLevelOfDetail(GeotypicalModelLod geotypicalModelLod, Stream content)
     {
-        using DbConnection dbConnection = dbDataSource.OpenConnection();
-        using DbCommand insertIntoGeotypicalModelLodCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoGeotypicalModelLodCommand(insertIntoGeotypicalModelLodCommand);
-        insertIntoGeotypicalModelLodCommand.Prepare();
-
-        InsertIntoGeotypicalModelLod(insertIntoGeotypicalModelLodCommand, geotypicalModelLod, content);
-    }
-
-    /// <inheritdoc cref="WriteGeotypicalModelLevelOfDetail(GeotypicalModelLod, Stream)"/>
-    /// <param name="insertIntoGeotypicalModelLodCommand">The prepared statement to use to execute the query.</param>
-    internal void InsertIntoGeotypicalModelLod(DbCommand insertIntoGeotypicalModelLodCommand, GeotypicalModelLod geotypicalModelLod, Stream content)
-    {
-        SetCdbParameter(insertIntoGeotypicalModelLodCommand);
-        SetGeotypicalModelLodParameters(insertIntoGeotypicalModelLodCommand, geotypicalModelLod);
-        SetContentParameter(insertIntoGeotypicalModelLodCommand, content);
-
-        insertIntoGeotypicalModelLodCommand.ExecuteNonQuery();
+        geotypicalModelLodAccessor.InsertUsingNewConnection(geotypicalModelLod, content);
     }
 
     /// <inheritdoc/>
-    public async Task WriteGeotypicalModelLevelOfDetailAsync(GeotypicalModelLod geotypicalModelLod, Stream content, CancellationToken cancellationToken)
+    public Task WriteGeotypicalModelLevelOfDetailAsync(GeotypicalModelLod geotypicalModelLod, Stream content, CancellationToken cancellationToken)
     {
-        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        await using DbCommand insertIntoGeotypicalModelLodCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoGeotypicalModelLodCommand(insertIntoGeotypicalModelLodCommand);
-        await insertIntoGeotypicalModelLodCommand.PrepareAsync(cancellationToken);
-
-        await InsertIntoGeotypicalModelLodAsync(insertIntoGeotypicalModelLodCommand, geotypicalModelLod, content, cancellationToken);
-    }
-
-    /// <inheritdoc cref="WriteGeotypicalModelLevelOfDetailAsync(GeotypicalModelLod, Stream, CancellationToken)"/>
-    /// <param name="insertIntoGeotypicalModelLodCommand">The prepared statement to use to execute the query.</param>
-    internal Task InsertIntoGeotypicalModelLodAsync(DbCommand insertIntoGeotypicalModelLodCommand, GeotypicalModelLod geotypicalModelLod, Stream content, CancellationToken cancellationToken)
-    {
-        SetCdbParameter(insertIntoGeotypicalModelLodCommand);
-        SetGeotypicalModelLodParameters(insertIntoGeotypicalModelLodCommand, geotypicalModelLod);
-        SetContentParameter(insertIntoGeotypicalModelLodCommand, content);
-
-        return insertIntoGeotypicalModelLodCommand.ExecuteNonQueryAsync(cancellationToken);
+        return geotypicalModelLodAccessor.InsertUsingNewConnectionAsync(geotypicalModelLod, content, cancellationToken);
     }
 
     #endregion
@@ -2318,86 +1757,70 @@ public abstract class SQLCDB : ICDB
     #region Moving Model
 
     /// <summary>
+    /// A table accessor for type <see cref="MovingModel"/>.
+    /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><term><see cref="MovingModel"/> Property</term><description>SQL Statement Parameter</description></listheader>
+    ///   <item><term><see cref="MovingModel.Dataset"/></term><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><term><see cref="MovingModel.ComponentSelector1"/></term><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><term><see cref="MovingModel.ComponentSelector2"/></term><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><term><see cref="MovingModel.MMDC"/> <see cref="DISEntity.Kind"/></term><description><see cref="DISKindParamName"/></description></item>
+    ///   <item><term><see cref="MovingModel.MMDC"/> <see cref="DISEntity.Domain"/></term><description><see cref="DISDomainParamName"/></description></item>
+    ///   <item><term><see cref="MovingModel.MMDC"/> <see cref="DISEntity.Country"/></term><description><see cref="DISCountryParamName"/></description></item>
+    ///   <item><term><see cref="MovingModel.MMDC"/> <see cref="DISEntity.Category"/></term><description><see cref="DISCategoryParamName"/></description></item>
+    ///   <item><term><see cref="MovingModel.MMDC"/> <see cref="DISEntity.Subcategory"/></term><description><see cref="DISSubcategoryParamName"/></description></item>
+    ///   <item><term><see cref="MovingModel.MMDC"/> <see cref="DISEntity.Specific"/></term><description><see cref="DISSpecificParamName"/></description></item>
+    ///   <item><term><see cref="MovingModel.MMDC"/> <see cref="DISEntity.Extra"/></term><description><see cref="DISExtraParamName"/></description></item>
+    ///   <item><term><see cref="MovingModel.FileType"/></term><description><see cref="FileTypeParamName"/></description></item>
+    /// </list>
+    /// </remarks>
+    private class MovingModelTableAccessor : TableAccessor<MovingModel>
+    {
+        internal MovingModelTableAccessor(SQLCDB sqlCDB)
+            : base(sqlCDB, sqlCDB.SelectFromMovingModelStatement, sqlCDB.InsertIntoMovingModelStatement)
+        {
+        }
+
+        /// <inheritdoc/>
+        internal override void CreateAndAttachObjectParameter(DbCommand dbCommand)
+        {
+            CreateAndAttachParameter(dbCommand, sqlCDB.DatasetParamName, DbType.Int32);
+            CreateAndAttachParameter(dbCommand, sqlCDB.ComponentSelector1ParamName, DbType.Int32);
+            CreateAndAttachParameter(dbCommand, sqlCDB.ComponentSelector2ParamName, DbType.Int32);
+            CreateAndAttachParameter(dbCommand, sqlCDB.DISKindParamName, DbType.Int32);
+            CreateAndAttachParameter(dbCommand, sqlCDB.DISDomainParamName, DbType.Int32);
+            CreateAndAttachParameter(dbCommand, sqlCDB.DISCountryParamName, DbType.Int32);
+            CreateAndAttachParameter(dbCommand, sqlCDB.DISCategoryParamName, DbType.Int32);
+            CreateAndAttachParameter(dbCommand, sqlCDB.DISSubcategoryParamName, DbType.Int32);
+            CreateAndAttachParameter(dbCommand, sqlCDB.DISSpecificParamName, DbType.Int32);
+            CreateAndAttachParameter(dbCommand, sqlCDB.DISExtraParamName, DbType.Int32);
+            CreateAndAttachParameter(dbCommand, sqlCDB.FileTypeParamName, DbType.String);
+        }
+
+        /// <inheritdoc/>
+        internal override void SetObjectParameters(DbCommand dbCommand, MovingModel obj)
+        {
+            dbCommand.Parameters[sqlCDB.DatasetParamName].Value = obj.Dataset.Value;
+            dbCommand.Parameters[sqlCDB.ComponentSelector1ParamName].Value = obj.ComponentSelector1;
+            dbCommand.Parameters[sqlCDB.ComponentSelector2ParamName].Value = obj.ComponentSelector2;
+            dbCommand.Parameters[sqlCDB.DISKindParamName].Value = obj.MMDC.Kind;
+            dbCommand.Parameters[sqlCDB.DISDomainParamName].Value = obj.MMDC.Domain;
+            dbCommand.Parameters[sqlCDB.DISCountryParamName].Value = obj.MMDC.Country;
+            dbCommand.Parameters[sqlCDB.DISCategoryParamName].Value = obj.MMDC.Category;
+            dbCommand.Parameters[sqlCDB.DISSubcategoryParamName].Value = obj.MMDC.Subcategory;
+            dbCommand.Parameters[sqlCDB.DISSpecificParamName].Value = obj.MMDC.Specific;
+            dbCommand.Parameters[sqlCDB.DISExtraParamName].Value = obj.MMDC.Extra;
+            dbCommand.Parameters[sqlCDB.FileTypeParamName].Value = obj.FileType;
+        }
+    }
+
+    /// <summary>
     /// The SQL DDL statement to create the Moving Model table.
     /// </summary>
     protected abstract string CreateTableMovingModelStatement
     {
         get;
-    }
-
-    /// <summary>
-    /// Creates the parameters appropriate for a <see cref="MovingModel"/> object
-    /// and attaches them to the prepared statement.
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    ///   <listheader><description>Parameters</description></listheader>
-    ///   <item><description><see cref="DatasetParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
-    ///   <item><description><see cref="DISKindParamName"/></description></item>
-    ///   <item><description><see cref="DISDomainParamName"/></description></item>
-    ///   <item><description><see cref="DISCountryParamName"/></description></item>
-    ///   <item><description><see cref="DISCategoryParamName"/></description></item>
-    ///   <item><description><see cref="DISSubcategoryParamName"/></description></item>
-    ///   <item><description><see cref="DISSpecificParamName"/></description></item>
-    ///   <item><description><see cref="DISExtraParamName"/></description></item>
-    ///   <item><description><see cref="FileTypeParamName"/></description></item>
-    /// </list>
-    /// </remarks>
-    /// <param name="dbCommand">The command to create the parameters for.</param>
-    /// <seealso cref="SetMovingModelParameters(DbCommand, MovingModel)"/>
-    private void CreateAndAttachMovingModelParameters(DbCommand dbCommand)
-    {
-        CreateAndAttachParameter(dbCommand, DatasetParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, ComponentSelector1ParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, ComponentSelector2ParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, DISKindParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, DISDomainParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, DISCountryParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, DISCategoryParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, DISSubcategoryParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, DISSpecificParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, DISExtraParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, FileTypeParamName, DbType.String);
-    }
-
-    /// <summary>
-    /// Sets the parameters according to the members of a <see cref="MovingModel"/>
-    /// object.
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    ///   <listheader><description>Parameters</description></listheader>
-    ///   <item><description><see cref="DatasetParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
-    ///   <item><description><see cref="DISKindParamName"/></description></item>
-    ///   <item><description><see cref="DISDomainParamName"/></description></item>
-    ///   <item><description><see cref="DISCountryParamName"/></description></item>
-    ///   <item><description><see cref="DISCategoryParamName"/></description></item>
-    ///   <item><description><see cref="DISSubcategoryParamName"/></description></item>
-    ///   <item><description><see cref="DISSpecificParamName"/></description></item>
-    ///   <item><description><see cref="DISExtraParamName"/></description></item>
-    ///   <item><description><see cref="FileTypeParamName"/></description></item>
-    /// </list>
-    /// </remarks>
-    /// <param name="dbCommand">The prepared statement to set the parameter for.</param>
-    /// <param name="movingModel">The object from which to get all the parameter values.</param>
-    /// <seealso cref="CreateAndAttachMovingModelParameters(DbCommand)"/>
-    private void SetMovingModelParameters(DbCommand dbCommand, MovingModel movingModel)
-    {
-        dbCommand.Parameters[DatasetParamName].Value = movingModel.Dataset.Value;
-        dbCommand.Parameters[ComponentSelector1ParamName].Value = movingModel.ComponentSelector1;
-        dbCommand.Parameters[ComponentSelector2ParamName].Value = movingModel.ComponentSelector2;
-        dbCommand.Parameters[DISKindParamName].Value = movingModel.MMDC.Kind;
-        dbCommand.Parameters[DISDomainParamName].Value = movingModel.MMDC.Domain;
-        dbCommand.Parameters[DISCountryParamName].Value = movingModel.MMDC.Country;
-        dbCommand.Parameters[DISCategoryParamName].Value = movingModel.MMDC.Category;
-        dbCommand.Parameters[DISSubcategoryParamName].Value = movingModel.MMDC.Subcategory;
-        dbCommand.Parameters[DISSpecificParamName].Value = movingModel.MMDC.Specific;
-        dbCommand.Parameters[DISExtraParamName].Value = movingModel.MMDC.Extra;
-        dbCommand.Parameters[FileTypeParamName].Value = movingModel.FileType;
     }
 
     #region Select
@@ -2431,147 +1854,16 @@ public abstract class SQLCDB : ICDB
         get;
     }
 
-    /// <summary>
-    /// Initializes a prepared statement to be a <see cref="SelectFromMovingModelStatement"/>.
-    /// </summary>
-    /// <param name="dbCommand">The command to initialize.</param>
-    internal void InitializeSelectFromMovingModelCommand(DbCommand dbCommand)
-    {
-        dbCommand.CommandText = SelectFromMovingModelStatement;
-        CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
-        CreateAndAttachMovingModelParameters(dbCommand);
-    }
-
     /// <inheritdoc/>
     public Stream? ReadMovingModel(MovingModel movingModel)
     {
-        DbConnection dbConnection = dbDataSource.OpenConnection();
-        try
-        {
-            DbCommand selectFromMovingModelCommand = dbConnection.CreateCommand();
-            try
-            {
-                InitializeSelectFromMovingModelCommand(selectFromMovingModelCommand);
-                selectFromMovingModelCommand.Prepare();
-
-                Stream? stream = SelectFromMovingModel(selectFromMovingModelCommand, movingModel);
-                if (stream is not null)
-                {
-                    return new WrappedStream(stream, selectFromMovingModelCommand, dbConnection);
-                }
-                else
-                {
-                    selectFromMovingModelCommand.Dispose();
-                    dbConnection.Dispose();
-                    return null;
-                }
-            }
-            catch (Exception)
-            {
-                selectFromMovingModelCommand.Dispose();
-                throw;
-            }
-        }
-        catch (Exception)
-        {
-            dbConnection.Dispose();
-            throw;
-        }
-    }
-
-    /// <inheritdoc cref="ReadMovingModel(MovingModel)"/>
-    /// <param name="selectFromMovingModelCommand">The prepared statement to use to execute the query.</param>
-    internal Stream? SelectFromMovingModel(DbCommand selectFromMovingModelCommand, MovingModel movingModel)
-    {
-        SetCdbParameter(selectFromMovingModelCommand);
-        SetMovingModelParameters(selectFromMovingModelCommand, movingModel);
-
-        DbDataReader dbDataReader = selectFromMovingModelCommand.ExecuteReader(
-            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow);
-        try
-        {
-            do
-            {
-                while (dbDataReader.Read())
-                {
-                    Stream stream = dbDataReader.GetStream(ContentColumnName);
-                    return new WrappedStream(stream, dbDataReader);
-                }
-            } while (dbDataReader.NextResult());
-            dbDataReader.Dispose();
-            return null;
-        }
-        catch (Exception)
-        {
-            dbDataReader.Dispose();
-            throw;
-        }
+        return movingModelAccessor.SelectUsingNewConnection(movingModel);
     }
 
     /// <inheritdoc/>
-    public async Task<Stream?> ReadMovingModelAsync(MovingModel movingModel, CancellationToken cancellationToken)
+    public Task<Stream?> ReadMovingModelAsync(MovingModel movingModel, CancellationToken cancellationToken)
     {
-        DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        try
-        {
-            DbCommand selectFromMovingModelCommand = dbConnection.CreateCommand();
-            try
-            {
-                InitializeSelectFromMovingModelCommand(selectFromMovingModelCommand);
-                await selectFromMovingModelCommand.PrepareAsync(cancellationToken);
-
-                Stream? stream = await SelectFromMovingModelAsync(selectFromMovingModelCommand, movingModel, cancellationToken);
-                if (stream is not null)
-                {
-                    return new WrappedStream(stream, selectFromMovingModelCommand, dbConnection);
-                }
-                else
-                {
-                    await selectFromMovingModelCommand.DisposeAsync();
-                    await dbConnection.DisposeAsync();
-                    return null;
-                }
-            }
-            catch (Exception)
-            {
-                await selectFromMovingModelCommand.DisposeAsync();
-                throw;
-            }
-        }
-        catch (Exception)
-        {
-            await dbConnection.DisposeAsync();
-            throw;
-        }
-    }
-
-    /// <inheritdoc cref="ReadMovingModelAsync(MovingModel, CancellationToken)"/>
-    /// <param name="selectFromMovingModelCommand">The prepared statement to use to execute the query.</param>
-    internal async Task<Stream?> SelectFromMovingModelAsync(DbCommand selectFromMovingModelCommand, MovingModel movingModel, CancellationToken cancellationToken)
-    {
-        SetCdbParameter(selectFromMovingModelCommand);
-        SetMovingModelParameters(selectFromMovingModelCommand, movingModel);
-
-        DbDataReader dbDataReader = await selectFromMovingModelCommand.ExecuteReaderAsync(
-            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow, cancellationToken);
-        try
-        {
-            do
-            {
-                while (await dbDataReader.ReadAsync(cancellationToken))
-                {
-                    Stream stream = dbDataReader.GetStream(ContentColumnName);
-                    return new WrappedStream(stream, dbDataReader);
-                }
-            } while (await dbDataReader.NextResultAsync(cancellationToken));
-            await dbDataReader.DisposeAsync();
-            return null;
-        }
-        catch (Exception)
-        {
-            await dbDataReader.DisposeAsync();
-            throw;
-        }
+        return movingModelAccessor.SelectUsingNewConnectionAsync(movingModel, cancellationToken);
     }
 
     #endregion
@@ -2604,60 +1896,16 @@ public abstract class SQLCDB : ICDB
         get;
     }
 
-    /// <summary>
-    /// Initializes a prepared statement to be an <see cref="InsertIntoMovingModelStatement"/>.
-    /// </summary>
-    /// <param name="dbCommand">The command to initialize.</param>
-    internal void InitializeInsertIntoMovingModelCommand(DbCommand dbCommand)
-    {
-        dbCommand.CommandText = InsertIntoMovingModelStatement;
-        CreateAndAttachCdbParameter(dbCommand);
-        CreateAndAttachMovingModelParameters(dbCommand);
-        CreateAndAttachContentParameter(dbCommand);
-    }
-
     /// <inheritdoc/>
     public void WriteMovingModel(MovingModel movingModel, Stream content)
     {
-        using DbConnection dbConnection = dbDataSource.OpenConnection();
-        using DbCommand insertIntoMovingModelCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoMovingModelCommand(insertIntoMovingModelCommand);
-        insertIntoMovingModelCommand.Prepare();
-
-        InsertIntoMovingModel(insertIntoMovingModelCommand, movingModel, content);
-    }
-
-    /// <inheritdoc cref="WriteMovingModel(MovingModel, Stream)"/>
-    /// <param name="insertIntoMovingModelCommand">The prepared statement to use to execute the query.</param>
-    internal void InsertIntoMovingModel(DbCommand insertIntoMovingModelCommand, MovingModel movingModel, Stream content)
-    {
-        SetCdbParameter(insertIntoMovingModelCommand);
-        SetMovingModelParameters(insertIntoMovingModelCommand, movingModel);
-        SetContentParameter(insertIntoMovingModelCommand, content);
-
-        insertIntoMovingModelCommand.ExecuteNonQuery();
+        movingModelAccessor.InsertUsingNewConnection(movingModel, content);
     }
 
     /// <inheritdoc/>
-    public async Task WriteMovingModelAsync(MovingModel movingModel, Stream content, CancellationToken cancellationToken)
+    public Task WriteMovingModelAsync(MovingModel movingModel, Stream content, CancellationToken cancellationToken)
     {
-        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        await using DbCommand insertIntoMovingModelCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoMovingModelCommand(insertIntoMovingModelCommand);
-        await insertIntoMovingModelCommand.PrepareAsync(cancellationToken);
-
-        await InsertIntoMovingModelAsync(insertIntoMovingModelCommand, movingModel, content, cancellationToken);
-    }
-
-    /// <inheritdoc cref="WriteMovingModelAsync(MovingModel, Stream, CancellationToken)"/>
-    /// <param name="insertIntoMovingModelCommand">The prepared statement to use to execute the query.</param>
-    internal Task InsertIntoMovingModelAsync(DbCommand insertIntoMovingModelCommand, MovingModel movingModel, Stream content, CancellationToken cancellationToken)
-    {
-        SetCdbParameter(insertIntoMovingModelCommand);
-        SetMovingModelParameters(insertIntoMovingModelCommand, movingModel);
-        SetContentParameter(insertIntoMovingModelCommand, content);
-
-        return insertIntoMovingModelCommand.ExecuteNonQueryAsync(cancellationToken);
+        return movingModelAccessor.InsertUsingNewConnectionAsync(movingModel, content, cancellationToken);
     }
 
     #endregion
@@ -2667,90 +1915,73 @@ public abstract class SQLCDB : ICDB
     #region Moving Model LOD
 
     /// <summary>
+    /// A table accessor for type <see cref="MovingModelLod"/>.
+    /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><term><see cref="MovingModelLod"/> Property</term><description>SQL Statement Parameter</description></listheader>
+    ///   <item><term><see cref="MovingModelLod.Dataset"/></term><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><term><see cref="MovingModelLod.ComponentSelector1"/></term><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><term><see cref="MovingModelLod.ComponentSelector2"/></term><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><term><see cref="MovingModelLod.LevelOfDetail"/></term><description><see cref="LevelOfDetailParamName"/></description></item>
+    ///   <item><term><see cref="MovingModelLod.MMDC"/> <see cref="DISEntity.Kind"/></term><description><see cref="DISKindParamName"/></description></item>
+    ///   <item><term><see cref="MovingModelLod.MMDC"/> <see cref="DISEntity.Domain"/></term><description><see cref="DISDomainParamName"/></description></item>
+    ///   <item><term><see cref="MovingModelLod.MMDC"/> <see cref="DISEntity.Country"/></term><description><see cref="DISCountryParamName"/></description></item>
+    ///   <item><term><see cref="MovingModelLod.MMDC"/> <see cref="DISEntity.Category"/></term><description><see cref="DISCategoryParamName"/></description></item>
+    ///   <item><term><see cref="MovingModelLod.MMDC"/> <see cref="DISEntity.Subcategory"/></term><description><see cref="DISSubcategoryParamName"/></description></item>
+    ///   <item><term><see cref="MovingModelLod.MMDC"/> <see cref="DISEntity.Specific"/></term><description><see cref="DISSpecificParamName"/></description></item>
+    ///   <item><term><see cref="MovingModelLod.MMDC"/> <see cref="DISEntity.Extra"/></term><description><see cref="DISExtraParamName"/></description></item>
+    ///   <item><term><see cref="MovingModelLod.FileType"/></term><description><see cref="FileTypeParamName"/></description></item>
+    /// </list>
+    /// </remarks>
+    private class MovingModelLodTableAccessor : TableAccessor<MovingModelLod>
+    {
+        internal MovingModelLodTableAccessor(SQLCDB sqlCDB)
+            : base(sqlCDB, sqlCDB.SelectFromMovingModelLodStatement, sqlCDB.InsertIntoMovingModelLodStatement)
+        {
+        }
+
+        /// <inheritdoc/>
+        internal override void CreateAndAttachObjectParameter(DbCommand dbCommand)
+        {
+            CreateAndAttachParameter(dbCommand, sqlCDB.DatasetParamName, DbType.Int32);
+            CreateAndAttachParameter(dbCommand, sqlCDB.ComponentSelector1ParamName, DbType.Int32);
+            CreateAndAttachParameter(dbCommand, sqlCDB.ComponentSelector2ParamName, DbType.Int32);
+            CreateAndAttachParameter(dbCommand, sqlCDB.LevelOfDetailParamName, DbType.Int32);
+            CreateAndAttachParameter(dbCommand, sqlCDB.DISKindParamName, DbType.Int32);
+            CreateAndAttachParameter(dbCommand, sqlCDB.DISDomainParamName, DbType.Int32);
+            CreateAndAttachParameter(dbCommand, sqlCDB.DISCountryParamName, DbType.Int32);
+            CreateAndAttachParameter(dbCommand, sqlCDB.DISCategoryParamName, DbType.Int32);
+            CreateAndAttachParameter(dbCommand, sqlCDB.DISSubcategoryParamName, DbType.Int32);
+            CreateAndAttachParameter(dbCommand, sqlCDB.DISSpecificParamName, DbType.Int32);
+            CreateAndAttachParameter(dbCommand, sqlCDB.DISExtraParamName, DbType.Int32);
+            CreateAndAttachParameter(dbCommand, sqlCDB.FileTypeParamName, DbType.String);
+        }
+
+        /// <inheritdoc/>
+        internal override void SetObjectParameters(DbCommand dbCommand, MovingModelLod obj)
+        {
+            dbCommand.Parameters[sqlCDB.DatasetParamName].Value = obj.Dataset.Value;
+            dbCommand.Parameters[sqlCDB.ComponentSelector1ParamName].Value = obj.ComponentSelector1;
+            dbCommand.Parameters[sqlCDB.ComponentSelector2ParamName].Value = obj.ComponentSelector2;
+            dbCommand.Parameters[sqlCDB.LevelOfDetailParamName].Value = obj.LevelOfDetail.Value;
+            dbCommand.Parameters[sqlCDB.DISKindParamName].Value = obj.MMDC.Kind;
+            dbCommand.Parameters[sqlCDB.DISDomainParamName].Value = obj.MMDC.Domain;
+            dbCommand.Parameters[sqlCDB.DISCountryParamName].Value = obj.MMDC.Country;
+            dbCommand.Parameters[sqlCDB.DISCategoryParamName].Value = obj.MMDC.Category;
+            dbCommand.Parameters[sqlCDB.DISSubcategoryParamName].Value = obj.MMDC.Subcategory;
+            dbCommand.Parameters[sqlCDB.DISSpecificParamName].Value = obj.MMDC.Specific;
+            dbCommand.Parameters[sqlCDB.DISExtraParamName].Value = obj.MMDC.Extra;
+            dbCommand.Parameters[sqlCDB.FileTypeParamName].Value = obj.FileType;
+        }
+    }
+
+    /// <summary>
     /// The SQL DDL statement to create the Moving Model Level of Detail table.
     /// </summary>
     protected abstract string CreateTableMovingModelLodStatement
     {
         get;
-    }
-
-    /// <summary>
-    /// Creates the parameters appropriate for a <see cref="MovingModelLod"/> object
-    /// and attaches them to the prepared statement.
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    ///   <listheader><description>Parameters</description></listheader>
-    ///   <item><description><see cref="DatasetParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
-    ///   <item><description><see cref="LevelOfDetailParamName"/></description></item>
-    ///   <item><description><see cref="DISKindParamName"/></description></item>
-    ///   <item><description><see cref="DISDomainParamName"/></description></item>
-    ///   <item><description><see cref="DISCountryParamName"/></description></item>
-    ///   <item><description><see cref="DISCategoryParamName"/></description></item>
-    ///   <item><description><see cref="DISSubcategoryParamName"/></description></item>
-    ///   <item><description><see cref="DISSpecificParamName"/></description></item>
-    ///   <item><description><see cref="DISExtraParamName"/></description></item>
-    ///   <item><description><see cref="FileTypeParamName"/></description></item>
-    /// </list>
-    /// </remarks>
-    /// <param name="dbCommand">The command to create the parameters for.</param>
-    /// <seealso cref="SetMovingModelLodParameters(DbCommand, MovingModelLod)"/>
-    private void CreateAndAttachMovingModelLodParameters(DbCommand dbCommand)
-    {
-        CreateAndAttachParameter(dbCommand, DatasetParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, ComponentSelector1ParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, ComponentSelector2ParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, LevelOfDetailParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, DISKindParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, DISDomainParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, DISCountryParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, DISCategoryParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, DISSubcategoryParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, DISSpecificParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, DISExtraParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, FileTypeParamName, DbType.String);
-    }
-
-    /// <summary>
-    /// Sets the parameters according to the members of a <see cref="MovingModelLod"/>
-    /// object.
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    ///   <listheader><description>Parameters</description></listheader>
-    ///   <item><description><see cref="DatasetParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
-    ///   <item><description><see cref="LevelOfDetailParamName"/></description></item>
-    ///   <item><description><see cref="DISKindParamName"/></description></item>
-    ///   <item><description><see cref="DISDomainParamName"/></description></item>
-    ///   <item><description><see cref="DISCountryParamName"/></description></item>
-    ///   <item><description><see cref="DISCategoryParamName"/></description></item>
-    ///   <item><description><see cref="DISSubcategoryParamName"/></description></item>
-    ///   <item><description><see cref="DISSpecificParamName"/></description></item>
-    ///   <item><description><see cref="DISExtraParamName"/></description></item>
-    ///   <item><description><see cref="FileTypeParamName"/></description></item>
-    /// </list>
-    /// </remarks>
-    /// <param name="dbCommand">The prepared statement to set the parameter for.</param>
-    /// <param name="movingModelLod">The object from which to get all the parameter values.</param>
-    /// <seealso cref="CreateAndAttachMovingModelLodParameters(DbCommand)"/>
-    private void SetMovingModelLodParameters(DbCommand dbCommand, MovingModelLod movingModelLod)
-    {
-        dbCommand.Parameters[DatasetParamName].Value = movingModelLod.Dataset.Value;
-        dbCommand.Parameters[ComponentSelector1ParamName].Value = movingModelLod.ComponentSelector1;
-        dbCommand.Parameters[ComponentSelector2ParamName].Value = movingModelLod.ComponentSelector2;
-        dbCommand.Parameters[LevelOfDetailParamName].Value = movingModelLod.LevelOfDetail.Value;
-        dbCommand.Parameters[DISKindParamName].Value = movingModelLod.MMDC.Kind;
-        dbCommand.Parameters[DISDomainParamName].Value = movingModelLod.MMDC.Domain;
-        dbCommand.Parameters[DISCountryParamName].Value = movingModelLod.MMDC.Country;
-        dbCommand.Parameters[DISCategoryParamName].Value = movingModelLod.MMDC.Category;
-        dbCommand.Parameters[DISSubcategoryParamName].Value = movingModelLod.MMDC.Subcategory;
-        dbCommand.Parameters[DISSpecificParamName].Value = movingModelLod.MMDC.Specific;
-        dbCommand.Parameters[DISExtraParamName].Value = movingModelLod.MMDC.Extra;
-        dbCommand.Parameters[FileTypeParamName].Value = movingModelLod.FileType;
     }
 
     #region Select
@@ -2785,147 +2016,16 @@ public abstract class SQLCDB : ICDB
         get;
     }
 
-    /// <summary>
-    /// Initializes a prepared statement to be a <see cref="SelectFromMovingModelLodStatement"/>.
-    /// </summary>
-    /// <param name="dbCommand">The command to initialize.</param>
-    internal void InitializeSelectFromMovingModelLodCommand(DbCommand dbCommand)
-    {
-        dbCommand.CommandText = SelectFromMovingModelLodStatement;
-        CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
-        CreateAndAttachMovingModelLodParameters(dbCommand);
-    }
-
     /// <inheritdoc/>
     public Stream? ReadMovingModelLevelOfDetail(MovingModelLod movingModelLod)
     {
-        DbConnection dbConnection = dbDataSource.OpenConnection();
-        try
-        {
-            DbCommand selectFromMovingModelLodCommand = dbConnection.CreateCommand();
-            try
-            {
-                InitializeSelectFromMovingModelLodCommand(selectFromMovingModelLodCommand);
-                selectFromMovingModelLodCommand.Prepare();
-
-                Stream? stream = SelectFromMovingModelLod(selectFromMovingModelLodCommand, movingModelLod);
-                if (stream is not null)
-                {
-                    return new WrappedStream(stream, selectFromMovingModelLodCommand, dbConnection);
-                }
-                else
-                {
-                    selectFromMovingModelLodCommand.Dispose();
-                    dbConnection.Dispose();
-                    return null;
-                }
-            }
-            catch (Exception)
-            {
-                selectFromMovingModelLodCommand.Dispose();
-                throw;
-            }
-        }
-        catch (Exception)
-        {
-            dbConnection.Dispose();
-            throw;
-        }
-    }
-
-    /// <inheritdoc cref="ReadMovingModelLevelOfDetail(MovingModelLod)"/>
-    /// <param name="selectFromMovingModelLodCommand">The prepared statement to use to execute the query.</param>
-    internal Stream? SelectFromMovingModelLod(DbCommand selectFromMovingModelLodCommand, MovingModelLod movingModelLod)
-    {
-        SetCdbParameter(selectFromMovingModelLodCommand);
-        SetMovingModelLodParameters(selectFromMovingModelLodCommand, movingModelLod);
-
-        DbDataReader dbDataReader = selectFromMovingModelLodCommand.ExecuteReader(
-            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow);
-        try
-        {
-            do
-            {
-                while (dbDataReader.Read())
-                {
-                    Stream stream = dbDataReader.GetStream(ContentColumnName);
-                    return new WrappedStream(stream, dbDataReader);
-                }
-            } while (dbDataReader.NextResult());
-            dbDataReader.Dispose();
-            return null;
-        }
-        catch (Exception)
-        {
-            dbDataReader.Dispose();
-            throw;
-        }
+        return movingModelLodAccessor.SelectUsingNewConnection(movingModelLod);
     }
 
     /// <inheritdoc/>
-    public async Task<Stream?> ReadMovingModelLevelOfDetailAsync(MovingModelLod movingModelLod, CancellationToken cancellationToken)
+    public Task<Stream?> ReadMovingModelLevelOfDetailAsync(MovingModelLod movingModelLod, CancellationToken cancellationToken)
     {
-        DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        try
-        {
-            DbCommand selectFromMovingModelLodCommand = dbConnection.CreateCommand();
-            try
-            {
-                InitializeSelectFromMovingModelLodCommand(selectFromMovingModelLodCommand);
-                await selectFromMovingModelLodCommand.PrepareAsync(cancellationToken);
-
-                Stream? stream = await SelectFromMovingModelLodAsync(selectFromMovingModelLodCommand, movingModelLod, cancellationToken);
-                if (stream is not null)
-                {
-                    return new WrappedStream(stream, selectFromMovingModelLodCommand, dbConnection);
-                }
-                else
-                {
-                    await selectFromMovingModelLodCommand.DisposeAsync();
-                    await dbConnection.DisposeAsync();
-                    return null;
-                }
-            }
-            catch (Exception)
-            {
-                await selectFromMovingModelLodCommand.DisposeAsync();
-                throw;
-            }
-        }
-        catch (Exception)
-        {
-            await dbConnection.DisposeAsync();
-            throw;
-        }
-    }
-
-    /// <inheritdoc cref="ReadMovingModelLevelOfDetailAsync(MovingModelLod, CancellationToken)"/>
-    /// <param name="selectFromMovingModelLodCommand">The prepared statement to use to execute the query.</param>
-    internal async Task<Stream?> SelectFromMovingModelLodAsync(DbCommand selectFromMovingModelLodCommand, MovingModelLod movingModelLod, CancellationToken cancellationToken)
-    {
-        SetCdbParameter(selectFromMovingModelLodCommand);
-        SetMovingModelLodParameters(selectFromMovingModelLodCommand, movingModelLod);
-
-        DbDataReader dbDataReader = await selectFromMovingModelLodCommand.ExecuteReaderAsync(
-            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow, cancellationToken);
-        try
-        {
-            do
-            {
-                while (await dbDataReader.ReadAsync(cancellationToken))
-                {
-                    Stream stream = dbDataReader.GetStream(ContentColumnName);
-                    return new WrappedStream(stream, dbDataReader);
-                }
-            } while (await dbDataReader.NextResultAsync(cancellationToken));
-            await dbDataReader.DisposeAsync();
-            return null;
-        }
-        catch (Exception)
-        {
-            await dbDataReader.DisposeAsync();
-            throw;
-        }
+        return movingModelLodAccessor.SelectUsingNewConnectionAsync(movingModelLod, cancellationToken);
     }
 
     #endregion
@@ -2959,60 +2059,16 @@ public abstract class SQLCDB : ICDB
         get;
     }
 
-    /// <summary>
-    /// Initializes a prepared statement to be an <see cref="InsertIntoMovingModelLodStatement"/>.
-    /// </summary>
-    /// <param name="dbCommand">The command to initialize.</param>
-    internal void InitializeInsertIntoMovingModelLodCommand(DbCommand dbCommand)
-    {
-        dbCommand.CommandText = InsertIntoMovingModelLodStatement;
-        CreateAndAttachCdbParameter(dbCommand);
-        CreateAndAttachMovingModelLodParameters(dbCommand);
-        CreateAndAttachContentParameter(dbCommand);
-    }
-
     /// <inheritdoc/>
     public void WriteMovingModelLevelOfDetail(MovingModelLod movingModelLod, Stream content)
     {
-        using DbConnection dbConnection = dbDataSource.OpenConnection();
-        using DbCommand insertIntoMovingModelLodCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoMovingModelLodCommand(insertIntoMovingModelLodCommand);
-        insertIntoMovingModelLodCommand.Prepare();
-
-        InsertIntoMovingModelLod(insertIntoMovingModelLodCommand, movingModelLod, content);
-    }
-
-    /// <inheritdoc cref="WriteMovingModelLevelOfDetail(MovingModelLod, Stream)"/>
-    /// <param name="insertIntoMovingModelLodCommand">The prepared statement to use to execute the query.</param>
-    internal void InsertIntoMovingModelLod(DbCommand insertIntoMovingModelLodCommand, MovingModelLod movingModelLod, Stream content)
-    {
-        SetCdbParameter(insertIntoMovingModelLodCommand);
-        SetMovingModelLodParameters(insertIntoMovingModelLodCommand, movingModelLod);
-        SetContentParameter(insertIntoMovingModelLodCommand, content);
-
-        insertIntoMovingModelLodCommand.ExecuteNonQuery();
+        movingModelLodAccessor.InsertUsingNewConnection(movingModelLod, content);
     }
 
     /// <inheritdoc/>
-    public async Task WriteMovingModelLevelOfDetailAsync(MovingModelLod movingModelLod, Stream content, CancellationToken cancellationToken)
+    public Task WriteMovingModelLevelOfDetailAsync(MovingModelLod movingModelLod, Stream content, CancellationToken cancellationToken)
     {
-        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        await using DbCommand insertIntoMovingModelLodCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoMovingModelLodCommand(insertIntoMovingModelLodCommand);
-        await insertIntoMovingModelLodCommand.PrepareAsync(cancellationToken);
-
-        await InsertIntoMovingModelLodAsync(insertIntoMovingModelLodCommand, movingModelLod, content, cancellationToken);
-    }
-
-    /// <inheritdoc cref="WriteMovingModelLevelOfDetailAsync(MovingModelLod, Stream, CancellationToken)"/>
-    /// <param name="insertIntoMovingModelLodCommand">The prepared statement to use to execute the query.</param>
-    internal Task InsertIntoMovingModelLodAsync(DbCommand insertIntoMovingModelLodCommand, MovingModelLod movingModelLod, Stream content, CancellationToken cancellationToken)
-    {
-        SetCdbParameter(insertIntoMovingModelLodCommand);
-        SetMovingModelLodParameters(insertIntoMovingModelLodCommand, movingModelLod);
-        SetContentParameter(insertIntoMovingModelLodCommand, content);
-
-        return insertIntoMovingModelLodCommand.ExecuteNonQueryAsync(cancellationToken);
+        return movingModelLodAccessor.InsertUsingNewConnectionAsync(movingModelLod, content, cancellationToken);
     }
 
     #endregion
@@ -3022,78 +2078,64 @@ public abstract class SQLCDB : ICDB
     #region Tile
 
     /// <summary>
+    /// A table accessor for type <see cref="Tile"/>.
+    /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><term><see cref="Tile"/> Property</term><description>SQL Statement Parameter</description></listheader>
+    ///   <item><term><see cref="Tile.LatitudeValue"/></term><description><see cref="LatitudeParamName"/></description></item>
+    ///   <item><term><see cref="Tile.LongitudeValue"/></term><description><see cref="LongitudeParamName"/></description></item>
+    ///   <item><term><see cref="Tile.DatasetValue"/></term><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><term><see cref="Tile.ComponentSelector1"/></term><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><term><see cref="Tile.ComponentSelector2"/></term><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><term><see cref="Tile.Level"/></term><description><see cref="LevelOfDetailParamName"/></description></item>
+    ///   <item><term><see cref="Tile.Up"/></term><description><see cref="UpParamName"/></description></item>
+    ///   <item><term><see cref="Tile.Right"/></term><description><see cref="RightParamName"/></description></item>
+    ///   <item><term><see cref="Tile.FileType"/></term><description><see cref="FileTypeParamName"/></description></item>
+    /// </list>
+    /// </remarks>
+    private class TileTableAccessor : TableAccessor<Tile>
+    {
+        internal TileTableAccessor(SQLCDB sqlCDB)
+            : base(sqlCDB, sqlCDB.SelectFromTileStatement, sqlCDB.InsertIntoTileStatement)
+        {
+        }
+
+        /// <inheritdoc/>
+        internal override void CreateAndAttachObjectParameter(DbCommand dbCommand)
+        {
+            CreateAndAttachParameter(dbCommand, sqlCDB.LatitudeParamName, DbType.Int32);
+            CreateAndAttachParameter(dbCommand, sqlCDB.LongitudeParamName, DbType.Int32);
+            CreateAndAttachParameter(dbCommand, sqlCDB.DatasetParamName, DbType.Int32);
+            CreateAndAttachParameter(dbCommand, sqlCDB.ComponentSelector1ParamName, DbType.Int32);
+            CreateAndAttachParameter(dbCommand, sqlCDB.ComponentSelector2ParamName, DbType.Int32);
+            CreateAndAttachParameter(dbCommand, sqlCDB.LevelOfDetailParamName, DbType.Int32);
+            CreateAndAttachParameter(dbCommand, sqlCDB.UpParamName, DbType.Int32);
+            CreateAndAttachParameter(dbCommand, sqlCDB.RightParamName, DbType.Int32);
+            CreateAndAttachParameter(dbCommand, sqlCDB.FileTypeParamName, DbType.String);
+        }
+
+        /// <inheritdoc/>
+        internal override void SetObjectParameters(DbCommand dbCommand, Tile obj)
+        {
+            dbCommand.Parameters[sqlCDB.LatitudeParamName].Value = obj.LatitudeValue.Value;
+            dbCommand.Parameters[sqlCDB.LongitudeParamName].Value = obj.LongitudeValue.Value;
+            dbCommand.Parameters[sqlCDB.DatasetParamName].Value = obj.DatasetValue.Value;
+            dbCommand.Parameters[sqlCDB.ComponentSelector1ParamName].Value = obj.ComponentSelector1;
+            dbCommand.Parameters[sqlCDB.ComponentSelector2ParamName].Value = obj.ComponentSelector2;
+            dbCommand.Parameters[sqlCDB.LevelOfDetailParamName].Value = obj.Level.Value;
+            dbCommand.Parameters[sqlCDB.UpParamName].Value = obj.Up;
+            dbCommand.Parameters[sqlCDB.RightParamName].Value = obj.Right;
+            dbCommand.Parameters[sqlCDB.FileTypeParamName].Value = obj.FileType;
+        }
+    }
+
+    /// <summary>
     /// The SQL DDL statement to create the Tile table.
     /// </summary>
     protected abstract string CreateTableTileStatement
     {
         get;
-    }
-
-    /// <summary>
-    /// Creates the parameters appropriate for a <see cref="Tile"/> object
-    /// and attaches them to the prepared statement.
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    ///   <listheader><description>Parameters</description></listheader>
-    ///   <item><description><see cref="LatitudeParamName"/></description></item>
-    ///   <item><description><see cref="LongitudeParamName"/></description></item>
-    ///   <item><description><see cref="DatasetParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
-    ///   <item><description><see cref="LevelOfDetailParamName"/></description></item>
-    ///   <item><description><see cref="UpParamName"/></description></item>
-    ///   <item><description><see cref="RightParamName"/></description></item>
-    ///   <item><description><see cref="FileTypeParamName"/></description></item>
-    /// </list>
-    /// </remarks>
-    /// <param name="dbCommand">The command to create the parameters for.</param>
-    /// <seealso cref="SetTileParameters(DbCommand, Tile)"/>
-    private void CreateAndAttachTileParameters(DbCommand dbCommand)
-    {
-        CreateAndAttachParameter(dbCommand, LatitudeParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, LongitudeParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, DatasetParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, ComponentSelector1ParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, ComponentSelector2ParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, LevelOfDetailParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, UpParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, RightParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, FileTypeParamName, DbType.String);
-    }
-
-    /// <summary>
-    /// Sets the parameters according to the members of a <see cref="Tile"/>
-    /// object.
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    ///   <listheader><description>Parameters</description></listheader>
-    ///   <item><description><see cref="LatitudeParamName"/></description></item>
-    ///   <item><description><see cref="LongitudeParamName"/></description></item>
-    ///   <item><description><see cref="DatasetParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
-    ///   <item><description><see cref="LevelOfDetailParamName"/></description></item>
-    ///   <item><description><see cref="UpParamName"/></description></item>
-    ///   <item><description><see cref="RightParamName"/></description></item>
-    ///   <item><description><see cref="FileTypeParamName"/></description></item>
-    /// </list>
-    /// </remarks>
-    /// <param name="dbCommand">The prepared statement to set the parameter for.</param>
-    /// <param name="tile">The object from which to get all the parameter values.</param>
-    /// <seealso cref="CreateAndAttachTileParameters(DbCommand)"/>
-    private void SetTileParameters(DbCommand dbCommand, Tile tile)
-    {
-        dbCommand.Parameters[LatitudeParamName].Value = tile.LatitudeValue.Value;
-        dbCommand.Parameters[LongitudeParamName].Value = tile.LongitudeValue.Value;
-        dbCommand.Parameters[DatasetParamName].Value = tile.DatasetValue.Value;
-        dbCommand.Parameters[ComponentSelector1ParamName].Value = tile.ComponentSelector1;
-        dbCommand.Parameters[ComponentSelector2ParamName].Value = tile.ComponentSelector2;
-        dbCommand.Parameters[LevelOfDetailParamName].Value = tile.Level.Value;
-        dbCommand.Parameters[UpParamName].Value = tile.Up;
-        dbCommand.Parameters[RightParamName].Value = tile.Right;
-        dbCommand.Parameters[FileTypeParamName].Value = tile.FileType;
     }
 
     #region Select
@@ -3125,147 +2167,16 @@ public abstract class SQLCDB : ICDB
         get;
     }
 
-    /// <summary>
-    /// Initializes a prepared statement to be a <see cref="SelectFromTileStatement"/>.
-    /// </summary>
-    /// <param name="dbCommand">The command to initialize.</param>
-    internal void InitializeSelectFromTileCommand(DbCommand dbCommand)
-    {
-        dbCommand.CommandText = SelectFromTileStatement;
-        CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
-        CreateAndAttachTileParameters(dbCommand);
-    }
-
     /// <inheritdoc/>
     public Stream? ReadTile(Tile tile)
     {
-        DbConnection dbConnection = dbDataSource.OpenConnection();
-        try
-        {
-            DbCommand selectFromTileCommand = dbConnection.CreateCommand();
-            try
-            {
-                InitializeSelectFromTileCommand(selectFromTileCommand);
-                selectFromTileCommand.Prepare();
-
-                Stream? stream = SelectFromTile(selectFromTileCommand, tile);
-                if (stream is not null)
-                {
-                    return new WrappedStream(stream, selectFromTileCommand, dbConnection);
-                }
-                else
-                {
-                    selectFromTileCommand.Dispose();
-                    dbConnection.Dispose();
-                    return null;
-                }
-            }
-            catch (Exception)
-            {
-                selectFromTileCommand.Dispose();
-                throw;
-            }
-        }
-        catch (Exception)
-        {
-            dbConnection.Dispose();
-            throw;
-        }
-    }
-
-    /// <inheritdoc cref="ReadTile(Tile)"/>
-    /// <param name="selectFromTileCommand">The prepared statement to use to execute the query.</param>
-    internal Stream? SelectFromTile(DbCommand selectFromTileCommand, Tile tile)
-    {
-        SetCdbParameter(selectFromTileCommand);
-        SetTileParameters(selectFromTileCommand, tile);
-
-        DbDataReader dbDataReader = selectFromTileCommand.ExecuteReader(
-            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow);
-        try
-        {
-            do
-            {
-                while (dbDataReader.Read())
-                {
-                    Stream stream = dbDataReader.GetStream(ContentColumnName);
-                    return new WrappedStream(stream, dbDataReader);
-                }
-            } while (dbDataReader.NextResult());
-            dbDataReader.Dispose();
-            return null;
-        }
-        catch (Exception)
-        {
-            dbDataReader.Dispose();
-            throw;
-        }
+        return tileAccessor.SelectUsingNewConnection(tile);
     }
 
     /// <inheritdoc/>
-    public async Task<Stream?> ReadTileAsync(Tile tile, CancellationToken cancellationToken)
+    public Task<Stream?> ReadTileAsync(Tile tile, CancellationToken cancellationToken)
     {
-        DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        try
-        {
-            DbCommand selectFromTileCommand = dbConnection.CreateCommand();
-            try
-            {
-                InitializeSelectFromTileCommand(selectFromTileCommand);
-                await selectFromTileCommand.PrepareAsync(cancellationToken);
-
-                Stream? stream = await SelectFromTileAsync(selectFromTileCommand, tile, cancellationToken);
-                if (stream is not null)
-                {
-                    return new WrappedStream(stream, selectFromTileCommand, dbConnection);
-                }
-                else
-                {
-                    await selectFromTileCommand.DisposeAsync();
-                    await dbConnection.DisposeAsync();
-                    return null;
-                }
-            }
-            catch (Exception)
-            {
-                await selectFromTileCommand.DisposeAsync();
-                throw;
-            }
-        }
-        catch (Exception)
-        {
-            await dbConnection.DisposeAsync();
-            throw;
-        }
-    }
-
-    /// <inheritdoc cref="ReadTileAsync(Tile, CancellationToken)"/>
-    /// <param name="selectFromTileCommand">The prepared statement to use to execute the query.</param>
-    internal async Task<Stream?> SelectFromTileAsync(DbCommand selectFromTileCommand, Tile tile, CancellationToken cancellationToken)
-    {
-        SetCdbParameter(selectFromTileCommand);
-        SetTileParameters(selectFromTileCommand, tile);
-
-        DbDataReader dbDataReader = await selectFromTileCommand.ExecuteReaderAsync(
-            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow, cancellationToken);
-        try
-        {
-            do
-            {
-                while (await dbDataReader.ReadAsync(cancellationToken))
-                {
-                    Stream stream = dbDataReader.GetStream(ContentColumnName);
-                    return new WrappedStream(stream, dbDataReader);
-                }
-            } while (await dbDataReader.NextResultAsync(cancellationToken));
-            await dbDataReader.DisposeAsync();
-            return null;
-        }
-        catch (Exception)
-        {
-            await dbDataReader.DisposeAsync();
-            throw;
-        }
+        return tileAccessor.SelectUsingNewConnectionAsync(tile, cancellationToken);
     }
 
     #endregion
@@ -3296,60 +2207,16 @@ public abstract class SQLCDB : ICDB
         get;
     }
 
-    /// <summary>
-    /// Initializes a prepared statement to be an <see cref="InsertIntoTileStatement"/>.
-    /// </summary>
-    /// <param name="dbCommand">The command to initialize.</param>
-    internal void InitializeInsertIntoTileCommand(DbCommand dbCommand)
-    {
-        dbCommand.CommandText = InsertIntoTileStatement;
-        CreateAndAttachCdbParameter(dbCommand);
-        CreateAndAttachTileParameters(dbCommand);
-        CreateAndAttachContentParameter(dbCommand);
-    }
-
     /// <inheritdoc/>
     public void WriteTile(Tile tile, Stream content)
     {
-        using DbConnection dbConnection = dbDataSource.OpenConnection();
-        using DbCommand insertIntoTileCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoTileCommand(insertIntoTileCommand);
-        insertIntoTileCommand.Prepare();
-
-        InsertIntoTile(insertIntoTileCommand, tile, content);
-    }
-
-    /// <inheritdoc cref="WriteTile(Tile, Stream)"/>
-    /// <param name="insertIntoTileCommand">The prepared statement to use to execute the query.</param>
-    internal void InsertIntoTile(DbCommand insertIntoTileCommand, Tile tile, Stream content)
-    {
-        SetCdbParameter(insertIntoTileCommand);
-        SetTileParameters(insertIntoTileCommand, tile);
-        SetContentParameter(insertIntoTileCommand, content);
-
-        insertIntoTileCommand.ExecuteNonQuery();
+        tileAccessor.InsertUsingNewConnection(tile, content);
     }
 
     /// <inheritdoc/>
-    public async Task WriteTileAsync(Tile tile, Stream content, CancellationToken cancellationToken)
+    public Task WriteTileAsync(Tile tile, Stream content, CancellationToken cancellationToken)
     {
-        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        await using DbCommand insertIntoTileCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoTileCommand(insertIntoTileCommand);
-        await insertIntoTileCommand.PrepareAsync(cancellationToken);
-
-        await InsertIntoTileAsync(insertIntoTileCommand, tile, content, cancellationToken);
-    }
-
-    /// <inheritdoc cref="WriteTileAsync(Tile, Stream, CancellationToken)"/>
-    /// <param name="insertIntoTileCommand">The prepared statement to use to execute the query.</param>
-    internal Task InsertIntoTileAsync(DbCommand insertIntoTileCommand, Tile tile, Stream content, CancellationToken cancellationToken)
-    {
-        SetCdbParameter(insertIntoTileCommand);
-        SetTileParameters(insertIntoTileCommand, tile);
-        SetContentParameter(insertIntoTileCommand, content);
-
-        return insertIntoTileCommand.ExecuteNonQueryAsync(cancellationToken);
+        return tileAccessor.InsertUsingNewConnectionAsync(tile, content, cancellationToken);
     }
 
     #endregion
@@ -3359,98 +2226,79 @@ public abstract class SQLCDB : ICDB
     #region Tile Archived Feature
 
     /// <summary>
+    /// A table accessor for type <see cref="TileArchivedFeature"/>.
+    /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><term><see cref="TileArchivedFeature"/> Property</term><description>SQL Statement Parameter</description></listheader>
+    ///   <item><term><see cref="TileArchivedFeature.LatitudeValue"/></term><description><see cref="LatitudeParamName"/></description></item>
+    ///   <item><term><see cref="TileArchivedFeature.LongitudeValue"/></term><description><see cref="LongitudeParamName"/></description></item>
+    ///   <item><term><see cref="TileArchivedFeature.DatasetValue"/></term><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><term><see cref="TileArchivedFeature.ComponentSelector1"/></term><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><term><see cref="TileArchivedFeature.ComponentSelector2"/></term><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><term><see cref="TileArchivedFeature.Level"/></term><description><see cref="LevelOfDetailParamName"/></description></item>
+    ///   <item><term><see cref="TileArchivedFeature.Up"/></term><description><see cref="UpParamName"/></description></item>
+    ///   <item><term><see cref="TileArchivedFeature.Right"/></term><description><see cref="RightParamName"/></description></item>
+    ///   <item><term><see cref="TileArchivedFeature.FeatureCode"/> <see cref="FeatureCode.Category"/></term><description><see cref="FeatureCategoryParamName"/></description></item>
+    ///   <item><term><see cref="TileArchivedFeature.FeatureCode"/> <see cref="FeatureCode.Subcategory"/></term><description><see cref="FeatureSubcategoryParamName"/></description></item>
+    ///   <item><term><see cref="TileArchivedFeature.FeatureCode"/> <see cref="FeatureCode.Type"/></term><description><see cref="FeatureTypeParamName"/></description></item>
+    ///   <item><term><see cref="TileArchivedFeature.FeatureSubcode"/></term><description><see cref="FeatureSubcodeParamName"/></description></item>
+    ///   <item><term><see cref="TileArchivedFeature.Name"/></term><description><see cref="ModelNameParamName"/></description></item>
+    ///   <item><term><see cref="TileArchivedFeature.FileType"/></term><description><see cref="FileTypeParamName"/></description></item>
+    /// </list>
+    /// </remarks>
+    private class TileArchivedFeatureTableAccessor : TableAccessor<TileArchivedFeature>
+    {
+        internal TileArchivedFeatureTableAccessor(SQLCDB sqlCDB)
+            : base(sqlCDB, sqlCDB.SelectFromTileArchivedFeatureStatement, sqlCDB.InsertIntoTileArchivedFeatureStatement)
+        {
+        }
+
+        /// <inheritdoc/>
+        internal override void CreateAndAttachObjectParameter(DbCommand dbCommand)
+        {
+            CreateAndAttachParameter(dbCommand, sqlCDB.LatitudeParamName, DbType.Int32);
+            CreateAndAttachParameter(dbCommand, sqlCDB.LongitudeParamName, DbType.Int32);
+            CreateAndAttachParameter(dbCommand, sqlCDB.DatasetParamName, DbType.Int32);
+            CreateAndAttachParameter(dbCommand, sqlCDB.ComponentSelector1ParamName, DbType.Int32);
+            CreateAndAttachParameter(dbCommand, sqlCDB.ComponentSelector2ParamName, DbType.Int32);
+            CreateAndAttachParameter(dbCommand, sqlCDB.LevelOfDetailParamName, DbType.Int32);
+            CreateAndAttachParameter(dbCommand, sqlCDB.UpParamName, DbType.Int32);
+            CreateAndAttachParameter(dbCommand, sqlCDB.RightParamName, DbType.Int32);
+            CreateAndAttachParameter(dbCommand, sqlCDB.FeatureCategoryParamName, DbType.String);
+            CreateAndAttachParameter(dbCommand, sqlCDB.FeatureSubcategoryParamName, DbType.String);
+            CreateAndAttachParameter(dbCommand, sqlCDB.FeatureTypeParamName, DbType.Int32);
+            CreateAndAttachParameter(dbCommand, sqlCDB.FeatureSubcodeParamName, DbType.Int32);
+            CreateAndAttachParameter(dbCommand, sqlCDB.ModelNameParamName, DbType.String);
+            CreateAndAttachParameter(dbCommand, sqlCDB.FileTypeParamName, DbType.String);
+        }
+
+        /// <inheritdoc/>
+        internal override void SetObjectParameters(DbCommand dbCommand, TileArchivedFeature obj)
+        {
+            dbCommand.Parameters[sqlCDB.LatitudeParamName].Value = obj.LatitudeValue.Value;
+            dbCommand.Parameters[sqlCDB.LongitudeParamName].Value = obj.LongitudeValue.Value;
+            dbCommand.Parameters[sqlCDB.DatasetParamName].Value = obj.DatasetValue.Value;
+            dbCommand.Parameters[sqlCDB.ComponentSelector1ParamName].Value = obj.ComponentSelector1;
+            dbCommand.Parameters[sqlCDB.ComponentSelector2ParamName].Value = obj.ComponentSelector2;
+            dbCommand.Parameters[sqlCDB.LevelOfDetailParamName].Value = obj.Level.Value;
+            dbCommand.Parameters[sqlCDB.UpParamName].Value = obj.Up;
+            dbCommand.Parameters[sqlCDB.RightParamName].Value = obj.Right;
+            dbCommand.Parameters[sqlCDB.FeatureCategoryParamName].Value = obj.FeatureCode.Category;
+            dbCommand.Parameters[sqlCDB.FeatureSubcategoryParamName].Value = obj.FeatureCode.Subcategory;
+            dbCommand.Parameters[sqlCDB.FeatureTypeParamName].Value = obj.FeatureCode.Type;
+            dbCommand.Parameters[sqlCDB.FeatureSubcodeParamName].Value = obj.FeatureSubcode;
+            dbCommand.Parameters[sqlCDB.ModelNameParamName].Value = obj.Name;
+            dbCommand.Parameters[sqlCDB.FileTypeParamName].Value = obj.FileType;
+        }
+    }
+
+    /// <summary>
     /// The SQL DDL statement to create the TileArchivedFeature table.
     /// </summary>
     protected abstract string CreateTableTileArchivedFeatureStatement
     {
         get;
-    }
-
-    /// <summary>
-    /// Creates the parameters appropriate for a <see cref="TileArchivedFeature"/> object
-    /// and attaches them to the prepared statement.
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    ///   <listheader><description>Parameters</description></listheader>
-    ///   <item><description><see cref="LatitudeParamName"/></description></item>
-    ///   <item><description><see cref="LongitudeParamName"/></description></item>
-    ///   <item><description><see cref="DatasetParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
-    ///   <item><description><see cref="LevelOfDetailParamName"/></description></item>
-    ///   <item><description><see cref="UpParamName"/></description></item>
-    ///   <item><description><see cref="RightParamName"/></description></item>
-    ///   <item><description><see cref="FeatureCategoryParamName"/></description></item>
-    ///   <item><description><see cref="FeatureSubcategoryParamName"/></description></item>
-    ///   <item><description><see cref="FeatureTypeParamName"/></description></item>
-    ///   <item><description><see cref="FeatureSubcodeParamName"/></description></item>
-    ///   <item><description><see cref="ModelNameParamName"/></description></item>
-    ///   <item><description><see cref="FileTypeParamName"/></description></item>
-    /// </list>
-    /// </remarks>
-    /// <param name="dbCommand">The command to create the parameters for.</param>
-    /// <seealso cref="SetTileArchivedFeatureParameters(DbCommand, TileArchivedFeature)"/>
-    private void CreateAndAttachTileArchivedFeatureParameters(DbCommand dbCommand)
-    {
-        CreateAndAttachParameter(dbCommand, LatitudeParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, LongitudeParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, DatasetParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, ComponentSelector1ParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, ComponentSelector2ParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, LevelOfDetailParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, UpParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, RightParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, FeatureCategoryParamName, DbType.String);
-        CreateAndAttachParameter(dbCommand, FeatureSubcategoryParamName, DbType.String);
-        CreateAndAttachParameter(dbCommand, FeatureTypeParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, FeatureSubcodeParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, ModelNameParamName, DbType.String);
-        CreateAndAttachParameter(dbCommand, FileTypeParamName, DbType.String);
-    }
-
-    /// <summary>
-    /// Sets the parameters according to the members of a <see cref="TileArchivedFeature"/>
-    /// object.
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    ///   <listheader><description>Parameters</description></listheader>
-    ///   <item><description><see cref="LatitudeParamName"/></description></item>
-    ///   <item><description><see cref="LongitudeParamName"/></description></item>
-    ///   <item><description><see cref="DatasetParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
-    ///   <item><description><see cref="LevelOfDetailParamName"/></description></item>
-    ///   <item><description><see cref="UpParamName"/></description></item>
-    ///   <item><description><see cref="RightParamName"/></description></item>
-    ///   <item><description><see cref="FeatureCategoryParamName"/></description></item>
-    ///   <item><description><see cref="FeatureSubcategoryParamName"/></description></item>
-    ///   <item><description><see cref="FeatureTypeParamName"/></description></item>
-    ///   <item><description><see cref="FeatureSubcodeParamName"/></description></item>
-    ///   <item><description><see cref="ModelNameParamName"/></description></item>
-    ///   <item><description><see cref="FileTypeParamName"/></description></item>
-    /// </list>
-    /// </remarks>
-    /// <param name="dbCommand">The prepared statement to set the parameter for.</param>
-    /// <param name="tileArchivedFeature">The object from which to get all the parameter values.</param>
-    /// <seealso cref="CreateAndAttachTileArchivedFeatureParameters(DbCommand)"/>
-    private void SetTileArchivedFeatureParameters(DbCommand dbCommand, TileArchivedFeature tileArchivedFeature)
-    {
-        dbCommand.Parameters[LatitudeParamName].Value = tileArchivedFeature.LatitudeValue.Value;
-        dbCommand.Parameters[LongitudeParamName].Value = tileArchivedFeature.LongitudeValue.Value;
-        dbCommand.Parameters[DatasetParamName].Value = tileArchivedFeature.DatasetValue.Value;
-        dbCommand.Parameters[ComponentSelector1ParamName].Value = tileArchivedFeature.ComponentSelector1;
-        dbCommand.Parameters[ComponentSelector2ParamName].Value = tileArchivedFeature.ComponentSelector2;
-        dbCommand.Parameters[LevelOfDetailParamName].Value = tileArchivedFeature.Level.Value;
-        dbCommand.Parameters[UpParamName].Value = tileArchivedFeature.Up;
-        dbCommand.Parameters[RightParamName].Value = tileArchivedFeature.Right;
-        dbCommand.Parameters[FeatureCategoryParamName].Value = tileArchivedFeature.FeatureCode.Category;
-        dbCommand.Parameters[FeatureSubcategoryParamName].Value = tileArchivedFeature.FeatureCode.Subcategory;
-        dbCommand.Parameters[FeatureTypeParamName].Value = tileArchivedFeature.FeatureCode.Type;
-        dbCommand.Parameters[FeatureSubcodeParamName].Value = tileArchivedFeature.FeatureSubcode;
-        dbCommand.Parameters[ModelNameParamName].Value = tileArchivedFeature.Name;
-        dbCommand.Parameters[FileTypeParamName].Value = tileArchivedFeature.FileType;
     }
 
     #region Select
@@ -3487,147 +2335,16 @@ public abstract class SQLCDB : ICDB
         get;
     }
 
-    /// <summary>
-    /// Initializes a prepared statement to be a <see cref="SelectFromTileArchivedFeatureStatement"/>.
-    /// </summary>
-    /// <param name="dbCommand">The command to initialize.</param>
-    internal void InitializeSelectFromTileArchivedFeatureCommand(DbCommand dbCommand)
-    {
-        dbCommand.CommandText = SelectFromTileArchivedFeatureStatement;
-        CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
-        CreateAndAttachTileArchivedFeatureParameters(dbCommand);
-    }
-
     /// <inheritdoc/>
     public Stream? ReadTileFeature(TileArchivedFeature tileArchivedFeature)
     {
-        DbConnection dbConnection = dbDataSource.OpenConnection();
-        try
-        {
-            DbCommand selectFromTileArchivedFeatureCommand = dbConnection.CreateCommand();
-            try
-            {
-                InitializeSelectFromTileArchivedFeatureCommand(selectFromTileArchivedFeatureCommand);
-                selectFromTileArchivedFeatureCommand.Prepare();
-
-                Stream? stream = SelectFromTileArchivedFeature(selectFromTileArchivedFeatureCommand, tileArchivedFeature);
-                if (stream is not null)
-                {
-                    return new WrappedStream(stream, selectFromTileArchivedFeatureCommand, dbConnection);
-                }
-                else
-                {
-                    selectFromTileArchivedFeatureCommand.Dispose();
-                    dbConnection.Dispose();
-                    return null;
-                }
-            }
-            catch (Exception)
-            {
-                selectFromTileArchivedFeatureCommand.Dispose();
-                throw;
-            }
-        }
-        catch (Exception)
-        {
-            dbConnection.Dispose();
-            throw;
-        }
-    }
-
-    /// <inheritdoc cref="ReadTileFeature(TileArchivedFeature)"/>
-    /// <param name="selectFromTileArchivedFeatureCommand">The prepared statement to use to execute the query.</param>
-    internal Stream? SelectFromTileArchivedFeature(DbCommand selectFromTileArchivedFeatureCommand, TileArchivedFeature tileArchivedFeature)
-    {
-        SetCdbParameter(selectFromTileArchivedFeatureCommand);
-        SetTileArchivedFeatureParameters(selectFromTileArchivedFeatureCommand, tileArchivedFeature);
-
-        DbDataReader dbDataReader = selectFromTileArchivedFeatureCommand.ExecuteReader(
-            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow);
-        try
-        {
-            do
-            {
-                while (dbDataReader.Read())
-                {
-                    Stream stream = dbDataReader.GetStream(ContentColumnName);
-                    return new WrappedStream(stream, dbDataReader);
-                }
-            } while (dbDataReader.NextResult());
-            dbDataReader.Dispose();
-            return null;
-        }
-        catch (Exception)
-        {
-            dbDataReader.Dispose();
-            throw;
-        }
+        return tileFeatureAccessor.SelectUsingNewConnection(tileArchivedFeature);
     }
 
     /// <inheritdoc/>
-    public async Task<Stream?> ReadTileFeatureAsync(TileArchivedFeature tileArchivedFeature, CancellationToken cancellationToken)
+    public Task<Stream?> ReadTileFeatureAsync(TileArchivedFeature tileArchivedFeature, CancellationToken cancellationToken)
     {
-        DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        try
-        {
-            DbCommand selectFromTileArchivedFeatureCommand = dbConnection.CreateCommand();
-            try
-            {
-                InitializeSelectFromTileArchivedFeatureCommand(selectFromTileArchivedFeatureCommand);
-                await selectFromTileArchivedFeatureCommand.PrepareAsync(cancellationToken);
-
-                Stream? stream = await SelectFromTileArchivedFeatureAsync(selectFromTileArchivedFeatureCommand, tileArchivedFeature, cancellationToken);
-                if (stream is not null)
-                {
-                    return new WrappedStream(stream, selectFromTileArchivedFeatureCommand, dbConnection);
-                }
-                else
-                {
-                    await selectFromTileArchivedFeatureCommand.DisposeAsync();
-                    await dbConnection.DisposeAsync();
-                    return null;
-                }
-            }
-            catch (Exception)
-            {
-                await selectFromTileArchivedFeatureCommand.DisposeAsync();
-                throw;
-            }
-        }
-        catch (Exception)
-        {
-            await dbConnection.DisposeAsync();
-            throw;
-        }
-    }
-
-    /// <inheritdoc cref="ReadTileFeatureAsync(TileArchivedFeature, CancellationToken)"/>
-    /// <param name="selectFromTileArchivedFeatureCommand">The prepared statement to use to execute the query.</param>
-    internal async Task<Stream?> SelectFromTileArchivedFeatureAsync(DbCommand selectFromTileArchivedFeatureCommand, TileArchivedFeature tileArchivedFeature, CancellationToken cancellationToken)
-    {
-        SetCdbParameter(selectFromTileArchivedFeatureCommand);
-        SetTileArchivedFeatureParameters(selectFromTileArchivedFeatureCommand, tileArchivedFeature);
-
-        DbDataReader dbDataReader = await selectFromTileArchivedFeatureCommand.ExecuteReaderAsync(
-            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow, cancellationToken);
-        try
-        {
-            do
-            {
-                while (await dbDataReader.ReadAsync(cancellationToken))
-                {
-                    Stream stream = dbDataReader.GetStream(ContentColumnName);
-                    return new WrappedStream(stream, dbDataReader);
-                }
-            } while (await dbDataReader.NextResultAsync(cancellationToken));
-            await dbDataReader.DisposeAsync();
-            return null;
-        }
-        catch (Exception)
-        {
-            await dbDataReader.DisposeAsync();
-            throw;
-        }
+        return tileFeatureAccessor.SelectUsingNewConnectionAsync(tileArchivedFeature, cancellationToken);
     }
 
     #endregion
@@ -3663,60 +2380,16 @@ public abstract class SQLCDB : ICDB
         get;
     }
 
-    /// <summary>
-    /// Initializes a prepared statement to be an <see cref="InsertIntoTileArchivedFeatureStatement"/>.
-    /// </summary>
-    /// <param name="dbCommand">The command to initialize.</param>
-    internal void InitializeInsertIntoTileArchivedFeatureCommand(DbCommand dbCommand)
-    {
-        dbCommand.CommandText = InsertIntoTileArchivedFeatureStatement;
-        CreateAndAttachCdbParameter(dbCommand);
-        CreateAndAttachTileArchivedFeatureParameters(dbCommand);
-        CreateAndAttachContentParameter(dbCommand);
-    }
-
     /// <inheritdoc/>
     public void WriteTileFeature(TileArchivedFeature tileArchivedFeature, Stream content)
     {
-        using DbConnection dbConnection = dbDataSource.OpenConnection();
-        using DbCommand insertIntoTileArchivedFeatureCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoTileArchivedFeatureCommand(insertIntoTileArchivedFeatureCommand);
-        insertIntoTileArchivedFeatureCommand.Prepare();
-
-        InsertIntoTileArchivedFeature(insertIntoTileArchivedFeatureCommand, tileArchivedFeature, content);
-    }
-
-    /// <inheritdoc cref="WriteTileFeature(TileArchivedFeature, Stream)"/>
-    /// <param name="insertIntoTileArchivedFeatureCommand">The prepared statement to use to execute the query.</param>
-    internal void InsertIntoTileArchivedFeature(DbCommand insertIntoTileArchivedFeatureCommand, TileArchivedFeature tileArchivedFeature, Stream content)
-    {
-        SetCdbParameter(insertIntoTileArchivedFeatureCommand);
-        SetTileArchivedFeatureParameters(insertIntoTileArchivedFeatureCommand, tileArchivedFeature);
-        SetContentParameter(insertIntoTileArchivedFeatureCommand, content);
-
-        insertIntoTileArchivedFeatureCommand.ExecuteNonQuery();
+        tileFeatureAccessor.InsertUsingNewConnection(tileArchivedFeature, content);
     }
 
     /// <inheritdoc/>
-    public async Task WriteTileFeatureAsync(TileArchivedFeature tileArchivedFeature, Stream content, CancellationToken cancellationToken)
+    public Task WriteTileFeatureAsync(TileArchivedFeature tileArchivedFeature, Stream content, CancellationToken cancellationToken)
     {
-        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        await using DbCommand insertIntoTileArchivedFeatureCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoTileArchivedFeatureCommand(insertIntoTileArchivedFeatureCommand);
-        await insertIntoTileArchivedFeatureCommand.PrepareAsync(cancellationToken);
-
-        await InsertIntoTileArchivedFeatureAsync(insertIntoTileArchivedFeatureCommand, tileArchivedFeature, content, cancellationToken);
-    }
-
-    /// <inheritdoc cref="WriteTileFeatureAsync(TileArchivedFeature, Stream, CancellationToken)"/>
-    /// <param name="insertIntoTileArchivedFeatureCommand">The prepared statement to use to execute the query.</param>
-    internal Task InsertIntoTileArchivedFeatureAsync(DbCommand insertIntoTileArchivedFeatureCommand, TileArchivedFeature tileArchivedFeature, Stream content, CancellationToken cancellationToken)
-    {
-        SetCdbParameter(insertIntoTileArchivedFeatureCommand);
-        SetTileArchivedFeatureParameters(insertIntoTileArchivedFeatureCommand, tileArchivedFeature);
-        SetContentParameter(insertIntoTileArchivedFeatureCommand, content);
-
-        return insertIntoTileArchivedFeatureCommand.ExecuteNonQueryAsync(cancellationToken);
+        return tileFeatureAccessor.InsertUsingNewConnectionAsync(tileArchivedFeature, content, cancellationToken);
     }
 
     #endregion
@@ -3726,82 +2399,67 @@ public abstract class SQLCDB : ICDB
     #region Tile Archived Texture
 
     /// <summary>
+    /// A table accessor for type <see cref="TileArchivedTexture"/>.
+    /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><term><see cref="TileArchivedTexture"/> Property</term><description>SQL Statement Parameter</description></listheader>
+    ///   <item><term><see cref="TileArchivedTexture.LatitudeValue"/></term><description><see cref="LatitudeParamName"/></description></item>
+    ///   <item><term><see cref="TileArchivedTexture.LongitudeValue"/></term><description><see cref="LongitudeParamName"/></description></item>
+    ///   <item><term><see cref="TileArchivedTexture.DatasetValue"/></term><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><term><see cref="TileArchivedTexture.ComponentSelector1"/></term><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><term><see cref="TileArchivedTexture.ComponentSelector2"/></term><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><term><see cref="TileArchivedTexture.Level"/></term><description><see cref="LevelOfDetailParamName"/></description></item>
+    ///   <item><term><see cref="TileArchivedTexture.Up"/></term><description><see cref="UpParamName"/></description></item>
+    ///   <item><term><see cref="TileArchivedTexture.Right"/></term><description><see cref="RightParamName"/></description></item>
+    ///   <item><term><see cref="TileArchivedTexture.Name"/></term><description><see cref="TextureNameParamName"/></description></item>
+    ///   <item><term><see cref="TileArchivedTexture.FileType"/></term><description><see cref="FileTypeParamName"/></description></item>
+    /// </list>
+    /// </remarks>
+    private class TileArchivedTextureTableAccessor : TableAccessor<TileArchivedTexture>
+    {
+        internal TileArchivedTextureTableAccessor(SQLCDB sqlCDB)
+            : base(sqlCDB, sqlCDB.SelectFromTileArchivedTextureStatement, sqlCDB.InsertIntoTileArchivedTextureStatement)
+        {
+        }
+
+        /// <inheritdoc/>
+        internal override void CreateAndAttachObjectParameter(DbCommand dbCommand)
+        {
+            CreateAndAttachParameter(dbCommand, sqlCDB.LatitudeParamName, DbType.Int32);
+            CreateAndAttachParameter(dbCommand, sqlCDB.LongitudeParamName, DbType.Int32);
+            CreateAndAttachParameter(dbCommand, sqlCDB.DatasetParamName, DbType.Int32);
+            CreateAndAttachParameter(dbCommand, sqlCDB.ComponentSelector1ParamName, DbType.Int32);
+            CreateAndAttachParameter(dbCommand, sqlCDB.ComponentSelector2ParamName, DbType.Int32);
+            CreateAndAttachParameter(dbCommand, sqlCDB.LevelOfDetailParamName, DbType.Int32);
+            CreateAndAttachParameter(dbCommand, sqlCDB.UpParamName, DbType.Int32);
+            CreateAndAttachParameter(dbCommand, sqlCDB.RightParamName, DbType.Int32);
+            CreateAndAttachParameter(dbCommand, sqlCDB.TextureNameParamName, DbType.String);
+            CreateAndAttachParameter(dbCommand, sqlCDB.FileTypeParamName, DbType.String);
+        }
+
+        /// <inheritdoc/>
+        internal override void SetObjectParameters(DbCommand dbCommand, TileArchivedTexture obj)
+        {
+            dbCommand.Parameters[sqlCDB.LatitudeParamName].Value = obj.LatitudeValue.Value;
+            dbCommand.Parameters[sqlCDB.LongitudeParamName].Value = obj.LongitudeValue.Value;
+            dbCommand.Parameters[sqlCDB.DatasetParamName].Value = obj.DatasetValue.Value;
+            dbCommand.Parameters[sqlCDB.ComponentSelector1ParamName].Value = obj.ComponentSelector1;
+            dbCommand.Parameters[sqlCDB.ComponentSelector2ParamName].Value = obj.ComponentSelector2;
+            dbCommand.Parameters[sqlCDB.LevelOfDetailParamName].Value = obj.Level.Value;
+            dbCommand.Parameters[sqlCDB.UpParamName].Value = obj.Up;
+            dbCommand.Parameters[sqlCDB.RightParamName].Value = obj.Right;
+            dbCommand.Parameters[sqlCDB.TextureNameParamName].Value = obj.Name;
+            dbCommand.Parameters[sqlCDB.FileTypeParamName].Value = obj.FileType;
+        }
+    }
+
+    /// <summary>
     /// The SQL DDL statement to create the TileArchivedTexture table.
     /// </summary>
     protected abstract string CreateTableTileArchivedTextureStatement
     {
         get;
-    }
-
-    /// <summary>
-    /// Creates the parameters appropriate for a <see cref="TileArchivedTexture"/> object
-    /// and attaches them to the prepared statement.
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    ///   <listheader><description>Parameters</description></listheader>
-    ///   <item><description><see cref="LatitudeParamName"/></description></item>
-    ///   <item><description><see cref="LongitudeParamName"/></description></item>
-    ///   <item><description><see cref="DatasetParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
-    ///   <item><description><see cref="LevelOfDetailParamName"/></description></item>
-    ///   <item><description><see cref="UpParamName"/></description></item>
-    ///   <item><description><see cref="RightParamName"/></description></item>
-    ///   <item><description><see cref="TextureNameParamName"/></description></item>
-    ///   <item><description><see cref="FileTypeParamName"/></description></item>
-    /// </list>
-    /// </remarks>
-    /// <param name="dbCommand">The command to create the parameters for.</param>
-    /// <seealso cref="SetTileArchivedTextureParameters(DbCommand, TileArchivedTexture)"/>
-    private void CreateAndAttachTileArchivedTextureParameters(DbCommand dbCommand)
-    {
-        CreateAndAttachParameter(dbCommand, LatitudeParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, LongitudeParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, DatasetParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, ComponentSelector1ParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, ComponentSelector2ParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, LevelOfDetailParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, UpParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, RightParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, TextureNameParamName, DbType.String);
-        CreateAndAttachParameter(dbCommand, FileTypeParamName, DbType.String);
-    }
-
-    /// <summary>
-    /// Sets the parameters according to the members of a <see cref="TileArchivedTexture"/>
-    /// object.
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    ///   <listheader><description>Parameters</description></listheader>
-    ///   <item><description><see cref="LatitudeParamName"/></description></item>
-    ///   <item><description><see cref="LongitudeParamName"/></description></item>
-    ///   <item><description><see cref="DatasetParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
-    ///   <item><description><see cref="LevelOfDetailParamName"/></description></item>
-    ///   <item><description><see cref="UpParamName"/></description></item>
-    ///   <item><description><see cref="RightParamName"/></description></item>
-    ///   <item><description><see cref="TextureNameParamName"/></description></item>
-    ///   <item><description><see cref="FileTypeParamName"/></description></item>
-    /// </list>
-    /// </remarks>
-    /// <param name="dbCommand">The prepared statement to set the parameter for.</param>
-    /// <param name="tileArchivedTexture">The object from which to get all the parameter values.</param>
-    /// <seealso cref="CreateAndAttachTileArchivedTextureParameters(DbCommand)"/>
-    private void SetTileArchivedTextureParameters(DbCommand dbCommand, TileArchivedTexture tileArchivedTexture)
-    {
-        dbCommand.Parameters[LatitudeParamName].Value = tileArchivedTexture.LatitudeValue.Value;
-        dbCommand.Parameters[LongitudeParamName].Value = tileArchivedTexture.LongitudeValue.Value;
-        dbCommand.Parameters[DatasetParamName].Value = tileArchivedTexture.DatasetValue.Value;
-        dbCommand.Parameters[ComponentSelector1ParamName].Value = tileArchivedTexture.ComponentSelector1;
-        dbCommand.Parameters[ComponentSelector2ParamName].Value = tileArchivedTexture.ComponentSelector2;
-        dbCommand.Parameters[LevelOfDetailParamName].Value = tileArchivedTexture.Level.Value;
-        dbCommand.Parameters[UpParamName].Value = tileArchivedTexture.Up;
-        dbCommand.Parameters[RightParamName].Value = tileArchivedTexture.Right;
-        dbCommand.Parameters[TextureNameParamName].Value = tileArchivedTexture.Name;
-        dbCommand.Parameters[FileTypeParamName].Value = tileArchivedTexture.FileType;
     }
 
     #region Select
@@ -3834,147 +2492,16 @@ public abstract class SQLCDB : ICDB
         get;
     }
 
-    /// <summary>
-    /// Initializes a prepared statement to be a <see cref="SelectFromTileArchivedTextureStatement"/>.
-    /// </summary>
-    /// <param name="dbCommand">The command to initialize.</param>
-    internal void InitializeSelectFromTileArchivedTextureCommand(DbCommand dbCommand)
-    {
-        dbCommand.CommandText = SelectFromTileArchivedTextureStatement;
-        CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
-        CreateAndAttachTileArchivedTextureParameters(dbCommand);
-    }
-
     /// <inheritdoc/>
     public Stream? ReadTileTexture(TileArchivedTexture tileArchivedTexture)
     {
-        DbConnection dbConnection = dbDataSource.OpenConnection();
-        try
-        {
-            DbCommand selectFromTileArchivedTextureCommand = dbConnection.CreateCommand();
-            try
-            {
-                InitializeSelectFromTileArchivedTextureCommand(selectFromTileArchivedTextureCommand);
-                selectFromTileArchivedTextureCommand.Prepare();
-
-                Stream? stream = SelectFromTileArchivedTexture(selectFromTileArchivedTextureCommand, tileArchivedTexture);
-                if (stream is not null)
-                {
-                    return new WrappedStream(stream, selectFromTileArchivedTextureCommand, dbConnection);
-                }
-                else
-                {
-                    selectFromTileArchivedTextureCommand.Dispose();
-                    dbConnection.Dispose();
-                    return null;
-                }
-            }
-            catch (Exception)
-            {
-                selectFromTileArchivedTextureCommand.Dispose();
-                throw;
-            }
-        }
-        catch (Exception)
-        {
-            dbConnection.Dispose();
-            throw;
-        }
-    }
-
-    /// <inheritdoc cref="ReadTileTexture(TileArchivedTexture)"/>
-    /// <param name="selectFromTileArchivedTextureCommand">The prepared statement to use to execute the query.</param>
-    internal Stream? SelectFromTileArchivedTexture(DbCommand selectFromTileArchivedTextureCommand, TileArchivedTexture tileArchivedTexture)
-    {
-        SetCdbParameter(selectFromTileArchivedTextureCommand);
-        SetTileArchivedTextureParameters(selectFromTileArchivedTextureCommand, tileArchivedTexture);
-
-        DbDataReader dbDataReader = selectFromTileArchivedTextureCommand.ExecuteReader(
-            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow);
-        try
-        {
-            do
-            {
-                while (dbDataReader.Read())
-                {
-                    Stream stream = dbDataReader.GetStream(ContentColumnName);
-                    return new WrappedStream(stream, dbDataReader);
-                }
-            } while (dbDataReader.NextResult());
-            dbDataReader.Dispose();
-            return null;
-        }
-        catch (Exception)
-        {
-            dbDataReader.Dispose();
-            throw;
-        }
+        return tileTextureAccessor.SelectUsingNewConnection(tileArchivedTexture);
     }
 
     /// <inheritdoc/>
-    public async Task<Stream?> ReadTileTextureAsync(TileArchivedTexture tileArchivedTexture, CancellationToken cancellationToken)
+    public Task<Stream?> ReadTileTextureAsync(TileArchivedTexture tileArchivedTexture, CancellationToken cancellationToken)
     {
-        DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        try
-        {
-            DbCommand selectFromTileArchivedTextureCommand = dbConnection.CreateCommand();
-            try
-            {
-                InitializeSelectFromTileArchivedTextureCommand(selectFromTileArchivedTextureCommand);
-                await selectFromTileArchivedTextureCommand.PrepareAsync(cancellationToken);
-
-                Stream? stream = await SelectFromTileArchivedTextureAsync(selectFromTileArchivedTextureCommand, tileArchivedTexture, cancellationToken);
-                if (stream is not null)
-                {
-                    return new WrappedStream(stream, selectFromTileArchivedTextureCommand, dbConnection);
-                }
-                else
-                {
-                    await selectFromTileArchivedTextureCommand.DisposeAsync();
-                    await dbConnection.DisposeAsync();
-                    return null;
-                }
-            }
-            catch (Exception)
-            {
-                await selectFromTileArchivedTextureCommand.DisposeAsync();
-                throw;
-            }
-        }
-        catch (Exception)
-        {
-            await dbConnection.DisposeAsync();
-            throw;
-        }
-    }
-
-    /// <inheritdoc cref="ReadTileTextureAsync(TileArchivedTexture, CancellationToken)"/>
-    /// <param name="selectFromTileArchivedTextureCommand">The prepared statement to use to execute the query.</param>
-    internal async Task<Stream?> SelectFromTileArchivedTextureAsync(DbCommand selectFromTileArchivedTextureCommand, TileArchivedTexture tileArchivedTexture, CancellationToken cancellationToken)
-    {
-        SetCdbParameter(selectFromTileArchivedTextureCommand);
-        SetTileArchivedTextureParameters(selectFromTileArchivedTextureCommand, tileArchivedTexture);
-
-        DbDataReader dbDataReader = await selectFromTileArchivedTextureCommand.ExecuteReaderAsync(
-            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow, cancellationToken);
-        try
-        {
-            do
-            {
-                while (await dbDataReader.ReadAsync(cancellationToken))
-                {
-                    Stream stream = dbDataReader.GetStream(ContentColumnName);
-                    return new WrappedStream(stream, dbDataReader);
-                }
-            } while (await dbDataReader.NextResultAsync(cancellationToken));
-            await dbDataReader.DisposeAsync();
-            return null;
-        }
-        catch (Exception)
-        {
-            await dbDataReader.DisposeAsync();
-            throw;
-        }
+        return tileTextureAccessor.SelectUsingNewConnectionAsync(tileArchivedTexture, cancellationToken);
     }
 
     #endregion
@@ -4006,60 +2533,16 @@ public abstract class SQLCDB : ICDB
         get;
     }
 
-    /// <summary>
-    /// Initializes a prepared statement to be an <see cref="InsertIntoTileArchivedTextureStatement"/>.
-    /// </summary>
-    /// <param name="dbCommand">The command to initialize.</param>
-    internal void InitializeInsertIntoTileArchivedTextureCommand(DbCommand dbCommand)
-    {
-        dbCommand.CommandText = InsertIntoTileArchivedTextureStatement;
-        CreateAndAttachCdbParameter(dbCommand);
-        CreateAndAttachTileArchivedTextureParameters(dbCommand);
-        CreateAndAttachContentParameter(dbCommand);
-    }
-
     /// <inheritdoc/>
     public void WriteTileTexture(TileArchivedTexture tileArchivedTexture, Stream content)
     {
-        using DbConnection dbConnection = dbDataSource.OpenConnection();
-        using DbCommand insertIntoTileArchivedTextureCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoTileArchivedTextureCommand(insertIntoTileArchivedTextureCommand);
-        insertIntoTileArchivedTextureCommand.Prepare();
-
-        InsertIntoTileArchivedTexture(insertIntoTileArchivedTextureCommand, tileArchivedTexture, content);
-    }
-
-    /// <inheritdoc cref="WriteTileTextureAsync(TileArchivedTexture, Stream, CancellationToken)"/>
-    /// <param name="insertIntoTileArchivedTextureCommand">The prepared statement to use to execute the query.</param>
-    internal void InsertIntoTileArchivedTexture(DbCommand insertIntoTileArchivedTextureCommand, TileArchivedTexture tileArchivedTexture, Stream content)
-    {
-        SetCdbParameter(insertIntoTileArchivedTextureCommand);
-        SetTileArchivedTextureParameters(insertIntoTileArchivedTextureCommand, tileArchivedTexture);
-        SetContentParameter(insertIntoTileArchivedTextureCommand, content);
-
-        insertIntoTileArchivedTextureCommand.ExecuteNonQuery();
+        tileTextureAccessor.InsertUsingNewConnection(tileArchivedTexture, content);
     }
 
     /// <inheritdoc/>
-    public async Task WriteTileTextureAsync(TileArchivedTexture tileArchivedTexture, Stream content, CancellationToken cancellationToken)
+    public Task WriteTileTextureAsync(TileArchivedTexture tileArchivedTexture, Stream content, CancellationToken cancellationToken)
     {
-        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        await using DbCommand insertIntoTileArchivedTextureCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoTileArchivedTextureCommand(insertIntoTileArchivedTextureCommand);
-        await insertIntoTileArchivedTextureCommand.PrepareAsync(cancellationToken);
-
-        await InsertIntoTileArchivedTextureAsync(insertIntoTileArchivedTextureCommand, tileArchivedTexture, content, cancellationToken);
-    }
-
-    /// <inheritdoc cref="WriteTileTextureAsync(TileArchivedTexture, Stream, CancellationToken)"/>
-    /// <param name="insertIntoTileArchivedTextureCommand">The prepared statement to use to execute the query.</param>
-    internal Task InsertIntoTileArchivedTextureAsync(DbCommand insertIntoTileArchivedTextureCommand, TileArchivedTexture tileArchivedTexture, Stream content, CancellationToken cancellationToken)
-    {
-        SetCdbParameter(insertIntoTileArchivedTextureCommand);
-        SetTileArchivedTextureParameters(insertIntoTileArchivedTextureCommand, tileArchivedTexture);
-        SetContentParameter(insertIntoTileArchivedTextureCommand, content);
-
-        return insertIntoTileArchivedTextureCommand.ExecuteNonQueryAsync(cancellationToken);
+        return tileTextureAccessor.InsertUsingNewConnectionAsync(tileArchivedTexture, content, cancellationToken);
     }
 
     #endregion
@@ -4069,58 +2552,49 @@ public abstract class SQLCDB : ICDB
     #region Navigation
 
     /// <summary>
+    /// A table accessor for type <see cref="Navigation"/>.
+    /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <listheader><term><see cref="Navigation"/> Property</term><description>SQL Statement Parameter</description></listheader>
+    ///   <item><term><see cref="Navigation.Dataset"/></term><description><see cref="DatasetParamName"/></description></item>
+    ///   <item><term><see cref="Navigation.ComponentSelector1"/></term><description><see cref="ComponentSelector1ParamName"/></description></item>
+    ///   <item><term><see cref="Navigation.ComponentSelector2"/></term><description><see cref="ComponentSelector2ParamName"/></description></item>
+    ///   <item><term><see cref="Navigation.FileType"/></term><description><see cref="FileTypeParamName"/></description></item>
+    /// </list>
+    /// </remarks>
+    private class NavigationTableAccessor : TableAccessor<Navigation>
+    {
+        internal NavigationTableAccessor(SQLCDB sqlCDB)
+            : base(sqlCDB, sqlCDB.SelectFromNavigationStatement, sqlCDB.InsertIntoNavigationStatement)
+        {
+        }
+
+        /// <inheritdoc/>
+        internal override void CreateAndAttachObjectParameter(DbCommand dbCommand)
+        {
+            CreateAndAttachParameter(dbCommand, sqlCDB.DatasetParamName, DbType.Int32);
+            CreateAndAttachParameter(dbCommand, sqlCDB.ComponentSelector1ParamName, DbType.Int32);
+            CreateAndAttachParameter(dbCommand, sqlCDB.ComponentSelector2ParamName, DbType.Int32);
+            CreateAndAttachParameter(dbCommand, sqlCDB.FileTypeParamName, DbType.String);
+        }
+
+        /// <inheritdoc/>
+        internal override void SetObjectParameters(DbCommand dbCommand, Navigation obj)
+        {
+            dbCommand.Parameters[sqlCDB.DatasetParamName].Value = obj.Dataset.Value;
+            dbCommand.Parameters[sqlCDB.ComponentSelector1ParamName].Value = obj.ComponentSelector1;
+            dbCommand.Parameters[sqlCDB.ComponentSelector2ParamName].Value = obj.ComponentSelector2;
+            dbCommand.Parameters[sqlCDB.FileTypeParamName].Value = obj.FileType;
+        }
+    }
+
+    /// <summary>
     /// The SQL DDL statement to create the Navigation table.
     /// </summary>
     protected abstract string CreateTableNavigationStatement
     {
         get;
-    }
-
-    /// <summary>
-    /// Creates the parameters appropriate for a <see cref="Navigation"/> object
-    /// and attaches them to the prepared statement.
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    ///   <listheader><description>Parameters</description></listheader>
-    ///   <item><description><see cref="DatasetParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
-    ///   <item><description><see cref="FileTypeParamName"/></description></item>
-    /// </list>
-    /// </remarks>
-    /// <param name="dbCommand">The command to create the parameters for.</param>
-    /// <seealso cref="SetNavigationParameters(DbCommand, Navigation)"/>
-    private void CreateAndAttachNavigationParameters(DbCommand dbCommand)
-    {
-        CreateAndAttachParameter(dbCommand, DatasetParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, ComponentSelector1ParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, ComponentSelector2ParamName, DbType.Int32);
-        CreateAndAttachParameter(dbCommand, FileTypeParamName, DbType.String);
-    }
-
-    /// <summary>
-    /// Sets the parameters according to the members of a <see cref="Navigation"/>
-    /// object.
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    ///   <listheader><description>Parameters</description></listheader>
-    ///   <item><description><see cref="DatasetParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector1ParamName"/></description></item>
-    ///   <item><description><see cref="ComponentSelector2ParamName"/></description></item>
-    ///   <item><description><see cref="FileTypeParamName"/></description></item>
-    /// </list>
-    /// </remarks>
-    /// <param name="dbCommand">The prepared statement to set the parameter for.</param>
-    /// <param name="navigation">The object from which to get all the parameter values.</param>
-    /// <seealso cref="CreateAndAttachNavigationParameters(DbCommand)"/>
-    private void SetNavigationParameters(DbCommand dbCommand, Navigation navigation)
-    {
-        dbCommand.Parameters[DatasetParamName].Value = navigation.Dataset.Value;
-        dbCommand.Parameters[ComponentSelector1ParamName].Value = navigation.ComponentSelector1;
-        dbCommand.Parameters[ComponentSelector2ParamName].Value = navigation.ComponentSelector2;
-        dbCommand.Parameters[FileTypeParamName].Value = navigation.FileType;
     }
 
     #region Select
@@ -4147,147 +2621,16 @@ public abstract class SQLCDB : ICDB
         get;
     }
 
-    /// <summary>
-    /// Initializes a prepared statement to be a <see cref="SelectFromNavigationStatement"/>.
-    /// </summary>
-    /// <param name="dbCommand">The command to initialize.</param>
-    internal void InitializeSelectFromNavigationCommand(DbCommand dbCommand)
-    {
-        dbCommand.CommandText = SelectFromNavigationStatement;
-        CreateAndAttachParameter(dbCommand, CdbParamName, DbType.String);
-        CreateAndAttachNavigationParameters(dbCommand);
-    }
-
     /// <inheritdoc/>
     public Stream? ReadNavigation(Navigation navigation)
     {
-        DbConnection dbConnection = dbDataSource.OpenConnection();
-        try
-        {
-            DbCommand selectFromNavigationCommand = dbConnection.CreateCommand();
-            try
-            {
-                InitializeSelectFromNavigationCommand(selectFromNavigationCommand);
-                selectFromNavigationCommand.Prepare();
-
-                Stream? stream = SelectFromNavigation(selectFromNavigationCommand, navigation);
-                if (stream is not null)
-                {
-                    return new WrappedStream(stream, selectFromNavigationCommand, dbConnection);
-                }
-                else
-                {
-                    selectFromNavigationCommand.Dispose();
-                    dbConnection.Dispose();
-                    return null;
-                }
-            }
-            catch (Exception)
-            {
-                selectFromNavigationCommand.Dispose();
-                throw;
-            }
-        }
-        catch (Exception)
-        {
-            dbConnection.Dispose();
-            throw;
-        }
-    }
-
-    /// <inheritdoc cref="ReadNavigation(Navigation)"/>
-    /// <param name="selectFromNavigationCommand">The prepared statement to use to execute the query.</param>
-    internal Stream? SelectFromNavigation(DbCommand selectFromNavigationCommand, Navigation navigation)
-    {
-        SetCdbParameter(selectFromNavigationCommand);
-        SetNavigationParameters(selectFromNavigationCommand, navigation);
-
-        DbDataReader dbDataReader = selectFromNavigationCommand.ExecuteReader(
-            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow);
-        try
-        {
-            do
-            {
-                while (dbDataReader.Read())
-                {
-                    Stream stream = dbDataReader.GetStream(ContentColumnName);
-                    return new WrappedStream(stream, dbDataReader);
-                }
-            } while (dbDataReader.NextResult());
-            dbDataReader.Dispose();
-            return null;
-        }
-        catch (Exception)
-        {
-            dbDataReader.Dispose();
-            throw;
-        }
+        return navigationAccessor.SelectUsingNewConnection(navigation);
     }
 
     /// <inheritdoc/>
-    public async Task<Stream?> ReadNavigationAsync(Navigation navigation, CancellationToken cancellationToken)
+    public Task<Stream?> ReadNavigationAsync(Navigation navigation, CancellationToken cancellationToken)
     {
-        DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        try
-        {
-            DbCommand selectFromNavigationCommand = dbConnection.CreateCommand();
-            try
-            {
-                InitializeSelectFromNavigationCommand(selectFromNavigationCommand);
-                await selectFromNavigationCommand.PrepareAsync(cancellationToken);
-
-                Stream? stream = await SelectFromNavigationAsync(selectFromNavigationCommand, navigation, cancellationToken);
-                if (stream is not null)
-                {
-                    return new WrappedStream(stream, selectFromNavigationCommand, dbConnection);
-                }
-                else
-                {
-                    await selectFromNavigationCommand.DisposeAsync();
-                    await dbConnection.DisposeAsync();
-                    return null;
-                }
-            }
-            catch (Exception)
-            {
-                await selectFromNavigationCommand.DisposeAsync();
-                throw;
-            }
-        }
-        catch (Exception)
-        {
-            await dbConnection.DisposeAsync();
-            throw;
-        }
-    }
-
-    /// <inheritdoc cref="ReadNavigationAsync(Navigation, CancellationToken)"/>
-    /// <param name="selectFromNavigationCommand">The prepared statement to use to execute the query.</param>
-    internal async Task<Stream?> SelectFromNavigationAsync(DbCommand selectFromNavigationCommand, Navigation navigation, CancellationToken cancellationToken)
-    {
-        SetCdbParameter(selectFromNavigationCommand);
-        SetNavigationParameters(selectFromNavigationCommand, navigation);
-
-        DbDataReader dbDataReader = await selectFromNavigationCommand.ExecuteReaderAsync(
-            CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow, cancellationToken);
-        try
-        {
-            do
-            {
-                while (await dbDataReader.ReadAsync(cancellationToken))
-                {
-                    Stream stream = dbDataReader.GetStream(ContentColumnName);
-                    return new WrappedStream(stream, dbDataReader);
-                }
-            } while (await dbDataReader.NextResultAsync(cancellationToken));
-            await dbDataReader.DisposeAsync();
-            return null;
-        }
-        catch (Exception)
-        {
-            await dbDataReader.DisposeAsync();
-            throw;
-        }
+        return navigationAccessor.SelectUsingNewConnectionAsync(navigation, cancellationToken);
     }
 
     #endregion
@@ -4313,60 +2656,16 @@ public abstract class SQLCDB : ICDB
         get;
     }
 
-    /// <summary>
-    /// Initializes a prepared statement to be an <see cref="InsertIntoNavigationStatement"/>.
-    /// </summary>
-    /// <param name="dbCommand">The command to initialize.</param>
-    internal void InitializeInsertIntoNavigationCommand(DbCommand dbCommand)
-    {
-        dbCommand.CommandText = InsertIntoNavigationStatement;
-        CreateAndAttachCdbParameter(dbCommand);
-        CreateAndAttachNavigationParameters(dbCommand);
-        CreateAndAttachContentParameter(dbCommand);
-    }
-
     /// <inheritdoc/>
     public void WriteNavigation(Navigation navigation, Stream content)
     {
-        using DbConnection dbConnection = dbDataSource.OpenConnection();
-        using DbCommand insertIntoNavigationCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoNavigationCommand(insertIntoNavigationCommand);
-        insertIntoNavigationCommand.Prepare();
-
-        InsertIntoNavigation(insertIntoNavigationCommand, navigation, content);
-    }
-
-    /// <inheritdoc cref="WriteNavigation(Navigation, Stream)"/>
-    /// <param name="insertIntoNavigationCommand">The prepared statement to use to execute the query.</param>
-    internal void InsertIntoNavigation(DbCommand insertIntoNavigationCommand, Navigation navigation, Stream content)
-    {
-        SetCdbParameter(insertIntoNavigationCommand);
-        SetNavigationParameters(insertIntoNavigationCommand, navigation);
-        SetContentParameter(insertIntoNavigationCommand, content);
-
-        insertIntoNavigationCommand.ExecuteNonQuery();
+        navigationAccessor.InsertUsingNewConnection(navigation, content);
     }
 
     /// <inheritdoc/>
-    public async Task WriteNavigationAsync(Navigation navigation, Stream content, CancellationToken cancellationToken)
+    public Task WriteNavigationAsync(Navigation navigation, Stream content, CancellationToken cancellationToken)
     {
-        await using DbConnection dbConnection = await dbDataSource.OpenConnectionAsync(cancellationToken);
-        await using DbCommand insertIntoNavigationCommand = dbConnection.CreateCommand();
-        InitializeInsertIntoNavigationCommand(insertIntoNavigationCommand);
-        await insertIntoNavigationCommand.PrepareAsync(cancellationToken);
-
-        await InsertIntoNavigationAsync(insertIntoNavigationCommand, navigation, content, cancellationToken);
-    }
-
-    /// <inheritdoc cref="WriteNavigationAsync(Navigation, Stream, CancellationToken)"/>
-    /// <param name="insertIntoNavigationCommand">The prepared statement to use to execute the query.</param>
-    internal Task InsertIntoNavigationAsync(DbCommand insertIntoNavigationCommand, Navigation navigation, Stream content, CancellationToken cancellationToken)
-    {
-        SetCdbParameter(insertIntoNavigationCommand);
-        SetNavigationParameters(insertIntoNavigationCommand, navigation);
-        SetContentParameter(insertIntoNavigationCommand, content);
-
-        return insertIntoNavigationCommand.ExecuteNonQueryAsync(cancellationToken);
+        return navigationAccessor.InsertUsingNewConnectionAsync(navigation, content, cancellationToken);
     }
 
     #endregion
@@ -4547,5 +2846,3 @@ public abstract class SQLCDB : ICDB
     #endregion
 
 }
-
-#pragma warning restore CS1573 // Parameter has no matching param tag in the XML comment (but other parameters do)
