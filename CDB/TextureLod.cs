@@ -110,7 +110,16 @@ public record TextureLod(
     /// This will be of the form <c>D000_S000_T000_L00_name.ext</c>.
     /// </para>
     /// </remarks>
-    // TODO: Are there some cases where we need to use W instead of L?
-    public string Filename => $"D{Dataset.Value:D3}_S{ComponentSelector1:D3}_T{ComponentSelector2:D3}_{LevelOfDetail.Code}_{Name}.{FileType}";
-
+    public string Filename
+    {
+        get
+        {
+            string lodCode = Dataset.Value switch
+            {
+                501 or 601 or 604 => LevelOfDetail.TextureCode,
+                _ => LevelOfDetail.Code,
+            };
+            return $"D{Dataset.Value:D3}_S{ComponentSelector1:D3}_T{ComponentSelector2:D3}_{lodCode}_{Name}.{FileType}";
+        }
+    }
 }

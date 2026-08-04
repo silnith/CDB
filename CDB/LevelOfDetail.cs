@@ -141,6 +141,17 @@ public record LevelOfDetail([property: Range(-10, 23)] int Value) : IComparable<
     public string Code => Value < 0 ? $"LC{-Value:D2}" : $"L{Value:D2}";
 
     /// <summary>
+    /// The form this level of detail takes when part of a filename and used as a mipmap level.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This will be of the form <c>W00</c> or <c>WC00</c>.
+    /// </para>
+    /// </remarks>
+    // TODO: Use W for textures?  (Datasets 501, 601, 604)
+    public string TextureCode => Value < 0 ? $"WC{-Value:D2}" : $"W{Value:D2}";
+
+    /// <summary>
     /// The form this level of detail takes when part of a tiled dataset directory.
     /// See 3.6.2.4. Directory Level 4 (LOD Directory)
     /// </summary>
