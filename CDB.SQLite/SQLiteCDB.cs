@@ -1033,205 +1033,205 @@ public class SQLiteCDB : SQLCDB
     #region Inherited Properties
 
     /// <inheritdoc/>
-    protected override string CDBNameColumnName => cdbNameColumnName;
+    public override string CDBNameColumnName => cdbNameColumnName;
 
     /// <inheritdoc/>
-    protected override string LatitudeColumnName => latitudeColumnName;
+    public override string LatitudeColumnName => latitudeColumnName;
 
     /// <inheritdoc/>
-    protected override string LongitudeColumnName => longitudeColumnName;
+    public override string LongitudeColumnName => longitudeColumnName;
 
     /// <inheritdoc/>
-    protected override string ContentColumnName => contentColumnName;
+    public override string ContentColumnName => contentColumnName;
 
     /// <inheritdoc/>
-    protected override string CdbParamName => cdbParamName;
+    public override string CdbParamName => cdbParamName;
 
     /// <inheritdoc/>
-    protected override string MetadataNameParamName => metadataNameParamName;
+    public override string MetadataNameParamName => metadataNameParamName;
 
     /// <inheritdoc/>
-    protected override string DatasetParamName => datasetParamName;
+    public override string DatasetParamName => datasetParamName;
 
     /// <inheritdoc/>
-    protected override string ComponentSelector1ParamName => cs1ParamName;
+    public override string ComponentSelector1ParamName => cs1ParamName;
 
     /// <inheritdoc/>
-    protected override string ComponentSelector2ParamName => cs2ParamName;
+    public override string ComponentSelector2ParamName => cs2ParamName;
 
     /// <inheritdoc/>
-    protected override string TextureNameParamName => textureNameParamName;
+    public override string TextureNameParamName => textureNameParamName;
 
     /// <inheritdoc/>
-    protected override string LevelOfDetailParamName => lodParamName;
+    public override string LevelOfDetailParamName => lodParamName;
 
     /// <inheritdoc/>
-    protected override string FeatureCategoryParamName => featureCategoryParamName;
+    public override string FeatureCategoryParamName => featureCategoryParamName;
 
     /// <inheritdoc/>
-    protected override string FeatureSubcategoryParamName => featureSubcategoryParamName;
+    public override string FeatureSubcategoryParamName => featureSubcategoryParamName;
 
     /// <inheritdoc/>
-    protected override string FeatureTypeParamName => featureTypeParamName;
+    public override string FeatureTypeParamName => featureTypeParamName;
 
     /// <inheritdoc/>
-    protected override string FeatureSubcodeParamName => featureSubcodeParamName;
+    public override string FeatureSubcodeParamName => featureSubcodeParamName;
 
     /// <inheritdoc/>
-    protected override string ModelNameParamName => modelNameParamName;
+    public override string ModelNameParamName => modelNameParamName;
 
     /// <inheritdoc/>
-    protected override string DISKindParamName => disKindParamName;
+    public override string DISKindParamName => disKindParamName;
 
     /// <inheritdoc/>
-    protected override string DISDomainParamName => disDomainParamName;
+    public override string DISDomainParamName => disDomainParamName;
 
     /// <inheritdoc/>
-    protected override string DISCountryParamName => disCountryParamName;
+    public override string DISCountryParamName => disCountryParamName;
 
     /// <inheritdoc/>
-    protected override string DISCategoryParamName => disCategoryParamName;
+    public override string DISCategoryParamName => disCategoryParamName;
 
     /// <inheritdoc/>
-    protected override string DISSubcategoryParamName => disSubcategoryParamName;
+    public override string DISSubcategoryParamName => disSubcategoryParamName;
 
     /// <inheritdoc/>
-    protected override string DISSpecificParamName => disSpecificParamName;
+    public override string DISSpecificParamName => disSpecificParamName;
 
     /// <inheritdoc/>
-    protected override string DISExtraParamName => disExtraParamName;
+    public override string DISExtraParamName => disExtraParamName;
 
     /// <inheritdoc/>
-    protected override string LatitudeParamName => latitudeParamName;
+    public override string LatitudeParamName => latitudeParamName;
 
     /// <inheritdoc/>
-    protected override string LongitudeParamName => longitudeParamName;
+    public override string LongitudeParamName => longitudeParamName;
 
     /// <inheritdoc/>
-    protected override string UpParamName => upParamName;
+    public override string UpParamName => upParamName;
 
     /// <inheritdoc/>
-    protected override string RightParamName => rightParamName;
+    public override string RightParamName => rightParamName;
 
     /// <inheritdoc/>
-    protected override string FileTypeParamName => fileTypeParamName;
+    public override string FileTypeParamName => fileTypeParamName;
 
     /// <inheritdoc/>
-    protected override string ContentParamName => contentParamName;
+    public override string ContentParamName => contentParamName;
 
     /// <inheritdoc/>
-    protected override string CreateTableCDBStatement => createTableCDB;
+    public override string CreateTableCDBStatement => createTableCDB;
 
     /// <inheritdoc/>
-    protected override string InsertIntoCDBStatement => insertIntoCDB;
+    public override string InsertIntoCDBStatement => insertIntoCDB;
 
     /// <inheritdoc/>
-    protected override string SelectFromCDBStatement => selectFromCDB;
+    public override string SelectFromCDBStatement => selectFromCDB;
 
     /// <inheritdoc/>
-    protected override string CreateTableMetadataStatement => createTableMetadata;
+    public override string CreateTableMetadataStatement => createTableMetadata;
 
     /// <inheritdoc/>
-    protected override string InsertIntoMetadataStatement => insertIntoMetadata;
+    public override string InsertIntoMetadataStatement => insertIntoMetadata;
 
     /// <inheritdoc/>
-    protected override string SelectFromMetadataStatement => selectFromMetadata;
+    public override string SelectFromMetadataStatement => selectFromMetadata;
 
     /// <inheritdoc/>
-    protected override string CreateTableTextureStatement => createTableTexture;
+    public override string CreateTableTextureStatement => createTableTexture;
 
     /// <inheritdoc/>
-    protected override string InsertIntoTextureStatement => insertIntoTexture;
+    public override string InsertIntoTextureStatement => insertIntoTexture;
 
     /// <inheritdoc/>
-    protected override string SelectFromTextureStatement => selectFromTexture;
+    public override string SelectFromTextureStatement => selectFromTexture;
 
     /// <inheritdoc/>
-    protected override string CreateTableTextureLodStatement => createTableTextureLod;
+    public override string CreateTableTextureLodStatement => createTableTextureLod;
 
     /// <inheritdoc/>
-    protected override string InsertIntoTextureLodStatement => insertIntoTextureLod;
+    public override string InsertIntoTextureLodStatement => insertIntoTextureLod;
 
     /// <inheritdoc/>
-    protected override string SelectFromTextureLodStatement => selectFromTextureLod;
+    public override string SelectFromTextureLodStatement => selectFromTextureLod;
 
     /// <inheritdoc/>
-    protected override string CreateTableGeotypicalModelStatement => createTableGeotypicalModel;
+    public override string CreateTableGeotypicalModelStatement => createTableGeotypicalModel;
 
     /// <inheritdoc/>
-    protected override string InsertIntoGeotypicalModelStatement => insertIntoGeotypicalModel;
+    public override string InsertIntoGeotypicalModelStatement => insertIntoGeotypicalModel;
 
     /// <inheritdoc/>
-    protected override string SelectFromGeotypicalModelStatement => selectFromGeotypicalModel;
+    public override string SelectFromGeotypicalModelStatement => selectFromGeotypicalModel;
 
     /// <inheritdoc/>
-    protected override string CreateTableGeotypicalModelLodStatement => createTableGeotypicalModelLod;
+    public override string CreateTableGeotypicalModelLodStatement => createTableGeotypicalModelLod;
 
     /// <inheritdoc/>
-    protected override string InsertIntoGeotypicalModelLodStatement => insertIntoGeotypicalModelLod;
+    public override string InsertIntoGeotypicalModelLodStatement => insertIntoGeotypicalModelLod;
 
     /// <inheritdoc/>
-    protected override string SelectFromGeotypicalModelLodStatement => selectFromGeotypicalModelLod;
+    public override string SelectFromGeotypicalModelLodStatement => selectFromGeotypicalModelLod;
 
     /// <inheritdoc/>
-    protected override string CreateTableMovingModelStatement => createTableMovingModel;
+    public override string CreateTableMovingModelStatement => createTableMovingModel;
 
     /// <inheritdoc/>
-    protected override string InsertIntoMovingModelStatement => insertIntoMovingModel;
+    public override string InsertIntoMovingModelStatement => insertIntoMovingModel;
 
     /// <inheritdoc/>
-    protected override string SelectFromMovingModelStatement => selectFromMovingModel;
+    public override string SelectFromMovingModelStatement => selectFromMovingModel;
 
     /// <inheritdoc/>
-    protected override string CreateTableMovingModelLodStatement => createTableMovingModelLod;
+    public override string CreateTableMovingModelLodStatement => createTableMovingModelLod;
 
     /// <inheritdoc/>
-    protected override string InsertIntoMovingModelLodStatement => insertIntoMovingModelLod;
+    public override string InsertIntoMovingModelLodStatement => insertIntoMovingModelLod;
 
     /// <inheritdoc/>
-    protected override string SelectFromMovingModelLodStatement => selectFromMovingModelLod;
+    public override string SelectFromMovingModelLodStatement => selectFromMovingModelLod;
 
     /// <inheritdoc/>
-    protected override string CreateTableTileStatement => createTableTile;
+    public override string CreateTableTileStatement => createTableTile;
 
     /// <inheritdoc/>
-    protected override string InsertIntoTileStatement => insertIntoTile;
+    public override string InsertIntoTileStatement => insertIntoTile;
 
     /// <inheritdoc/>
-    protected override string SelectFromTileStatement => selectFromTile;
+    public override string SelectFromTileStatement => selectFromTile;
 
     /// <inheritdoc/>
-    protected override string CreateTableTileArchivedFeatureStatement => createTableTileArchivedFeature;
+    public override string CreateTableTileArchivedFeatureStatement => createTableTileArchivedFeature;
 
     /// <inheritdoc/>
-    protected override string InsertIntoTileArchivedFeatureStatement => insertIntoTileArchivedFeature;
+    public override string InsertIntoTileArchivedFeatureStatement => insertIntoTileArchivedFeature;
 
     /// <inheritdoc/>
-    protected override string SelectFromTileArchivedFeatureStatement => selectFromTileArchivedFeature;
+    public override string SelectFromTileArchivedFeatureStatement => selectFromTileArchivedFeature;
 
     /// <inheritdoc/>
-    protected override string CreateTableTileArchivedTextureStatement => createTableTileArchivedTexture;
+    public override string CreateTableTileArchivedTextureStatement => createTableTileArchivedTexture;
 
     /// <inheritdoc/>
-    protected override string InsertIntoTileArchivedTextureStatement => insertIntoTileArchivedTexture;
+    public override string InsertIntoTileArchivedTextureStatement => insertIntoTileArchivedTexture;
 
     /// <inheritdoc/>
-    protected override string SelectFromTileArchivedTextureStatement => selectFromTileArchivedTexture;
+    public override string SelectFromTileArchivedTextureStatement => selectFromTileArchivedTexture;
 
     /// <inheritdoc/>
-    protected override string CreateTableNavigationStatement => createTableNavigation;
+    public override string CreateTableNavigationStatement => createTableNavigation;
 
     /// <inheritdoc/>
-    protected override string InsertIntoNavigationStatement => insertIntoNavigation;
+    public override string InsertIntoNavigationStatement => insertIntoNavigation;
 
     /// <inheritdoc/>
-    protected override string SelectFromNavigationStatement => selectFromNavigation;
+    public override string SelectFromNavigationStatement => selectFromNavigation;
 
     /// <inheritdoc/>
-    protected override string SelectTileExtentsStatement => selectTileExtents;
+    public override string SelectTileExtentsStatement => selectTileExtents;
 
     /// <inheritdoc/>
-    protected override IEnumerable<string> CreateIndexStatements => new List<string>()
+    public override IEnumerable<string> CreateIndexStatements => new List<string>()
     {
         createIndexTileLatitudeLongitude,
         createIndexTileArchivedFeatureLatitudeLongitude,
@@ -1247,7 +1247,7 @@ public class SQLiteCDB : SQLCDB
     /// extract the stream contents into a byte array.
     /// </para>
     /// </remarks>
-    protected override void SetContentParameter(DbCommand dbCommand, Stream content)
+    public override void SetContentParameter(DbCommand dbCommand, Stream content)
     {
         using MemoryStream memoryStream = new();
         content.CopyTo(memoryStream);
